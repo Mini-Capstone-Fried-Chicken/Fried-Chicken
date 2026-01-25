@@ -13,7 +13,7 @@
 | Haichuan Li   | 40275779  | Back-end | [@HaichuanLi](https://github.com/HaichuanLi) |
 | Emily Ng   | 40285171  | Team Member | [@enyc24](https://github.com/enyc24) |
 | Hoang Vu Luu   | 40247053  | Back-end | [@HoangVuLuu](https://github.com/HoangVuLuu) |
-| Lilia Messaoudi  | 40252419  | Front-end |  |
+| Lilia Messaoudi  | 40252419  | Front-end | [@Lilloush](https://github.com/Lilloush) |
 
 
 
