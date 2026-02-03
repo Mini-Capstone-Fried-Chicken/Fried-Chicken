@@ -15,7 +15,8 @@ class MapSearchBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         color: burgundy,
         child: TextField(
-          enabled: false, // UI only
+          enabled: true,
+          style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
             hintText: "Search Concordia SGW",
             hintStyle: TextStyle(color: Colors.white70),

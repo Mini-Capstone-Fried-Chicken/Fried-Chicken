@@ -22,12 +22,14 @@ class ExploreScreen extends StatelessWidget {
               ),
             ),
           ),
-          // Search bar at the top
-          SafeArea(
-            child: Column(
-              children: const [
-                MapSearchBar(),
-              ],
+          // Search bar
+          Positioned(
+            top: 40, // distance from top
+            left: 40, // horizontal margin
+            right: 20,
+            child: SizedBox(
+              height: 70, 
+              child: const MapSearchBar(),
             ),
           ),
         ],

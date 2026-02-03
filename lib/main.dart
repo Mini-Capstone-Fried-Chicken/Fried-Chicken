@@ -79,12 +79,10 @@ class HomePage extends StatelessWidget {
                     },
                     child: const Text("Open Indoor Map"),
                   ),
+                  const SizedBox(height: 30),
                   ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MainApp(isLoggedIn: isLoggedIn),
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => MainApp(isLoggedIn: isLoggedIn),
                           ),
                         );
                       },
@@ -92,7 +90,6 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-
               const AppLogo(),
             ],
           ),
