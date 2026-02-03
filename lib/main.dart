@@ -69,7 +69,6 @@ class AppButton extends StatelessWidget {
   }
 }
 
-
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -111,10 +110,7 @@ class HomePage extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
-                  const SizedBox(height: 20),
                   const AppLogo(),
-                  const SizedBox(height: 10),
-
                   // AppButton to Sign In
                   AppButton(
                     text: "Get started",
@@ -128,16 +124,16 @@ class HomePage extends StatelessWidget {
 
                   const SizedBox(height: 10),
 
-                  // Indoor map button
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const IndoorPage()),
-                      );
-                    },
-                    child: const Text("Open Indoor Map"),
-                  ),
+                  // Indoor map button for Sprint 3
+                  // ElevatedButton(
+                  //   onPressed: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(builder: (_) => const IndoorPage()),
+                  //     );
+                  //   },
+                  //   child: const Text("Open Indoor Map"),
+                  // ),
                 ],
               ),
             ),
