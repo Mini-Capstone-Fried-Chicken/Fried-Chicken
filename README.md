@@ -16,6 +16,20 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 =======
+## How to Get the Front End Running
+1. Make sure you have successfully installed flutter. 
+```
+flutter --version
+```
+2. Run the following command to start the front end server:
+```
+flutter run
+```
+3. Select the Web browser to open the project.
+---
+4. Project automatically opens up on the selected web.
+---
+
 # Fried-Chicken
 
 ## Contributors
