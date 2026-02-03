@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.flutter-plugins-dependencies
+.packages
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +45,23 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+android/local.properties
+android/.gradle/
+android/app/build/
+
+# === iOS ===
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Flutter-Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+
+# === macOS / Xcode ===
+*.xcconfig
+*.xcworkspace
+*.xcuserstate
+*.xcuserdata/
+
+# === Debug helpers ===
+flutter_lldb_helper.py
