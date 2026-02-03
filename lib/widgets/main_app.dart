@@ -4,7 +4,7 @@ import "../screens/calendar_screen.dart";
 import "../screens/saved_screen.dart";
 import "../screens/settings_screen.dart";
 
-const Color burgundy = Color(0xFF800020);
+const Color burgundy = Color(0xFF76263D); 
 
 class MainApp extends StatefulWidget {
   final bool isLoggedIn;
@@ -32,15 +32,15 @@ class _MainAppState extends State<MainApp> {
           ];
 
     final List<BottomNavigationBarItem> items = widget.isLoggedIn
-        ? const [
-            BottomNavigationBarItem(icon: Icon(Icons.explore), label: "Explore"),
-            BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Calendar"),
-            BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: "Saved"),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+        ? [
+            BottomNavigationBarItem(icon: Image.asset('assets/images/explore.png',width: 24, height: 24,), label: "Explore"), 
+            BottomNavigationBarItem(icon: Image.asset('assets/images/calendar.png',width: 24, height: 24,), label: "Calendar"),
+            BottomNavigationBarItem(icon: Image.asset('assets/images/saved.png',width: 24, height: 24,),label: "Saved"),
+            BottomNavigationBarItem(icon: Image.asset('assets/images/settings.png',width: 24, height: 24,), label: "Settings"),
           ]
-        : const [
-            BottomNavigationBarItem(icon: Icon(Icons.explore), label: "Explore"),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+        : [
+            BottomNavigationBarItem(icon: Image.asset('assets/images/explore.png',width: 24, height: 24,), label: "Explore"),
+            BottomNavigationBarItem(icon: Image.asset('assets/images/settings.png',width: 24, height: 24,), label: "Settings"),
           ];
 
     return Scaffold(

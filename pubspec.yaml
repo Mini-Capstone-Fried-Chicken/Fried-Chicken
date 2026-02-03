@@ -32,3 +32,4 @@ flutter:
   assets:
     - assets/indoor_svg/
     - assets/json/
+    - assets/images/

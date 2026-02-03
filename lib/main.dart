@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/indoor_page.dart';
 import 'screens/login_page.dart';
-
 import 'widgets/main_app.dart';
 
 void main() {

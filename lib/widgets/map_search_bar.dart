@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 
-const Color burgundy = Color(0xFF800020);
+const Color burgundy = Color(0xFF76263D); 
 
 class MapSearchBar extends StatelessWidget {
   const MapSearchBar({super.key});
