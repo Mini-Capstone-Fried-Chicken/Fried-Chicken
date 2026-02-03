@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-
 import 'screens/indoor_page.dart';
 import 'screens/login_page.dart';
-
+import 'widgets/main_app.dart';
 
 void main() {
-  runApp(const MyApp());
+  const bool isLoggedIn = true;
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -20,14 +21,13 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 255, 255, 255)),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: HomePage(isLoggedIn: isLoggedIn),
     );
   }
 }
 
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Image.asset(
@@ -70,8 +70,8 @@ class AppButton extends StatelessWidget {
 }
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
+  final bool isLoggedIn;
+  const HomePage({super.key, required this.isLoggedIn});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -121,8 +121,18 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
-
-                  const SizedBox(height: 10),
+                  ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => MainApp(isLoggedIn: isLoggedIn),
+                          ),
+                        );
+                      },
+                      child: const Text("Explore Campus Map"),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
                   // Indoor map button for Sprint 3
                   // ElevatedButton(
@@ -134,13 +144,9 @@ class HomePage extends StatelessWidget {
                   //   },
                   //   child: const Text("Open Indoor Map"),
                   // ),
-                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
+        );
   }
 }
 
