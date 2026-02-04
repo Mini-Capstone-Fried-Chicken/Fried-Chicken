@@ -1,7 +1,9 @@
 import 'package:campus_app/screens/explore_screen.dart';
+import 'package:campus_app/widgets/main_app.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
+import 'forgot_password_page.dart';
 class UserField extends StatelessWidget {
   final String label;
   final bool obscureText;
@@ -34,7 +36,7 @@ class UserField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(50),
-              borderSide: const BorderSide(color: Color(0xFF800020)),
+              borderSide: const BorderSide(color: Color(0xFF76263D)),
             ),
           ),
         ),
@@ -64,7 +66,7 @@ class LoginToggle extends StatelessWidget {
       height: 50, 
       margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(50),
         border: Border.all(color: Colors.grey),
       ),
       child: Row(
@@ -95,8 +97,8 @@ class LoginToggle extends StatelessWidget {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF800020) : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
+            color: isActive ? const Color(0xFF76263D) : Colors.transparent,
+            borderRadius: BorderRadius.circular(50),
           ),
           child: Text(
             text,
@@ -127,12 +129,26 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
               const SizedBox(height: 20),
               const AppLogo(),
+
+              const Center(
+                child: Text(
+                  "Welcome to Campus",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                    color: Color(0xFF76263D),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
 
               LoginToggle(
                 isLogin: isLogin,
@@ -149,17 +165,6 @@ class _SignInPageState extends State<SignInPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Center(
-                      child: Text(
-                        "Welcome to Campus",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 30,
-                          color: Color(0xFF800020),
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 20),
 
                     if (!isLogin) ...[
@@ -186,7 +191,31 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                     const SizedBox(height: 10),
                     const UserField(label: "Password", obscureText: true),
-                    const SizedBox(height: 20),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPassword(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero, 
+                          minimumSize: const Size(0, 0),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          "Forgot Password?",
+                          style: TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
 
                     if (!isLogin) ...[
                       const Text(
@@ -197,6 +226,8 @@ class _SignInPageState extends State<SignInPage> {
                       const UserField(label: "Confirm password", obscureText: true),
                       const SizedBox(height: 20),
                     ],
+
+                    const SizedBox(height: 50),
 
                     AppButton(
                       text: isLogin ? "Sign In" : "Sign Up",
@@ -209,7 +240,34 @@ class _SignInPageState extends State<SignInPage> {
                       },
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 80),
+                    
+                    if (isLogin) ...[
+                      const SizedBox(height: 10), 
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MainApp(isLoggedIn: true),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Continue as a guest",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Color(0xFF76263D),
+                              decoration: TextDecoration.underline,
+                              decorationColor: Color(0xFF76263D),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+    
                   ],
                 ),
               ),
