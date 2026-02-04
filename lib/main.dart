@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'screens/indoor_page.dart';
 import 'screens/login_page.dart';
 import 'widgets/main_app.dart';
+import 'screens/googlemaps_livelocation.dart';
+
 
 void main() {
   const bool isLoggedIn = true;
@@ -129,6 +131,26 @@ class HomePage extends StatelessWidget {
                       },
                       child: const Text("Explore Campus Map"),
                   ),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const OutdoorMapPage(initialCampus: Campus.sgw,)),
+                      );
+                    },
+                    child: const Text("Open Outdoor Map - SGW"),
+                  ),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const OutdoorMapPage(initialCampus: Campus.loyola,)),
+                      );
+                    },
+                    child: const Text("Open Outdoor Map - Loyola"),
+                  ),
                 ],
               ),
             ),
@@ -147,6 +169,8 @@ class HomePage extends StatelessWidget {
               ),
             ),
         );
+              // ignore: dead_code
+              const AppLogo();
   }
 }
 

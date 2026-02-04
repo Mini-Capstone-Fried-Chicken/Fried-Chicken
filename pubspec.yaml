@@ -20,6 +20,10 @@ dependencies:
   # Indoor SVG rendering
   flutter_svg: ^2.0.10
 
+  #google maps and live location tracking
+  google_maps_flutter: ^2.6.0
+  geolocator: ^11.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -33,3 +37,5 @@ flutter:
     - assets/indoor_svg/
     - assets/json/
     - assets/images/
+
+
