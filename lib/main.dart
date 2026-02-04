@@ -202,17 +202,17 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  AppButton(
-                    text: "Explore Campus Map",
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MainApp(isLoggedIn: isLoggedIn),
-                        ),
-                      );
-                    },
-                  ),
+                  // AppButton(
+                  //   text: "Explore Campus Map",
+                  //   onPressed: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (_) => MainApp(isLoggedIn: isLoggedIn),
+                  //       ),
+                  //     );
+                  //   },
+                  // ),
                   const SizedBox(height: 12),
 
                   TextButton(
