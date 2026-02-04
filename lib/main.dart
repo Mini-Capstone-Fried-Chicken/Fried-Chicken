@@ -52,7 +52,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Campus Guide",
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF800020)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF76263D)),
         useMaterial3: true,
       ),
       initialRoute: "/",
@@ -140,7 +140,7 @@ class AppButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF800020),
+          backgroundColor: const Color(0xFF76263D),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 18),
         ),
@@ -158,6 +158,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -167,7 +168,7 @@ class HomePage extends StatelessWidget {
               child: Image.asset(
                 "assets/images/concordia.png",
                 fit: BoxFit.cover,
-                color: const Color(0xFF800020).withOpacity(0.45),
+                color: const Color(0xFF76263D).withOpacity(0.45),
                 colorBlendMode: BlendMode.darken,
               ),
             ),
