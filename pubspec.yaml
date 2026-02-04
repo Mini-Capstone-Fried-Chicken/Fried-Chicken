@@ -19,6 +19,8 @@ dependencies:
 
   # Indoor SVG rendering
   flutter_svg: ^2.0.10
+  geolocator: ^14.0.2
+  google_maps_flutter: ^2.14.0
 
 dev_dependencies:
   flutter_test:
