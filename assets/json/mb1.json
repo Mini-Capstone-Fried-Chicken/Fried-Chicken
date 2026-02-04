@@ -8,8 +8,6 @@
   "svgWidth": 1024,
   "svgHeight": 1024,
 
-  "flipHorizontally": true,
-
   "classrooms": [
     { "name": "MB1.350", "x": 181.16, "y": 437.0 },
     { "name": "MB1.345", "x": 181.16, "y": 391.05 },
