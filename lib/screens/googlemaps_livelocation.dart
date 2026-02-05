@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../widgets/campus_toggle.dart';
 
 //concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -158,57 +159,83 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     };
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.sgw ? concordiaSGW : concordiaLoyola;
+@override
+Widget build(BuildContext context) {
+  final LatLng initialTarget =
+      widget.initialCampus == Campus.sgw ? concordiaSGW : concordiaLoyola;
 
-    return Scaffold(
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: initialTarget,
-          zoom: 16,
-        ),
-        myLocationEnabled: false, // Disabled to use custom marker
-        myLocationButtonEnabled: false, // We'll add our own button
-        onMapCreated: (controller) => _mapController = controller,
-        markers: _createMarkers(),
-        circles: _createCircles(),
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // My Location Button
-          FloatingActionButton(
-            heroTag: 'location_button',
-            mini: true,
-            onPressed: () {
-              if (_currentLocation != null) {
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-                );
-              }
-            },
-            child: const Icon(Icons.my_location),
+  return Scaffold(
+    body: Stack(
+      children: [
+        GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: initialTarget,
+            zoom: 16,
           ),
-          const SizedBox(height: 16),
-          // Campus Indicator
-          FloatingActionButton.extended(
-            heroTag: 'campus_button',
-            onPressed: null,
-            icon: const Icon(Icons.school),
-            label: Text(
-              _currentCampus == Campus.sgw
-                  ? 'SGW Campus'
-                  : _currentCampus == Campus.loyola
-                      ? 'Loyola Campus'
-                      : 'Off Campus',
+          myLocationEnabled: false, // Disabled to use custom marker
+          myLocationButtonEnabled: false, // We'll add our own button
+          onMapCreated: (controller) => _mapController = controller,
+          markers: _createMarkers(), 
+          circles: _createCircles(), 
+        ),
+
+        // Toggle Button at bottom
+        Positioned(
+          bottom: 20,  // Distance from bottom
+          left: 20,
+          right: 20,
+          child: Center(
+            // Campus selector overlay 
+            child: CampusToggle(
+              currentCampus: _currentCampus,
+              onCampusChanged: _switchCampus,
             ),
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+    // My Location Button
+    floatingActionButton: FloatingActionButton(
+      heroTag: 'location_button',
+      mini: true,
+      onPressed: () {
+        // Jump back to the user's current position.
+        if (_currentLocation != null) {
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(_currentLocation!, 17),
+          );
+        }
+      },
+      child: const Icon(Icons.my_location),
+    ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
+  );
+}
+
+
+
+void _switchCampus(Campus newCampus) {
+  LatLng targetLocation;
+  
+  switch (newCampus) {
+    case Campus.sgw:
+      targetLocation = concordiaSGW;
+      break;
+    case Campus.loyola:
+      targetLocation = concordiaLoyola;
+      break;
+    case Campus.none:
+      return; // Don't change if none
   }
+  
+  _mapController?.animateCamera(
+    CameraUpdate.newLatLngZoom(targetLocation, 16),
+  );
+  
+  setState(() {
+    _currentCampus = newCampus;
+  });
+}
 
   @override
   void dispose() {
@@ -216,3 +243,4 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     super.dispose();
   }
 }
+
