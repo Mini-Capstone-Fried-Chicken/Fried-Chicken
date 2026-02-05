@@ -1,3 +1,4 @@
+import 'package:campus_app/screens/googlemaps_livelocation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/map_search_bar.dart';
 
@@ -10,18 +11,7 @@ class ExploreScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Blank map area (container for now)
-          Container(
-            color: Colors.grey[300],
-            width: double.infinity,
-            height: double.infinity,
-            child: const Center(
-              child: Text(
-                "Map placeholder",
-                style: TextStyle(fontSize: 18, color: Colors.black54),
-              ),
-            ),
-          ),
+          const OutdoorMapPage(initialCampus: Campus.none),
           // Search bar
           Positioned(
             top: 40, // distance from top
