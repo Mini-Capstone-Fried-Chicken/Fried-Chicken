@@ -2,7 +2,6 @@ import "package:flutter/material.dart";
 
 import "screens/indoor/indoor_page.dart";
 import "screens/login_page.dart";
-import "widgets/main_app.dart";
 
 void main() {
   const bool isLoggedIn = true;
@@ -200,19 +199,6 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
-
-                  // AppButton(
-                  //   text: "Explore Campus Map",
-                  //   onPressed: () {
-                  //     Navigator.push(
-                  //       context,
-                  //       MaterialPageRoute(
-                  //         builder: (_) => MainApp(isLoggedIn: isLoggedIn),
-                  //       ),
-                  //     );
-                  //   },
-                  // ),
                   const SizedBox(height: 12),
 
                   TextButton(
