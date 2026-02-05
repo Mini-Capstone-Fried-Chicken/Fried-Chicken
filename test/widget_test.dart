@@ -14,13 +14,13 @@ void main() {
   testWidgets('Home page displays welcome message', (WidgetTester tester) async {
     await tester.pumpWidget(
       //Arrange - Act
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: HomePage(isLoggedIn: true),
-      ),
-      
+    MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(),
+          child: const HomePage(isLoggedIn: true),
+        ),
+    )
     );
-
     //Assert
     expect(find.text('Welcome to Campus'), findsOneWidget);
     expect(find.text('your go-to map on campus'), findsOneWidget);
