@@ -1,4 +1,4 @@
-import 'package:campus_app/screens/explore_screen.dart';
+import 'package:campus_app/widgets/main_app.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -204,7 +204,7 @@ class _SignInPageState extends State<SignInPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const ExploreScreen(isLoggedIn: true)),
+                              builder: (_) => const MainApp(isLoggedIn: true)),
                         );
                       },
                     ),
