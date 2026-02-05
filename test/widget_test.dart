@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:campus_app/main.dart' show HomePage, AppLogo, AppButton;
+import 'package:campus_app/screens/login_page.dart' show SignInPage, LoginToggle, UserField;
 
 void main() {
   group('Welcome Page Tests', () {
@@ -111,6 +112,148 @@ void main() {
 
       // Assert - Descriptive text is present
       expect(find.text('your go-to map on campus'), findsOneWidget);
+    });
+  });
+
+  group('Login Page Tests', () {
+    testWidgets('Login page displays sign in tab initially', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert
+      expect(find.text('Sign In'), findsWidgets);
+      expect(find.text('Welcome to Campus'), findsOneWidget);
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.text('Password'), findsWidgets);
+
+    });
+
+    testWidgets('Login page toggle switches to sign up mode', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Find and tap the "Sign Up" toggle
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert - Sign Up specific fields are now visible
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Confirm your password'), findsOneWidget);
+    });
+
+    testWidgets('Login page displays all form fields for sign in', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert - Common fields for Sign In
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.text('Password'), findsWidgets);
+      expect(find.byType(UserField), findsWidgets);
+    });
+
+    testWidgets('Login page sign in button is present and labeled correctly', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert
+      expect(find.text('Sign In'), findsWidgets);
+      expect(find.byType(AppButton), findsOneWidget);
+    });
+
+    testWidgets('Login page sign up button is labeled correctly after toggle', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert - Button text changes to "Sign Up"
+      expect(find.text('Sign Up'), findsWidgets);
+    });
+
+    testWidgets('Login page displays logo', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert
+      expect(find.byType(AppLogo), findsOneWidget);
+    });
+
+    testWidgets('Login page has all required UI elements for sign in', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert - All Sign In elements are present
+      expect(find.byType(AppLogo), findsOneWidget);
+      expect(find.byType(LoginToggle), findsOneWidget);
+      expect(find.text('Welcome to Campus'), findsOneWidget);
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.text('Password'), findsWidgets);
+      expect(find.text('Sign In'), findsWidgets);
     });
   });
 }
