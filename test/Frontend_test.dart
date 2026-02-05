@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:campus_app/main.dart' show HomePage, AppLogo, AppButton;
 import 'package:campus_app/screens/login_page.dart' show SignInPage, LoginToggle, UserField;
+import 'package:campus_app/screens/forgot_password_page.dart' show ForgotPassword;
 
 void main() {
   group('Welcome Page Tests', () {
@@ -424,6 +425,208 @@ void main() {
       // Assert - Both password fields should be obscured
       final passwordFields = find.byType(UserField);
       expect(passwordFields, findsNWidgets(4));
+    });
+
+    testWidgets('Login page displays continue as guest button', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert
+      expect(find.text('Continue as a guest'), findsOneWidget);
+    });
+
+    testWidgets('Login page displays forgot password button', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert
+      expect(find.text('Forgot Password?'), findsOneWidget);
+    });
+
+    testWidgets('Continue as guest button is functional', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Assert button exists and is tappable
+      final guestButton = find.text('Continue as a guest');
+      expect(guestButton, findsOneWidget);
+      
+      // Tap it
+      await tester.tap(guestButton);
+      await tester.pumpAndSettle();
+      
+      // Assert - Button can be tapped without error
+      expect(guestButton, findsNothing);
+    });
+  });
+
+  group('Forgot Password Page Tests', () {
+    testWidgets('Forgot password page displays correctly', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Assert
+      expect(find.byType(ForgotPassword), findsOneWidget);
+    });
+
+    testWidgets('Forgot password page displays email input field', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Assert
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.byType(UserField), findsOneWidget);
+    });
+
+    testWidgets('Forgot password page displays send button', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Assert
+      expect(find.text('Send'), findsOneWidget);
+      expect(find.byType(AppButton), findsOneWidget);
+    });
+
+    testWidgets('Forgot password page displays back button', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Assert - Back button is present and tappable
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    });
+
+    testWidgets('Back button on forgot password page returns to login', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Tap back button
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      // Assert - Navigated away from Forgot Password Page
+      expect(find.byType(ForgotPassword), findsNothing);
+    });
+
+    testWidgets('Forgot password page has all required UI elements', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Assert - All required elements are present
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.text('Forgot Password?'), findsOneWidget);
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.byType(UserField), findsOneWidget);
+      expect(find.text('Send'), findsOneWidget);
+      expect(find.byType(AppButton), findsOneWidget);
+    });
+
+    testWidgets('Send button is functional', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: ForgotPassword(),
+        ),
+      );
+
+      // Assert Send button exists
+      expect(find.text('Send'), findsOneWidget);
+
+      // Find email field and enter an email
+      await tester.enterText(find.byType(UserField), 'test@example.com');
+      await tester.pumpAndSettle();
+
+      // Tap Send button
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      // Assert - Navigation occurred (Send button should be gone)
+      expect(find.text('Send'), findsNothing);
     });
   });
 }
