@@ -256,4 +256,174 @@ void main() {
       expect(find.text('Sign In'), findsWidgets);
     });
   });
+
+  group('Sign Up Page Tests', () {
+    testWidgets('Sign up page displays all signup fields', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert - All Sign Up specific fields are visible
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.text('Password'), findsWidgets);
+      expect(find.text('Confirm your password'), findsOneWidget);
+    });
+
+    testWidgets('Sign up page has correct form fields count', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert - 4 UserField widgets for Sign Up (Name, Email, Password, Confirm Password)
+      expect(find.byType(UserField), findsNWidgets(4));
+    });
+
+    testWidgets('Sign up button is present and labeled correctly', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert
+      expect(find.text('Sign Up'), findsWidgets);
+      expect(find.byType(AppButton), findsOneWidget);
+    });
+
+    testWidgets('Sign up page can toggle back to sign in', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert Sign Up fields are visible
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Confirm your password'), findsOneWidget);
+
+      // Toggle back to Sign In
+      await tester.tap(find.text('Sign In').first);
+      await tester.pumpAndSettle();
+
+      // Assert Sign Up specific fields are gone
+      expect(find.text('Name'), findsNothing);
+      expect(find.text('Confirm your password'), findsNothing);
+    });
+
+    testWidgets('Sign up page displays logo', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert
+      expect(find.byType(AppLogo), findsOneWidget);
+    });
+
+    testWidgets('Sign up page has all required UI elements', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert - All Sign Up elements are present
+      expect(find.byType(AppLogo), findsOneWidget);
+      expect(find.byType(LoginToggle), findsOneWidget);
+      expect(find.text('Welcome to Campus'), findsOneWidget);
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.text('Password'), findsWidgets);
+      expect(find.text('Confirm your password'), findsOneWidget);
+      expect(find.text('Sign Up'), findsWidgets);
+    });
+
+    testWidgets('Sign up form has password fields with obscure text enabled', (WidgetTester tester) async {
+      // Set device size to avoid layout overflow
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+      
+      // Arrange & Act
+      await tester.pumpWidget(
+        const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: SignInPage(),
+        ),
+      );
+
+      // Toggle to Sign Up
+      await tester.tap(find.text('Sign Up').first);
+      await tester.pumpAndSettle();
+
+      // Assert - Both password fields should be obscured
+      final passwordFields = find.byType(UserField);
+      expect(passwordFields, findsNWidgets(4));
+    });
+  });
 }
