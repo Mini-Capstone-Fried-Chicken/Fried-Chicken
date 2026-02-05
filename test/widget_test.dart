@@ -16,8 +16,9 @@ void main() {
       //Arrange - Act
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: HomePage(),
+        home: HomePage(isLoggedIn: true),
       ),
+      
     );
 
     //Assert
