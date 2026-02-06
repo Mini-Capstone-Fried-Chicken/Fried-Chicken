@@ -1,19 +1,27 @@
-import 'package:campus_app/screens/explore_screen.dart';
 import 'package:campus_app/widgets/main_app.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
 import 'forgot_password_page.dart';
+
 class UserField extends StatelessWidget {
   final String label;
   final bool obscureText;
   final TextEditingController? controller;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final Iterable<String>? autofillHints;
 
   const UserField({
     super.key,
     required this.label,
     this.obscureText = false,
     this.controller,
+    this.keyboardType,
+    this.textInputAction,
+    this.autofillHints,
   });
 
   @override
@@ -24,6 +32,9 @@ class UserField extends StatelessWidget {
         TextField(
           controller: controller,
           obscureText: obscureText,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          autofillHints: autofillHints,
           decoration: InputDecoration(
             hintText: label,
             contentPadding: const EdgeInsets.symmetric(
@@ -63,7 +74,7 @@ class LoginToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 50, 
+      height: 50,
       margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(50),
@@ -71,16 +82,8 @@ class LoginToggle extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _buildOption(
-            text: "Sign In",
-            isActive: isLogin,
-            onTap: onLoginTap,
-          ),
-          _buildOption(
-            text: "Sign Up",
-            isActive: !isLogin,
-            onTap: onSignupTap,
-          ),
+          _buildOption(text: "Sign In", isActive: isLogin, onTap: onLoginTap),
+          _buildOption(text: "Sign Up", isActive: !isLogin, onTap: onSignupTap),
         ],
       ),
     );
@@ -124,7 +127,160 @@ class SignInPage extends StatefulWidget {
 }
 
 class _SignInPageState extends State<SignInPage> {
-  bool isLogin = true; 
+  bool isLogin = true;
+  bool isLoading = false;
+
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String message, {bool isError = true}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red[600] : Colors.green[600],
+        duration: const Duration(seconds: 3),
+        animation: null,
+      ),
+    );
+  }
+
+  Future<void> _handleAuth() async {
+    final email = emailController.text.trim().toLowerCase();
+    final password = passwordController.text;
+    final name = nameController.text.trim();
+    final confirmPassword = confirmPasswordController.text;
+
+    if (!isLogin && name.isEmpty) {
+      _showMessage("Please enter your name.");
+      return;
+    }
+
+    if (email.isEmpty || !email.contains("@")) {
+      _showMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 3) {
+      _showMessage("Password must be at least 3 characters.");
+      return;
+    }
+
+    if (!isLogin && password != confirmPassword) {
+      _showMessage("Passwords do not match.");
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      final usersRef = FirebaseFirestore.instance.collection("users");
+
+      if (isLogin) {
+        // Query firestore for login creds
+        // TODO: (check with TA if this enough for auth or
+        // if it needs to be encrypted or something)
+        final query = await usersRef
+            .where("email", isEqualTo: email)
+            .where("password", isEqualTo: password)
+            .limit(1)
+            .get()
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                throw Exception(
+                  "Connection timeout. Please check your internet.",
+                );
+              },
+            );
+
+        if (query.docs.isEmpty) {
+          setState(() => isLoading = false);
+          _showMessage("Invalid email or password.");
+          return;
+        }
+
+        // Sign in anonymously for session management
+        await FirebaseAuth.instance.signInAnonymously().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw Exception("Authentication timeout.");
+          },
+        );
+      } else {
+        // Signup: check if email already exists
+        final existing = await usersRef
+            .where("email", isEqualTo: email)
+            .limit(1)
+            .get()
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                throw Exception(
+                  "Connection timeout. Please check your internet.",
+                );
+              },
+            );
+
+        if (existing.docs.isNotEmpty) {
+          setState(() => isLoading = false);
+          _showMessage("That email is already in use.");
+          return;
+        }
+
+        // Create user document in Firestore
+        // TODO: (check with TA if this needs to be encrypted)
+        await usersRef
+            .add({
+              "name": name,
+              "email": email,
+              "password": password,
+              "createdAt": FieldValue.serverTimestamp(),
+            })
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                throw Exception(
+                  "Connection timeout. Please check your internet.",
+                );
+              },
+            );
+
+        // Sign in anonymously for session management
+        await FirebaseAuth.instance.signInAnonymously().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw Exception("Authentication timeout.");
+          },
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainApp(isLoggedIn: true)),
+      );
+    } on Exception catch (e) {
+      _showMessage(e.toString().replaceAll("Exception: ", ""));
+    } catch (e) {
+      _showMessage("Error: ${e.toString()}");
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -168,54 +324,63 @@ class _SignInPageState extends State<SignInPage> {
                     const SizedBox(height: 20),
 
                     if (!isLogin) ...[
-                      const Text(
-                        "Name",
-                        style: TextStyle(fontSize: 15),
-                      ),
+                      const Text("Name", style: TextStyle(fontSize: 15)),
                       const SizedBox(height: 10),
-                      const UserField(label: "Your name"),
+                      UserField(
+                        label: "Your name",
+                        controller: nameController,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.name],
+                      ),
                       const SizedBox(height: 20),
                     ],
 
-                    const Text(
-                      "Email address",
-                      style: TextStyle(fontSize: 15),
-                    ),
+                    const Text("Email address", style: TextStyle(fontSize: 15)),
                     const SizedBox(height: 10),
-                    const UserField(label: "Your email"),
+                    UserField(
+                      label: "Your email",
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.email],
+                    ),
                     const SizedBox(height: 20),
 
-                    const Text(
-                      "Password",
-                      style: TextStyle(fontSize: 15),
-                    ),
+                    const Text("Password", style: TextStyle(fontSize: 15)),
                     const SizedBox(height: 10),
-                    const UserField(label: "Password", obscureText: true),
+                    UserField(
+                      label: "Password",
+                      obscureText: true,
+                      controller: passwordController,
+                      textInputAction: isLogin
+                          ? TextInputAction.done
+                          : TextInputAction.next,
+                      autofillHints: const [AutofillHints.password],
+                    ),
 
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPassword(),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero, 
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          "Forgot Password?",
-                          style: TextStyle(
-                            fontSize: 16,
+                    if (isLogin)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPassword(),
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            "Forgot Password?",
+                            style: TextStyle(fontSize: 16),
                           ),
                         ),
                       ),
-                    ),
 
                     if (!isLogin) ...[
                       const Text(
@@ -223,51 +388,27 @@ class _SignInPageState extends State<SignInPage> {
                         style: TextStyle(fontSize: 15),
                       ),
                       const SizedBox(height: 10),
-                      const UserField(label: "Confirm password", obscureText: true),
+                      UserField(
+                        label: "Confirm password",
+                        obscureText: true,
+                        controller: confirmPasswordController,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                      ),
                       const SizedBox(height: 20),
                     ],
 
                     const SizedBox(height: 50),
 
+                    // TODO: Do we even need guest sign in?
+                    // If so, can just add a button here that skips auth
+                    // and goes to home page
                     AppButton(
                       text: isLogin ? "Sign In" : "Sign Up",
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const MainApp(isLoggedIn: true)),
-                        );
-                      },
+                      onPressed: _handleAuth,
+                      isLoading: isLoading,
+                      enabled: !isLoading,
                     ),
-
-                    const SizedBox(height: 80),
-                    
-                    if (isLogin) ...[
-                      const SizedBox(height: 10), 
-                      Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => MainApp(isLoggedIn: true),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "Continue as a guest",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Color(0xFF76263D),
-                              decoration: TextDecoration.underline,
-                              decorationColor: Color(0xFF76263D),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-    
                   ],
                 ),
               ),
