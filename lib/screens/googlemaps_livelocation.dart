@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../data/building_polygons.dart';
+import '../utils/geo.dart';
 
 //concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -47,7 +49,37 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Campus _currentCampus = Campus.none;
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
+  BuildingPolygon? _currentBuildingPoly;
 
+  BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
+  for (final b in buildingPolygons) {
+    if (pointInPolygon(userLocation, b.points)) return b;
+  }
+  return null;
+}
+
+Set<Polygon> _createBuildingPolygons() {
+  const burgundy = Color(0xFF800020);
+
+  final polys = <Polygon>{};
+
+  for (final b in buildingPolygons) {
+    final isCurrent = _currentBuildingPoly?.code == b.code;
+
+    polys.add(
+      Polygon(
+        polygonId: PolygonId('poly_${b.code}'),
+        points: b.points,
+        strokeWidth: isCurrent ? 3 : 2,
+        strokeColor: isCurrent ? Colors.blue.withOpacity(0.8) : burgundy.withOpacity(0.55),
+        fillColor: isCurrent ? Colors.blue.withOpacity(0.25) : burgundy.withOpacity(0.22),
+        zIndex: isCurrent ? 2 : 1,
+      ),
+    );
+  }
+
+  return polys;
+}
   @override
   void initState() {
     super.initState();
@@ -103,6 +135,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
+        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
       
       // Move camera to current location
@@ -124,6 +157,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
+        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
     });
   }
@@ -174,6 +208,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         onMapCreated: (controller) => _mapController = controller,
         markers: _createMarkers(),
         circles: _createCircles(),
+        polygons: _createBuildingPolygons(),
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
