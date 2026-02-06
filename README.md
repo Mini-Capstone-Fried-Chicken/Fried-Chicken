@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # campus_app
 
 A new Flutter project.
@@ -15,7 +14,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
-=======
 ## How to Get the Front End Running
 1. Make sure you have successfully installed flutter. 
 ```
@@ -29,6 +27,10 @@ flutter run
 ---
 4. Project automatically opens up on the selected web.
 ---
+5. Alternatively, use the following command to run the app:
+```
+flutter run -d chrome --web-port=3827
+```
 
 # Fried-Chicken
 
@@ -54,4 +56,3 @@ flutter run
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Firebase](https://img.shields.io/badge/firebase-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
 
->>>>>>> 4a9ea00f8c37ea7eab5d6eddedb9c37f7b32a237

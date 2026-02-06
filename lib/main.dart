@@ -1,18 +1,20 @@
+import "package:firebase_auth/firebase_auth.dart";
+import "package:firebase_core/firebase_core.dart";
 import "package:flutter/material.dart";
 
+import "firebase_options.dart";
 import "screens/indoor/indoor_page.dart";
 import "screens/login_page.dart";
 import "widgets/main_app.dart";
 
-void main() {
-  const bool isLoggedIn = true;
-  runApp(MyApp(isLoggedIn: isLoggedIn));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
-
-  const MyApp({super.key, required this.isLoggedIn});
+  const MyApp({super.key});
 
   static const Map<String, String> indoorAssetsById = {
     // SVGs
@@ -53,18 +55,31 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Campus Guide",
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF800020)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF76263D)),
         useMaterial3: true,
       ),
-      initialRoute: "/",
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final user = snapshot.data;
+          if (user != null) {
+            return const MainApp(isLoggedIn: true);
+          }
+          return const SignInPage();
+        },
+      ),
       onGenerateRoute: (settings) {
         final name = settings.name ?? "/";
 
         // Home
         if (name == "/") {
-          return MaterialPageRoute(
-            builder: (_) => HomePage(isLoggedIn: isLoggedIn),
-          );
+          return MaterialPageRoute(builder: (_) => const SignInPage());
         }
 
         // Optional legacy route: just opens MB-1
@@ -101,9 +116,7 @@ class MyApp extends StatelessWidget {
 
         // fallback
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(
-            body: Center(child: Text("404")),
-          ),
+          builder: (_) => const Scaffold(body: Center(child: Text("404"))),
         );
       },
     );
@@ -127,11 +140,15 @@ class AppLogo extends StatelessWidget {
 class AppButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
+  final bool isLoading;
+  final bool enabled;
 
   const AppButton({
     super.key,
     required this.text,
     required this.onPressed,
+    this.isLoading = false,
+    this.enabled = true,
   });
 
   @override
@@ -139,13 +156,22 @@ class AppButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: enabled && !isLoading ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF800020),
+          backgroundColor: const Color(0xFF76263D),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 18),
         ),
-        child: Text(text, style: const TextStyle(fontSize: 16)),
+        child: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(text, style: const TextStyle(fontSize: 16)),
       ),
     );
   }
@@ -159,6 +185,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -168,7 +195,7 @@ class HomePage extends StatelessWidget {
               child: Image.asset(
                 "assets/images/concordia.png",
                 fit: BoxFit.cover,
-                color: const Color(0xFF800020).withOpacity(0.45),
+                color: const Color(0xFF76263D).withOpacity(0.45),
                 colorBlendMode: BlendMode.darken,
               ),
             ),
@@ -200,19 +227,6 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
-
-                  // AppButton(
-                  //   text: "Explore Campus Map",
-                  //   onPressed: () {
-                  //     Navigator.push(
-                  //       context,
-                  //       MaterialPageRoute(
-                  //         builder: (_) => MainApp(isLoggedIn: isLoggedIn),
-                  //       ),
-                  //     );
-                  //   },
-                  // ),
                   const SizedBox(height: 12),
 
                   TextButton(
