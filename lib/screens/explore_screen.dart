@@ -12,11 +12,22 @@ class ExploreScreen extends StatelessWidget {
       body: Stack(
         children: [
           const OutdoorMapPage(initialCampus: Campus.none),
+          // App logo
+          Positioned(
+            left: MediaQuery.of(context).size.width / 2 - 30, // center horizontally
+            top: 15, // distance from top
+            child: SizedBox(
+              height: 60, 
+              child: Image.asset('assets/images/logo.png'),
+            ),
+          ),
           // Search bar
           Positioned(
-            top: 40, // distance from top
-            left: 40, // horizontal margin
+
+            top: 65, // distance from top
+            left: 20, // horizontal margin
             right: 20,
+
             child: SizedBox(
               height: 70, 
               child: const MapSearchBar(),
