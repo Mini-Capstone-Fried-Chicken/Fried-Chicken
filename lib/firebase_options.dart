@@ -41,15 +41,17 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCKbY7I3cvhYpIhRBZKGgfCvYgZZmPBv1Y',
-    appId: '1:513179995905:web:2dbe75dd54b07514a45500',
-    messagingSenderId: '513179995905',
-    projectId: 'campus-11a11',
-    authDomain: 'campus-11a11.firebaseapp.com',
-    storageBucket: 'campus-11a11.firebasestorage.app',
-    measurementId: 'G-17BVH5S6LZ',
+    apiKey: 'AIzaSyCGyz5Z6uLqqBDVBJnVUeZ4l23fJ6iXE6s',
+    appId: '1:269147380829:web:18211cd2e4047c764801b4',
+    messagingSenderId: '269147380829',
+    projectId: 'friedchicken-b3a11',
+    authDomain: 'friedchicken-b3a11.firebaseapp.com',
+    storageBucket: 'friedchicken-b3a11.firebasestorage.app',
+    measurementId: 'G-DN83T0H5E9',
   );
 
+  // OLD API KEYS (only web working rn)
+  // TODO: Remove or replace eventually
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCT_le11Nu9HgExLm-FkYc_rb752yqzpNw',
     appId: '1:513179995905:android:0dc4addadb741ef7a45500',
