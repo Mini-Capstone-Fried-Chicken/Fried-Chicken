@@ -65,7 +65,7 @@ class ForgotPassword extends StatelessWidget {
               SizedBox(
               width: 500,
               child: Image.asset(
-                "../assets/images/password.png",
+                "assets/images/password.png",
                 fit: BoxFit.cover,
               ),
             ),
@@ -81,7 +81,7 @@ class ForgotPassword extends StatelessWidget {
                       const Text(
                       "Please write your email to set a new password.",
                       style: TextStyle(fontSize: 15),
-                    ), 
+                    ),
                   ),
                     
                     const SizedBox(height: 60),
