@@ -29,7 +29,7 @@ class ExploreScreen extends StatelessWidget {
 
             child: SizedBox(
               height: 70, 
-              child: const MapSearchBar(),
+              child: MapSearchBar(),
             ),
           ),
         ],
