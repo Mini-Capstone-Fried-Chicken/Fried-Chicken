@@ -264,7 +264,7 @@ Set<Polygon> _createBuildingPolygons() {
 
           
           Positioned(
-            top: 40, // distance from top
+            top: 60, // distance from top
             left: 40, // horizontal margin
             right: 20,
             child: SizedBox(
