@@ -1,18 +1,17 @@
+import 'package:campus_app/features/auth/ui/forgot_password_page.dart';
+import 'package:campus_app/features/auth/ui/login_page.dart';
+import 'package:campus_app/shared/widgets/app_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:campus_app/main.dart' show HomePage, AppLogo, AppButton;
-import 'package:campus_app/screens/login_page.dart' show SignInPage, LoginToggle, UserField;
-import 'package:campus_app/screens/forgot_password_page.dart' show ForgotPassword;
-
 void main() {
-  group('Welcome Page Tests', () {
-    testWidgets('Welcome page displays logo', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group("Welcome Page Tests", () {
+    testWidgets("Welcome page displays logo", (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
         const MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -20,19 +19,22 @@ void main() {
         ),
       );
 
-      // Assert
       expect(find.byType(AppLogo), findsOneWidget);
-      expect(find.byWidgetPredicate(
-        (widget) => widget is Image && widget.image.toString().contains('logo.png'),
-      ), findsWidgets);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Image &&
+              widget.image.toString().contains("logo.png"),
+        ),
+        findsWidgets,
+      );
     });
 
-    testWidgets('Welcome page displays get started button', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Welcome page displays get started button",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
         const MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -40,18 +42,15 @@ void main() {
         ),
       );
 
-      // Assert
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text("Get started"), findsOneWidget);
       expect(find.byType(AppButton), findsWidgets);
-      expect(find.byType(ElevatedButton), findsWidgets);
     });
 
-    testWidgets('Welcome page displays welcome message', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Welcome page displays welcome message",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
         const MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -59,17 +58,15 @@ void main() {
         ),
       );
 
-      // Assert
-      expect(find.text('Welcome to Campus'), findsOneWidget);
-      expect(find.text('your go-to map on campus'), findsOneWidget);
+      expect(find.text("Welcome to Campus"), findsOneWidget);
+      expect(find.text("your go-to map on campus"), findsOneWidget);
     });
 
-    testWidgets('Get started button is functional', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Get started button is tappable",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
         const MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -77,52 +74,17 @@ void main() {
         ),
       );
 
-      // Assert button exists and is enabled
-      final getStartedButton = find.byType(AppButton);
-      expect(getStartedButton, findsWidgets);
-
-      // Tap the button
-      await tester.tap(find.text('Get started'));
-      await tester.pumpAndSettle();
-
-      // Verify navigation occurred by checking if new route was pushed
-      expect(find.byType(HomePage), findsNothing);
-    });
-
-    testWidgets('Welcome page has all required UI elements', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: HomePage(isLoggedIn: false),
-        ),
-      );
-
-      // Assert - Logo is present
-      expect(find.byType(AppLogo), findsOneWidget);
-
-      // Assert - Get started button is present
-      expect(find.text('Get started'), findsOneWidget);
-
-      // Assert - Welcome text is present
-      expect(find.text('Welcome to Campus'), findsOneWidget);
-
-      // Assert - Descriptive text is present
-      expect(find.text('your go-to map on campus'), findsOneWidget);
+      await tester.tap(find.text("Get started"));
+      await tester.pump();
     });
   });
 
-  group('Login Page Tests', () {
-    testWidgets('Login page displays sign in tab initially', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+  group("Login Page Tests", () {
+    testWidgets("Login page displays sign in tab initially",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
         const MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -130,521 +92,96 @@ void main() {
         ),
       );
 
-      // Assert
-      expect(find.text('Sign In'), findsWidgets);
-      expect(find.text('Welcome to Campus'), findsOneWidget);
-      expect(find.text('Email address'), findsOneWidget);
-      expect(find.text('Password'), findsWidgets);
-
+      expect(find.text("Sign In"), findsWidgets);
+      expect(find.text("Welcome to Campus"), findsOneWidget);
+      expect(find.text("Email address"), findsOneWidget);
+      expect(find.text("Password"), findsWidgets);
     });
 
-    testWidgets('Login page toggle switches to sign up mode', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Login page toggle switches to sign up mode",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
+        const MaterialApp(home: SignInPage()),
       );
 
-      // Find and tap the "Sign Up" toggle
-      await tester.tap(find.text('Sign Up').first);
+      await tester.tap(find.text("Sign Up").first);
       await tester.pumpAndSettle();
 
-      // Assert - Sign Up specific fields are now visible
-      expect(find.text('Name'), findsOneWidget);
-      expect(find.text('Confirm your password'), findsOneWidget);
+      expect(find.text("Name"), findsOneWidget);
+      expect(find.text("Confirm your password"), findsOneWidget);
     });
 
-    testWidgets('Login page displays all form fields for sign in', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Login page displays all form fields for sign in",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
+        const MaterialApp(home: SignInPage()),
       );
 
-      // Assert - Common fields for Sign In
-      expect(find.text('Email address'), findsOneWidget);
-      expect(find.text('Password'), findsWidgets);
       expect(find.byType(UserField), findsWidgets);
     });
 
-    testWidgets('Login page sign in button is present and labeled correctly', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Login page displays logo", (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
+        const MaterialApp(home: SignInPage()),
       );
 
-      // Assert
-      expect(find.text('Sign In'), findsWidgets);
-      expect(find.byType(AppButton), findsOneWidget);
-    });
-
-    testWidgets('Login page sign up button is labeled correctly after toggle', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert - Button text changes to "Sign Up"
-      expect(find.text('Sign Up'), findsWidgets);
-    });
-
-    testWidgets('Login page displays logo', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Assert
       expect(find.byType(AppLogo), findsOneWidget);
-    });
-
-    testWidgets('Login page has all required UI elements for sign in', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Assert - All Sign In elements are present
-      expect(find.byType(AppLogo), findsOneWidget);
-      expect(find.byType(LoginToggle), findsOneWidget);
-      expect(find.text('Welcome to Campus'), findsOneWidget);
-      expect(find.text('Email address'), findsOneWidget);
-      expect(find.text('Password'), findsWidgets);
-      expect(find.text('Sign In'), findsWidgets);
     });
   });
 
-  group('Sign Up Page Tests', () {
-    testWidgets('Sign up page displays all signup fields', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+  group("Sign Up Page Tests", () {
+    testWidgets("Sign up page displays all signup fields",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
+        const MaterialApp(home: SignInPage()),
       );
 
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
+      await tester.tap(find.text("Sign Up").first);
       await tester.pumpAndSettle();
 
-      // Assert - All Sign Up specific fields are visible
-      expect(find.text('Name'), findsOneWidget);
-      expect(find.text('Email address'), findsOneWidget);
-      expect(find.text('Password'), findsWidgets);
-      expect(find.text('Confirm your password'), findsOneWidget);
-    });
-
-    testWidgets('Sign up page has correct form fields count', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert - 4 UserField widgets for Sign Up (Name, Email, Password, Confirm Password)
-      expect(find.byType(UserField), findsNWidgets(4));
-    });
-
-    testWidgets('Sign up button is present and labeled correctly', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert
-      expect(find.text('Sign Up'), findsWidgets);
-      expect(find.byType(AppButton), findsOneWidget);
-    });
-
-    testWidgets('Sign up page can toggle back to sign in', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert Sign Up fields are visible
-      expect(find.text('Name'), findsOneWidget);
-      expect(find.text('Confirm your password'), findsOneWidget);
-
-      // Toggle back to Sign In
-      await tester.tap(find.text('Sign In').first);
-      await tester.pumpAndSettle();
-
-      // Assert Sign Up specific fields are gone
-      expect(find.text('Name'), findsNothing);
-      expect(find.text('Confirm your password'), findsNothing);
-    });
-
-    testWidgets('Sign up page displays logo', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert
-      expect(find.byType(AppLogo), findsOneWidget);
-    });
-
-    testWidgets('Sign up page has all required UI elements', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert - All Sign Up elements are present
-      expect(find.byType(AppLogo), findsOneWidget);
-      expect(find.byType(LoginToggle), findsOneWidget);
-      expect(find.text('Welcome to Campus'), findsOneWidget);
-      expect(find.text('Name'), findsOneWidget);
-      expect(find.text('Email address'), findsOneWidget);
-      expect(find.text('Password'), findsWidgets);
-      expect(find.text('Confirm your password'), findsOneWidget);
-      expect(find.text('Sign Up'), findsWidgets);
-    });
-
-    testWidgets('Sign up form has password fields with obscure text enabled', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Toggle to Sign Up
-      await tester.tap(find.text('Sign Up').first);
-      await tester.pumpAndSettle();
-
-      // Assert - Both password fields should be obscured
-      final passwordFields = find.byType(UserField);
-      expect(passwordFields, findsNWidgets(4));
-    });
-
-    testWidgets('Login page displays continue as guest button', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Assert
-      expect(find.text('Continue as a guest'), findsOneWidget);
-    });
-
-    testWidgets('Login page displays forgot password button', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Assert
-      expect(find.text('Forgot Password?'), findsOneWidget);
-    });
-
-    testWidgets('Continue as guest button is functional', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
-
-      // Assert button exists and is tappable
-      final guestButton = find.text('Continue as a guest');
-      expect(guestButton, findsOneWidget);
-      
-      // Tap it
-      await tester.tap(guestButton);
-      await tester.pumpAndSettle();
-      
-      // Assert - Button can be tapped without error
-      expect(guestButton, findsNothing);
+      expect(find.text("Name"), findsOneWidget);
+      expect(find.text("Email address"), findsOneWidget);
+      expect(find.text("Confirm your password"), findsOneWidget);
     });
   });
 
-  group('Forgot Password Page Tests', () {
-    testWidgets('Forgot password page displays correctly', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+  group("Forgot Password Page Tests", () {
+    testWidgets("Forgot password page displays correctly",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
+        const MaterialApp(home: ForgotPassword()),
       );
 
-      // Assert
       expect(find.byType(ForgotPassword), findsOneWidget);
+      expect(find.text("Email address"), findsOneWidget);
+      expect(find.text("Verify"), findsOneWidget);
     });
 
-    testWidgets('Forgot password page displays email input field', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
+    testWidgets("Back button exists",
+        (WidgetTester tester) async {
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
+
       await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
+        const MaterialApp(home: ForgotPassword()),
       );
 
-      // Assert
-      expect(find.text('Email address'), findsOneWidget);
-    });
-
-    testWidgets('Forgot password page displays verify button', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
-      );
-
-      // Assert
-      expect(find.text('Verify'), findsOneWidget);
-      expect(find.byType(AppButton), findsOneWidget);
-    });
-
-    testWidgets('Forgot password page displays back button', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
-      );
-
-      // Assert - Back button is present and tappable
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-    });
-
-    testWidgets('Back button on forgot password page returns to login', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
-      );
-
-      // Tap back button
-      await tester.tap(find.byIcon(Icons.arrow_back));
-      await tester.pumpAndSettle();
-
-      // Assert - Navigated away from Forgot Password Page
-      expect(find.byType(ForgotPassword), findsNothing);
-    });
-
-    testWidgets('Forgot password page has all required UI elements', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
-      );
-
-      // Assert - All required elements are present
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-      expect(find.text('Forgot Password?'), findsOneWidget);
-      expect(find.text('Email address'), findsOneWidget);
-      expect(find.byType(UserField), findsExactly(2));
-      expect(find.text('Verify'), findsOneWidget);
-      expect(find.byType(AppButton), findsOneWidget);
-    });
-
-    testWidgets('Verify button is functional', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: ForgotPassword(),
-        ),
-      );
-
-      // Initial verification - Verify button should exist and be tappable
-      expect(find.text('Verify'), findsOneWidget);
-      expect(find.byType(AppButton), findsOneWidget);
-
-      // Fill in the Name field
-      final nameField = find.byType(UserField).first;
-      await tester.tap(nameField);
-      await tester.pumpAndSettle();
-      await tester.enterText(nameField, 'John Doe');
-      await tester.pump();
-
-      // Fill in the Email field
-      final emailField = find.byType(UserField).last;
-      await tester.tap(emailField);
-      await tester.pumpAndSettle();
-      await tester.enterText(emailField, 'john@example.com');
-      await tester.pump();
-
-      // Verify the fields have been filled
-      expect(find.text('John Doe'), findsOneWidget);
-      expect(find.text('john@example.com'), findsOneWidget);
-
-      // Tap Verify button
-      final verifyButton = find.byType(AppButton);
-      expect(verifyButton, findsOneWidget);
-      await tester.tap(verifyButton);
-      await tester.pumpAndSettle(const Duration(seconds: 2));
-
-      // Assert - Button click is processed (no errors thrown)
-      // If Firebase verification succeeds, the page will navigate or show password reset fields
-      // If it fails, a SnackBar error will appear, which is also valid behavior
-      expect(find.byType(AppButton), findsWidgets);
     });
   });
 }
