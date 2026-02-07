@@ -35,7 +35,7 @@ flutter run -d chrome --web-port=3827
 # Fried-Chicken
 
 ## Contributors
-| Name                    | ID        | Role    | GitHub Username     
+| Name                    | ID        | Role    | GitHub Username
 |-------------------------|-----------|---------|------------|
 | Botao Yang     | 40213554  | Front-end | [@cherryaki1](https://github.com/cherryaki1) |
 | Nguyen-My-Linh Tang     | 40229505  | Front-end | [@mylinhtang](https://github.com/mylinhtang) |
