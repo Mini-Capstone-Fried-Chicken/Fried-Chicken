@@ -427,25 +427,22 @@ void main() {
       expect(passwordFields, findsNWidgets(4));
     });
 
-/*
-    testWidgets('Login page displays continue as guest button', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
+    // testWidgets('Login page displays continue as guest button', (WidgetTester tester) async {
+    //   // Set device size to avoid layout overflow
+    //   addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+    //   tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+    //   
+    //   // Arrange & Act
+    //   await tester.pumpWidget(
+    //     const MaterialApp(
+    //       debugShowCheckedModeBanner: false,
+    //       home: SignInPage(),
+    //     ),
+    //   );
 
-      // Assert
-      expect(find.text('Continue as a guest'), findsOneWidget);
-    });
-    */
-
+    //   // Assert
+    //   expect(find.text('Continue as a guest'), findsOneWidget);
+    // });
     testWidgets('Login page displays forgot password button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
@@ -463,32 +460,32 @@ void main() {
       expect(find.text('Forgot Password?'), findsOneWidget);
     });
 
-/*    testWidgets('Continue as guest button is functional', (WidgetTester tester) async {
-      // Set device size to avoid layout overflow
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
-      
-      // Arrange & Act
-      await tester.pumpWidget(
-        const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: SignInPage(),
-        ),
-      );
+    // testWidgets('Continue as guest button is functional', (WidgetTester tester) async {
+    //   // Set device size to avoid layout overflow
+    //   addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+    //   tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
+    //   
+    //   // Arrange & Act
+    //   await tester.pumpWidget(
+    //     const MaterialApp(
+    //       debugShowCheckedModeBanner: false,
+    //       home: SignInPage(),
+    //     ),
+    //   );
 
-      // Assert button exists and is tappable
-      final guestButton = find.text('Continue as a guest');
-      expect(guestButton, findsOneWidget);
-      
-      // Tap it
-      await tester.tap(guestButton);
-      await tester.pumpAndSettle();
-      
-      // Assert - Button can be tapped without error
-      expect(guestButton, findsNothing);
-    });
+    //   // Assert button exists and is tappable
+    //   final guestButton = find.text('Continue as a guest');
+    //   expect(guestButton, findsOneWidget);
+    //   
+    //   // Tap it
+    //   await tester.tap(guestButton);
+    //   await tester.pumpAndSettle();
+    //   
+    //   // Assert - Button can be tapped without error
+    //   expect(guestButton, findsNothing);
+    // });
   });
-*/
+
   group('Forgot Password Page Tests', () {
     testWidgets('Forgot password page displays correctly', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
