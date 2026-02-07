@@ -281,10 +281,51 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               ),
             ),
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+    // My Location Button
+    floatingActionButton: FloatingActionButton(
+      heroTag: 'location_button',
+      mini: true,
+      onPressed: () {
+        // Jump back to the user's current position.
+        if (_currentLocation != null) {
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(_currentLocation!, 17),
+          );
+        }
+      },
+      child: const Icon(Icons.my_location),
+    ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
+  );
+}
+
+
+
+void _switchCampus(Campus newCampus) {
+  LatLng targetLocation;
+  
+  switch (newCampus) {
+    case Campus.sgw:
+      targetLocation = concordiaSGW;
+      break;
+    case Campus.loyola:
+      targetLocation = concordiaLoyola;
+      break;
+    case Campus.none:
+      return; // Don't change if none
   }
+  
+  _mapController?.animateCamera(
+    CameraUpdate.newLatLngZoom(targetLocation, 16),
+  );
+  
+  setState(() {
+    _currentCampus = newCampus;
+  });
+}
 
   void switchCampus(Campus newCampus) {
     LatLng targetLocation;
