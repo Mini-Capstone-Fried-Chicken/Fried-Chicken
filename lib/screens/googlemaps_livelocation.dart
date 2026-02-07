@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../data/building_polygons.dart';
+import '../utils/geo.dart';
 import '../widgets/campus_toggle.dart';
 import '../widgets/map_search_bar.dart';
 
@@ -49,7 +51,37 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
+  BuildingPolygon? _currentBuildingPoly;
 
+  BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
+  for (final b in buildingPolygons) {
+    if (pointInPolygon(userLocation, b.points)) return b;
+  }
+  return null;
+}
+
+Set<Polygon> _createBuildingPolygons() {
+  const burgundy = Color(0xFF800020);
+
+  final polys = <Polygon>{};
+
+  for (final b in buildingPolygons) {
+    final isCurrent = _currentBuildingPoly?.code == b.code;
+
+    polys.add(
+      Polygon(
+        polygonId: PolygonId('poly_${b.code}'),
+        points: b.points,
+        strokeWidth: isCurrent ? 3 : 2,
+        strokeColor: isCurrent ? Colors.blue.withOpacity(0.8) : burgundy.withOpacity(0.55),
+        fillColor: isCurrent ? Colors.blue.withOpacity(0.25) : burgundy.withOpacity(0.22),
+        zIndex: isCurrent ? 2 : 1,
+      ),
+    );
+  }
+
+  return polys;
+}
   // _currentCampus = what GPS detects right now (can become Campus.none if you leave the zone)
   Campus _currentCampus = Campus.none;
 
@@ -116,12 +148,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
-
-        // If GPS says u're inside SGW/Loyola we auto-sync the toggle to that campus
-        
-        if (_currentCampus != Campus.none) {
-          _selectedCampus = _currentCampus; // lock selection when we are in campus
-        }
+        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
 
       // Move camera to current location
@@ -144,11 +171,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
-
-      
-        if (_currentCampus != Campus.none) {
-          _selectedCampus = _currentCampus; 
-        }
+        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
     });
   }
@@ -183,7 +206,30 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     };
   }
 
-  @override
+  void _switchCampus(Campus newCampus) {
+    LatLng targetLocation;
+
+    switch (newCampus) {
+      case Campus.sgw:
+        targetLocation = concordiaSGW;
+        break;
+      case Campus.loyola:
+        targetLocation = concordiaLoyola;
+        break;
+      case Campus.none:
+        return; // Don't change if none
+    }
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(targetLocation, 16),
+    );
+
+    setState(() {
+      _selectedCampus = newCampus;
+    });
+  }
+  
+@override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
@@ -212,6 +258,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             onMapCreated: (controller) => _mapController = controller,
             markers: _createMarkers(),
             circles: _createCircles(),
+	          polygons: _createBuildingPolygons(),
+
           ),
 
           
@@ -276,7 +324,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 width: 800,
                 child: CampusToggle(
                   currentCampus: _selectedCampus,
-                  onCampusChanged: switchCampus,
+                  onCampusChanged: _switchCampus,
                 ),
               ),
             ),
@@ -284,30 +332,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         ],
       ),
     );
-  }
-
-  void switchCampus(Campus newCampus) {
-    LatLng targetLocation;
-
-
-    switch (newCampus) {
-      case Campus.sgw:
-        targetLocation = concordiaSGW;
-        break;
-      case Campus.loyola:
-        targetLocation = concordiaLoyola;
-        break;
-      case Campus.none:
-        return; // Don't change if none
-    }
-
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(targetLocation, 16),
-    );
-
-    setState(() {
-      _selectedCampus = newCampus;
-    });
   }
 
   @override
