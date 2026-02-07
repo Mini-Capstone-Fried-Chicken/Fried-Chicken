@@ -35,7 +35,15 @@ jobs:
         uses: sonarsource/sonarcloud-github-action@v2
         with:
           args: >
-            -Dsonar.dart.file.suffixes=
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.organization=mini-capstone-fried-chicken
+            -Dsonar.projectKey=Mini-Capstone-Fried-Chicken_Fried-Chicken
+            -Dsonar.sources=lib
+            -Dsonar.tests=test
+            -Dsonar.dart.coverage.reportPaths=coverage/lcov.info
+            -Dsonar.coverage.exclusions=**/*.g.dart,**/*.pb.dart,**/*.freezed.dart,**/*.config.dart
+            -Dsonar.sourceEncoding=UTF-8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
