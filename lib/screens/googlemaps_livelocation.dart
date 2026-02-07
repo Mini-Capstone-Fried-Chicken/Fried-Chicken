@@ -266,7 +266,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           ),
 
           // Toggle Button 
-         
           Positioned(
             bottom: 20, // Distance from bottom
             left: 0,
