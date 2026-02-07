@@ -192,82 +192,50 @@ Set<Polygon> _createBuildingPolygons() {
       ),
     };
   }
+  
+@override
+Widget build(BuildContext context) {
+  final LatLng initialTarget =
+      widget.initialCampus == Campus.sgw ? concordiaSGW : concordiaLoyola;
 
-  @override
-  Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.sgw ? concordiaSGW : concordiaLoyola;
-
-    return Scaffold(
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: initialTarget,
-          zoom: 16,
-        ),
-        myLocationEnabled: false, // Disabled to use custom marker
-        myLocationButtonEnabled: false, // We'll add our own button
-        onMapCreated: (controller) => _mapController = controller,
-        markers: _createMarkers(),
-        circles: _createCircles(),
-        polygons: _createBuildingPolygons(),
+  return Scaffold(
+    body: GoogleMap(
+      initialCameraPosition: CameraPosition(
+        target: initialTarget,
+        zoom: 16,
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // My Location Button
-          FloatingActionButton(
-            heroTag: 'location_button',
-            mini: true,
-            onPressed: () {
-              if (_currentLocation != null) {
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-                );
-              }
-            },
-            child: const Icon(Icons.my_location),
-          ),
-          myLocationEnabled: false, // Disabled to use custom marker
-          myLocationButtonEnabled: false, // We'll add our own button
-          onMapCreated: (controller) => _mapController = controller,
-          markers: _createMarkers(), 
-          circles: _createCircles(), 
+      myLocationEnabled: false,
+      myLocationButtonEnabled: false,
+      onMapCreated: (controller) => _mapController = controller,
+      markers: _createMarkers(),
+      circles: _createCircles(),
+      polygons: _createBuildingPolygons(),
+    ),
+    floatingActionButton: Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        FloatingActionButton(
+          heroTag: 'location_button',
+          mini: true,
+          onPressed: () {
+            if (_currentLocation != null) {
+              _mapController?.animateCamera(
+                CameraUpdate.newLatLngZoom(_currentLocation!, 17),
+              );
+            }
+          },
+          child: const Icon(Icons.my_location),
         ),
-
-        // Toggle Button at bottom
-        Positioned(
-          bottom: 20,  // Distance from bottom
-          left: 20,
-          right: 20,
-          child: Center(
-            // Campus selector overlay 
-            child: CampusToggle(
-              currentCampus: _currentCampus,
-              onCampusChanged: _switchCampus,
-            ),
-          ),
+        SizedBox(height: 16),
+        CampusToggle(
+          currentCampus: _currentCampus,
+          onCampusChanged: _switchCampus,
         ),
       ],
-    ),
-    // My Location Button
-    floatingActionButton: FloatingActionButton(
-      heroTag: 'location_button',
-      mini: true,
-      onPressed: () {
-        // Jump back to the user's current position.
-        if (_currentLocation != null) {
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-          );
-        }
-      },
-      child: const Icon(Icons.my_location),
     ),
     floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
   );
 }
-
-
 
 void _switchCampus(Campus newCampus) {
   LatLng targetLocation;
