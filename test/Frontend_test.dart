@@ -520,10 +520,9 @@ void main() {
 
       // Assert
       expect(find.text('Email address'), findsOneWidget);
-      expect(find.byType(UserField), findsOneWidget);
     });
 
-    testWidgets('Forgot password page displays send button', (WidgetTester tester) async {
+    testWidgets('Forgot password page displays verify button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
@@ -537,7 +536,7 @@ void main() {
       );
 
       // Assert
-      expect(find.text('Send'), findsOneWidget);
+      expect(find.text('Verify'), findsOneWidget);
       expect(find.byType(AppButton), findsOneWidget);
     });
 
@@ -596,12 +595,12 @@ void main() {
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
       expect(find.text('Forgot Password?'), findsOneWidget);
       expect(find.text('Email address'), findsOneWidget);
-      expect(find.byType(UserField), findsOneWidget);
-      expect(find.text('Send'), findsOneWidget);
+      expect(find.byType(UserField), findsExactly(2));
+      expect(find.text('Verify'), findsOneWidget);
       expect(find.byType(AppButton), findsOneWidget);
     });
 
-    testWidgets('Send button is functional', (WidgetTester tester) async {
+    testWidgets('Verify button is functional', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
@@ -614,19 +613,23 @@ void main() {
         ),
       );
 
-      // Assert Send button exists
-      expect(find.text('Send'), findsOneWidget);
+      // Assert Verify button exists
+      expect(find.text('Verify'), findsOneWidget);
+
+      // Find name field and enter a name
+      await tester.enterText(find.byType(UserField).first, 'testname');
+      await tester.pumpAndSettle();
 
       // Find email field and enter an email
-      await tester.enterText(find.byType(UserField), 'test@example.com');
+      await tester.enterText(find.byType(UserField).last, 'test@example.com');
       await tester.pumpAndSettle();
 
-      // Tap Send button
-      await tester.tap(find.text('Send'));
+      // Tap Verify button
+      await tester.tap(find.text('Verify'));
       await tester.pumpAndSettle();
 
-      // Assert - Navigation occurred (Send button should be gone)
-      expect(find.text('Send'), findsNothing);
+      // Assert - Navigation occurred (Verify button should be gone)
+      expect(find.text('Verify'), findsNothing);
     });
   });
 }
