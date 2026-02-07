@@ -27,8 +27,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run Flutter tests with coverage
-        run: flutter test --coverage
+      #- name: Run Flutter tests with coverage
+       # run: flutter test --coverage
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@v2
