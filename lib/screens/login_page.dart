@@ -382,6 +382,8 @@ class _SignInPageState extends State<SignInPage> {
                         ),
                       ),
 
+                    const SizedBox(height: 20),
+
                     if (!isLogin) ...[
                       const Text(
                         "Confirm your password",
@@ -398,7 +400,7 @@ class _SignInPageState extends State<SignInPage> {
                       const SizedBox(height: 20),
                     ],
 
-                    const SizedBox(height: 50),
+                    const SizedBox(height: 30),
 
                     // TODO: Do we even need guest sign in?
                     // If so, can just add a button here that skips auth
@@ -409,6 +411,34 @@ class _SignInPageState extends State<SignInPage> {
                       isLoading: isLoading,
                       enabled: !isLoading,
                     ),
+
+                    const SizedBox(height: 10),
+
+                    if (isLogin) ...[
+                      const SizedBox(height: 10), 
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MainApp(isLoggedIn: true),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Continue as a guest",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Color(0xFF76263D),
+                              decoration: TextDecoration.underline,
+                              decorationColor: Color(0xFF76263D),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
