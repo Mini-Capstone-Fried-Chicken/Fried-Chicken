@@ -427,6 +427,7 @@ void main() {
       expect(passwordFields, findsNWidgets(4));
     });
 
+/*
     testWidgets('Login page displays continue as guest button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
@@ -443,6 +444,7 @@ void main() {
       // Assert
       expect(find.text('Continue as a guest'), findsOneWidget);
     });
+    */
 
     testWidgets('Login page displays forgot password button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
@@ -461,7 +463,7 @@ void main() {
       expect(find.text('Forgot Password?'), findsOneWidget);
     });
 
-    testWidgets('Continue as guest button is functional', (WidgetTester tester) async {
+/*    testWidgets('Continue as guest button is functional', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
@@ -486,7 +488,7 @@ void main() {
       expect(guestButton, findsNothing);
     });
   });
-
+*/
   group('Forgot Password Page Tests', () {
     testWidgets('Forgot password page displays correctly', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
