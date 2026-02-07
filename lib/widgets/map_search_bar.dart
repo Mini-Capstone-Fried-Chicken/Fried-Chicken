@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 
-
 const Color burgundy = Color(0xFF76263D); 
 
 class MapSearchBar extends StatelessWidget {
-  const MapSearchBar({super.key});
+  final String campusLabel;
+
+  const MapSearchBar({
+    super.key,
+    this.campusLabel = '',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final String hint =
+        campusLabel.trim().isEmpty ? "Search" : "Search Concordia $campusLabel";
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Material(
@@ -17,12 +24,12 @@ class MapSearchBar extends StatelessWidget {
         child: TextField(
           enabled: true,
           style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: "Search Concordia SGW",
-            hintStyle: TextStyle(color: Colors.white70),
-            prefixIcon: Icon(Icons.search, color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white70),
+            prefixIcon: const Icon(Icons.search, color: Colors.white),
             border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
       ),

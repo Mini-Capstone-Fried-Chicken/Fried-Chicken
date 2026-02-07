@@ -1,6 +1,5 @@
 import 'package:campus_app/screens/googlemaps_livelocation.dart';
 import 'package:flutter/material.dart';
-import '../widgets/map_search_bar.dart';
 
 class ExploreScreen extends StatelessWidget {
   final bool isLoggedIn;
