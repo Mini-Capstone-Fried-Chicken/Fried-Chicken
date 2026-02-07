@@ -157,6 +157,15 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
+  void _continueAsGuest() {
+    if (!mounted) return;
+    // Guest flow: skip auth and open the app
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AppShell(isLoggedIn: false)),
+    );
+  }
+
   Future<void> _handleAuth() async {
     final email = emailController.text.trim().toLowerCase();
     final password = passwordController.text;
@@ -383,6 +392,17 @@ class _SignInPageState extends State<SignInPage> {
                       isLoading: isLoading,
                       enabled: !isLoading,
                     ),
+
+                    
+                    if (!isLogin) ...[
+                      const SizedBox(height: 12),
+                      Center(
+                        child: TextButton(
+                          onPressed: isLoading ? null : _continueAsGuest,
+                          child: const Text("Continue as a guest"),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
