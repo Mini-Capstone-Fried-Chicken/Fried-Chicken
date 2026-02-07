@@ -205,6 +205,29 @@ Set<Polygon> _createBuildingPolygons() {
       ),
     };
   }
+
+  void _switchCampus(Campus newCampus) {
+    LatLng targetLocation;
+
+    switch (newCampus) {
+      case Campus.sgw:
+        targetLocation = concordiaSGW;
+        break;
+      case Campus.loyola:
+        targetLocation = concordiaLoyola;
+        break;
+      case Campus.none:
+        return; // Don't change if none
+    }
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(targetLocation, 16),
+    );
+
+    setState(() {
+      _selectedCampus = newCampus;
+    });
+  }
   
 @override
   Widget build(BuildContext context) {
@@ -301,7 +324,7 @@ Set<Polygon> _createBuildingPolygons() {
                 width: 800,
                 child: CampusToggle(
                   currentCampus: _selectedCampus,
-                  onCampusChanged: switchCampus,
+                  onCampusChanged: _switchCampus,
                 ),
               ),
             ),
@@ -309,45 +332,6 @@ Set<Polygon> _createBuildingPolygons() {
         ],
       ),
     );
-  }
-
-void _switchCampus(Campus newCampus) {
-  LatLng targetLocation;
-  
-  switch (newCampus) {
-    case Campus.sgw:
-      targetLocation = concordiaSGW;
-      break;
-    case Campus.loyola:
-      targetLocation = concordiaLoyola;
-      break;
-    case Campus.none:
-      return; // Don't change if none
-
-  
-
-  void switchCampus(Campus newCampus) {
-    LatLng targetLocation;
-
-
-    switch (newCampus) {
-      case Campus.sgw:
-        targetLocation = concordiaSGW;
-        break;
-      case Campus.loyola:
-        targetLocation = concordiaLoyola;
-        break;
-      case Campus.none:
-        return; // Don't change if none
-    }
-
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(targetLocation, 16),
-    );
-
-    setState(() {
-      _selectedCampus = newCampus;
-    });
   }
 
   @override
