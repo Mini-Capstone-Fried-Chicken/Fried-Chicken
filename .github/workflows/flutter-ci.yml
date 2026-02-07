@@ -37,7 +37,7 @@ jobs:
           args: >
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
             -Dsonar.organization=your-org
-            -Dsonar.projectKey=Mini-Capstone-Fried-Chicken
+            -Dsonar.projectKey=Mini-Capstone-Fried-Chicken_Fried-Chicken
             -Dsonar.sources=lib
             -Dsonar.tests=test
             -Dsonar.language=dart
