@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/location/googlemaps_livelocation.dart';
-import '../../../shared/widgets/map_search_bar.dart';  
+
 
 class ExploreScreen extends StatelessWidget {
   final bool isLoggedIn;
@@ -22,18 +22,7 @@ class ExploreScreen extends StatelessWidget {
               child: Image.asset('assets/images/logo.png'),
             ),
           ),
-          // Search bar
-          Positioned(
-
-            top: 65, // distance from top
-            left: 20, // horizontal margin
-            right: 20,
-
-            child: SizedBox(
-              height: 70, 
-              child: MapSearchBar(),
-            ),
-          ),
+          
         ],
       ),
     );

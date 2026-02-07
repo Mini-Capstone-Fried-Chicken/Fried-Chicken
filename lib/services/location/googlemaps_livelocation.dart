@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../shared/widgets/map_search_bar.dart';
 
 import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
@@ -236,14 +237,14 @@ Set<Polygon> _createBuildingPolygons() {
 
     //for the search bar text
   
-    final Campus effectiveCampus =
-        _currentCampus != Campus.none ? _currentCampus : _selectedCampus;
+  final Campus labelCampus =
+    _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
 
-    
-    // ''  the search bar will just show "Search"
-    final String campusLabel = effectiveCampus == Campus.none
-        ? ''
-        : (effectiveCampus == Campus.loyola ? 'Loyola' : 'SGW');
+final String campusLabel = labelCampus == Campus.sgw
+    ? 'SGW'
+    : labelCampus == Campus.loyola
+        ? 'Loyola'
+        : '';
 
     return Scaffold(
       body: Stack(
@@ -263,15 +264,16 @@ Set<Polygon> _createBuildingPolygons() {
           ),
 
           
-          // Positioned(
-          //   top: 40, // distance from top
-          //   left: 40, // horizontal margin
-          //   right: 20,
-          //   child: SizedBox(
-          //     height: 70,
-          //     child: MapSearchBar(campusLabel: campusLabel),
-          //   ),
-          // ),
+         Positioned(
+  top: 65,
+  left: 20,
+  right: 20,
+  child: SizedBox(
+    height: 70,
+    child: MapSearchBar(campusLabel: campusLabel),
+  ),
+),
+
 
           // My Location + Campus Indicator
           Positioned(
