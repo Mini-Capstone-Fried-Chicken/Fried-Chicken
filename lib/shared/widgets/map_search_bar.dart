@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-const Color burgundy = Color(0xFF76263D); 
+const Color burgundy = Color(0xFF76263D);
 
 class MapSearchBar extends StatelessWidget {
   final String campusLabel;
+  final TextEditingController? controller;
 
   const MapSearchBar({
     super.key,
     this.campusLabel = '',
+    this.controller,
   });
 
   @override
@@ -22,6 +24,7 @@ class MapSearchBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         color: burgundy,
         child: TextField(
+          controller: controller,
           enabled: true,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
