@@ -236,14 +236,14 @@ Set<Polygon> _createBuildingPolygons() {
 
     //for the search bar text
   
-    final Campus effectiveCampus =
-        _currentCampus != Campus.none ? _currentCampus : _selectedCampus;
+  final Campus labelCampus =
+    _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
 
-    
-    // ''  the search bar will just show "Search"
-    final String campusLabel = effectiveCampus == Campus.none
-        ? ''
-        : (effectiveCampus == Campus.loyola ? 'Loyola' : 'SGW');
+final String campusLabel = labelCampus == Campus.sgw
+    ? 'SGW'
+    : labelCampus == Campus.loyola
+        ? 'Loyola'
+        : '';
 
     return Scaffold(
       body: Stack(

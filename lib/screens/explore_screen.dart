@@ -22,18 +22,7 @@ class ExploreScreen extends StatelessWidget {
               child: Image.asset('assets/images/logo.png'),
             ),
           ),
-          // Search bar
-          Positioned(
-
-            top: 65, // distance from top
-            left: 20, // horizontal margin
-            right: 20,
-
-            child: SizedBox(
-              height: 70, 
-              child: MapSearchBar(),
-            ),
-          ),
+          
         ],
       ),
     );
