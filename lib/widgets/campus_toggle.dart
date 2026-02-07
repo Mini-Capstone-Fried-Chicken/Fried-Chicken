@@ -17,7 +17,7 @@ class CampusToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Outer pill container (background + border).
+    // Outer pill container (background + border)
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: Container(
@@ -57,8 +57,7 @@ class CampusToggle extends StatelessWidget {
     );
   }
 
-  /// Builds one clickable segment inside the pill.
-  /// When selected, it becomes a filled maroon pill; otherwise it stays transparent.
+  
   Widget _buildSegment({
     required Campus campus,
     required String label,
