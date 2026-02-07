@@ -1,6 +1,5 @@
 import 'package:campus_app/screens/googlemaps_livelocation.dart';
 import 'package:flutter/material.dart';
-import '../widgets/map_search_bar.dart';
 
 class ExploreScreen extends StatelessWidget {
   final bool isLoggedIn;
@@ -12,16 +11,6 @@ class ExploreScreen extends StatelessWidget {
       body: Stack(
         children: [
           const OutdoorMapPage(initialCampus: Campus.none),
-          // Search bar
-          Positioned(
-            top: 40, // distance from top
-            left: 40, // horizontal margin
-            right: 20,
-            child: SizedBox(
-              height: 70, 
-              child: const MapSearchBar(),
-            ),
-          ),
         ],
       ),
     );
