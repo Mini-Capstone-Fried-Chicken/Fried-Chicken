@@ -36,12 +36,14 @@ jobs:
         with:
           args: >
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-            -Dsonar.organization=your-org
+            -Dsonar.organization=mini-capstone-fried-chicken
             -Dsonar.projectKey=Mini-Capstone-Fried-Chicken_Fried-Chicken
             -Dsonar.sources=lib
             -Dsonar.tests=test
             -Dsonar.language=dart
             -Dsonar.coverageReportPaths=coverage/lcov.info
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.coverage.exclusions=**/*.g.dart,**/*.pb.dart,**/*.freezed.dart,**/*.config.dart
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
