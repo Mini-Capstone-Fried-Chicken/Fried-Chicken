@@ -5,6 +5,7 @@ import '../data/building_polygons.dart';
 import '../utils/geo.dart';
 import '../widgets/campus_toggle.dart';
 import '../widgets/map_search_bar.dart';
+import '../services/building_detection.dart';
 
 //concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -52,13 +53,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
-
-  BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
-  for (final b in buildingPolygons) {
-    if (pointInPolygon(userLocation, b.points)) return b;
-  }
-  return null;
-}
 
 Set<Polygon> _createBuildingPolygons() {
   const burgundy = Color(0xFF800020);
@@ -148,7 +142,7 @@ Set<Polygon> _createBuildingPolygons() {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
+        _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
 
       // Move camera to current location
@@ -171,7 +165,7 @@ Set<Polygon> _createBuildingPolygons() {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
+        _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
     });
   }
