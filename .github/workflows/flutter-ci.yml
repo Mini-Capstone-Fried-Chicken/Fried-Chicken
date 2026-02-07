@@ -27,17 +27,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run Flutter tests
-        run: flutter test
+      - name: Run Flutter tests with coverage
+        run: flutter test --coverage
 
       - name: Upload coverage reports to Codecov
-        if: always()
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run Flutter tests with coverage
-        run: flutter test --coverage
+          files: coverage/lcov.info
+          fail_ci_if_error: true
 
       - name: SonarCloud Scan
         if: always()
