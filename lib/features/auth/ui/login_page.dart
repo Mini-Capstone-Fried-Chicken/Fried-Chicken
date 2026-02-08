@@ -59,9 +59,6 @@ class UserField extends StatelessWidget {
   }
 }
 
-// ----------------------
-// Login/Signup toggle
-// ----------------------
 class LoginToggle extends StatelessWidget {
   final bool isLogin;
   final VoidCallback onLoginTap;
@@ -119,9 +116,6 @@ class LoginToggle extends StatelessWidget {
   }
 }
 
-// ----------------------
-// Main SignInPage
-// ----------------------
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
 
@@ -157,6 +151,14 @@ class _SignInPageState extends State<SignInPage> {
         duration: const Duration(seconds: 3),
         animation: null,
       ),
+    );
+  }
+
+  void _continueAsGuest() {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AppShell(isLoggedIn: false)),
     );
   }
 
@@ -389,6 +391,21 @@ class _SignInPageState extends State<SignInPage> {
                       isLoading: isLoading,
                       enabled: !isLoading,
                     ),
+                    if (isLogin) ...[
+                      const SizedBox(height: 12),
+                      Center(
+                        child: TextButton(
+                          onPressed: isLoading ? null : _continueAsGuest,
+                          child: const Text(
+                            "Continue as a guest",
+                            style: TextStyle(
+                              decoration: TextDecoration.underline,
+                              decorationColor: Color(0xFF76263D),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

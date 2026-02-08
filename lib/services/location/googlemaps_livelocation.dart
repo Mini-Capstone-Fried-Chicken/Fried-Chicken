@@ -2,10 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../shared/widgets/map_search_bar.dart';
 
 import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../utils/geo.dart';
+import '../../shared/widgets/building_info_popup.dart';
+import '../../shared/widgets/learn_more_popup.dart';
+import '../../features/indoor/data/building_info.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 // Concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -48,6 +53,10 @@ class OutdoorMapPage extends StatefulWidget {
 }
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _cameraMoving = false;
+  bool _showLearnMore = false;
+
   GoogleMapController? _mapController;
   StreamSubscription<Position>? _positionSubscription; // fix for e2e test
   bool _mapReady = false; // Flag to check if map is created
@@ -55,6 +64,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
+  BuildingPolygon? _selectedBuildingPoly;
 
   // Detect which building polygon the user is inside
   BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
@@ -95,7 +105,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // _currentCampus = what GPS detects right now (can become Campus.none if you leave the zone)
   Campus _currentCampus = Campus.none;
 
-  // _selectedCampus = what the user picked in the toggle (we keep it even if GPS goes off-campus)
+  Campus _currentCampus = Campus.none;
   Campus _selectedCampus = Campus.none;
 
   @override
@@ -109,49 +119,32 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _startLocationUpdates(); // Start GPS tracking
   }
 
-  // Create a custom blue dot icon
   Future<void> _createBlueDotIcon() async {
     _blueDotIcon = await BitmapDescriptor.fromAssetImage(
       const ImageConfiguration(size: Size(48, 48)),
-      'assets/blue_dot.png', // You can use default marker as fallback
+      'assets/blue_dot.png',
     ).catchError((_) {
-      // Fallback to default blue marker if custom icon fails
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     });
 
-    // If the above fails, just use the default blue marker
-    if (_blueDotIcon == null) {
-      _blueDotIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueAzure,
-      );
-    }
+    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueAzure,
+    );
   }
 
   // Start tracking the user's location
   Future<void> _startLocationUpdates() async {
-    // Check if location services are enabled
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      print('Location services are disabled.');
-      return;
-    }
+    if (!serviceEnabled) return;
 
-    // Check permission status
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        print('Location permissions are denied');
-        return;
-      }
+      if (permission == LocationPermission.denied) return;
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      print('Location permissions are permanently denied');
-      return;
-    }
+    if (permission == LocationPermission.deniedForever) return;
 
-    // Get initial position
     try {
       final position = await Geolocator.getCurrentPosition();
       final newLatLng = LatLng(position.latitude, position.longitude);
@@ -177,7 +170,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best,
-        distanceFilter: 5, // Update every 5 meters
+        distanceFilter: 5,
       ),
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
@@ -215,7 +208,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       Circle(
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
-        radius: 20, // Accuracy circle in meters
+        radius: 20,
         fillColor: Colors.blue.withOpacity(0.1),
         strokeColor: Colors.blue.withOpacity(0.3),
         strokeWidth: 1,
@@ -235,7 +228,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         targetLocation = concordiaLoyola;
         break;
       case Campus.none:
-        return; // Don't change if none
+        return;
     }
 
     // Only animate camera if map is ready
@@ -247,6 +240,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     setState(() {
       _selectedCampus = newCampus;
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _showLearnMore = false;
     });
   }
 
@@ -295,7 +292,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
           // My Location + Campus Indicator
           Positioned(
-            bottom: 70,
+            top: 65,
             left: 20,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -313,32 +310,67 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                   },
                   child: const Icon(Icons.my_location),
                 ),
-                const SizedBox(height: 10),
-
-                // Simple label showing if GPS currently detects SGW/Loyola or none (Off Campus)
-                FloatingActionButton.extended(
-                  heroTag: 'campus_button',
-                  onPressed: null,
-                  icon: const Icon(Icons.school),
-                  label: Text(
-                    _currentCampus == Campus.sgw
-                        ? 'SGW Campus'
-                        : _currentCampus == Campus.loyola
-                            ? 'Loyola Campus'
-                            : 'Off Campus',
-                  ),
-                ),
-              ],
+              ),
             ),
+
+          if (_showLearnMore && _selectedBuildingPoly != null)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: bottomPad + 180,
+              child: PointerInterceptor(
+                child: LearnMorePopup(
+                  onClose: _closeLearnMore,
+                  purposeText: 'No purpose available.',
+                  facilitiesText: 'No facilities available.',
+                ),
+              ),
+            ),
+
+         Positioned(
+  bottom: 70,
+  left: 20,
+  child: PointerInterceptor(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton(
+          heroTag: 'location_button',
+          mini: true,
+          onPressed: () {
+            final loc = _currentLocation;
+            if (loc == null) return;
+            _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(loc, 17),
+            );
+          },
+          child: const Icon(Icons.my_location),
+        ),
+        const SizedBox(height: 10),
+        FloatingActionButton.extended(
+          heroTag: 'campus_button',
+          onPressed: _goToMyLocation,
+          icon: const Icon(Icons.school),
+          label: Text(
+            _currentCampus == Campus.sgw
+                ? 'SGW Campus'
+                : _currentCampus == Campus.loyola
+                    ? 'Loyola Campus'
+                    : 'Off Campus',
           ),
+        ),
+      ],
+    ),
+  ),
+),
+
 
           // Toggle Button
           Positioned(
-            bottom: 20, // Distance from bottom
+            bottom: 20,
             left: 0,
             right: 0,
             child: Center(
-              // Campus selector overlay
               child: SizedBox(
                 width: 800,
                 child: CampusToggle(
@@ -357,6 +389,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   void dispose() {
     _positionSubscription?.cancel(); // cancel subscription to prevent memory leaks (fix for e2e test)
     _mapController?.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 }
