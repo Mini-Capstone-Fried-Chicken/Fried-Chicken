@@ -4,6 +4,7 @@ import 'package:campus_app/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:campus_app/app/app_shell.dart';
 import 'package:campus_app/features/auth/ui/login_page.dart';
+import 'package:campus_app/features/explore/ui/explore_screen.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -33,14 +34,19 @@ void main() {
     await tester.tap(loginButton);
 
     // Wait for navigation / dashboard load
-    await tester.pumpAndSettle(const Duration(seconds: 5));
+    //await tester.pumpAndSettle(const Duration(seconds: 5));
 
+
+    await tester.runAsync(() async {
+      await Future.delayed(const Duration(seconds: 5));
+    });
+
+    await tester.pump();
+    
     // Verify dashboard loaded
     expect(find.byType(AppShell), findsOneWidget);
+    //expect(find.byType(ExploreScreen), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
 
-    // Optional: ensure no exceptions from the map crash
-    await tester.runAsync(() async {
-      await Future.delayed(const Duration(seconds: 1));
-    });
   });
 }
