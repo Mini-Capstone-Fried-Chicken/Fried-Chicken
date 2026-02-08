@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../shared/widgets/map_search_bar.dart';
-
+import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../utils/geo.dart';
@@ -217,13 +217,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-  BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
-    for (final b in buildingPolygons) {
-      if (pointInPolygon(userLocation, b.points)) return b;
-    }
-    return null;
-  }
-
   Set<Polygon> _createBuildingPolygons() {
     const burgundy = Color(0xFF800020);
     const selectedBlue = Color(0xFF7F83C3);
@@ -312,7 +305,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
+        _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
 
       _mapController?.animateCamera(
@@ -332,7 +325,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
+        _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
     });
   }
