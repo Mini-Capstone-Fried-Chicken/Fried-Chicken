@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -6,14 +7,14 @@ import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../utils/geo.dart';
 
-//concordia campus coordinates
+// Concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 
 enum Campus { sgw, loyola, none }
 
-//knowing which campus the user is in 
+// Knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -48,40 +49,49 @@ class OutdoorMapPage extends StatefulWidget {
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   GoogleMapController? _mapController;
+  StreamSubscription<Position>? _positionSubscription; // fix for e2e test
+  bool _mapReady = false; // Flag to check if map is created
 
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
 
+  // Detect which building polygon the user is inside
   BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
-  for (final b in buildingPolygons) {
-    if (pointInPolygon(userLocation, b.points)) return b;
-  }
-  return null;
-}
-
-Set<Polygon> _createBuildingPolygons() {
-  const burgundy = Color(0xFF800020);
-
-  final polys = <Polygon>{};
-
-  for (final b in buildingPolygons) {
-    final isCurrent = _currentBuildingPoly?.code == b.code;
-
-    polys.add(
-      Polygon(
-        polygonId: PolygonId('poly_${b.code}'),
-        points: b.points,
-        strokeWidth: isCurrent ? 3 : 2,
-        strokeColor: isCurrent ? Colors.blue.withOpacity(0.8) : burgundy.withOpacity(0.55),
-        fillColor: isCurrent ? Colors.blue.withOpacity(0.25) : burgundy.withOpacity(0.22),
-        zIndex: isCurrent ? 2 : 1,
-      ),
-    );
+    for (final b in buildingPolygons) {
+      if (pointInPolygon(userLocation, b.points)) return b;
+    }
+    return null;
   }
 
-  return polys;
-}
+  // Create polygons for all buildings, highlighting the current one
+  Set<Polygon> _createBuildingPolygons() {
+    const burgundy = Color(0xFF800020);
+
+    final polys = <Polygon>{};
+
+    for (final b in buildingPolygons) {
+      final isCurrent = _currentBuildingPoly?.code == b.code;
+
+      polys.add(
+        Polygon(
+          polygonId: PolygonId('poly_${b.code}'),
+          points: b.points,
+          strokeWidth: isCurrent ? 3 : 2,
+          strokeColor: isCurrent
+              ? Colors.blue.withOpacity(0.8)
+              : burgundy.withOpacity(0.55),
+          fillColor: isCurrent
+              ? Colors.blue.withOpacity(0.25)
+              : burgundy.withOpacity(0.22),
+          zIndex: isCurrent ? 2 : 1,
+        ),
+      );
+    }
+
+    return polys;
+  }
+
   // _currentCampus = what GPS detects right now (can become Campus.none if you leave the zone)
   Campus _currentCampus = Campus.none;
 
@@ -92,11 +102,11 @@ Set<Polygon> _createBuildingPolygons() {
   void initState() {
     super.initState();
 
-    // Start the toggle on the campus passed to the page 
+    // Start the toggle on the campus passed to the page
     _selectedCampus = widget.initialCampus;
 
-    _createBlueDotIcon();
-    _startLocationUpdates();
+    _createBlueDotIcon(); // Create a custom blue dot icon for user location
+    _startLocationUpdates(); // Start GPS tracking
   }
 
   // Create a custom blue dot icon
@@ -117,6 +127,7 @@ Set<Polygon> _createBuildingPolygons() {
     }
   }
 
+  // Start tracking the user's location
   Future<void> _startLocationUpdates() async {
     // Check if location services are enabled
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -145,22 +156,25 @@ Set<Polygon> _createBuildingPolygons() {
       final position = await Geolocator.getCurrentPosition();
       final newLatLng = LatLng(position.latitude, position.longitude);
 
+      if (!mounted) return; // fix for the e2e test to display the map
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
         _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
 
-      // Move camera to current location
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLng(newLatLng),
-      );
+      // Move camera to current location if map controller is ready
+      if (_mapReady && _mapController != null) {
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(newLatLng),
+        );
+      }
     } catch (e) {
       print('Error getting initial position: $e');
     }
 
     // Listen to location updates
-    Geolocator.getPositionStream(
+    _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best,
         distanceFilter: 5, // Update every 5 meters
@@ -168,6 +182,7 @@ Set<Polygon> _createBuildingPolygons() {
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
 
+      if (!mounted) return; // fix for the e2e test to display the map
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
@@ -176,6 +191,7 @@ Set<Polygon> _createBuildingPolygons() {
     });
   }
 
+  // Create marker for user's current location
   Set<Marker> _createMarkers() {
     if (_currentLocation == null) return {};
 
@@ -191,6 +207,7 @@ Set<Polygon> _createBuildingPolygons() {
     };
   }
 
+  // Create accuracy circle around user's location
   Set<Circle> _createCircles() {
     if (_currentLocation == null) return {};
 
@@ -206,6 +223,7 @@ Set<Polygon> _createBuildingPolygons() {
     };
   }
 
+  // Switch campus when user uses the toggle
   void _switchCampus(Campus newCampus) {
     LatLng targetLocation;
 
@@ -220,27 +238,28 @@ Set<Polygon> _createBuildingPolygons() {
         return; // Don't change if none
     }
 
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(targetLocation, 16),
-    );
+    // Only animate camera if map is ready
+    if (_currentLocation != null && _mapReady && _mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(_currentLocation!, 17),
+      );
+    }
 
     setState(() {
       _selectedCampus = newCampus;
     });
   }
-  
-@override
+
+  @override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
-    //for the search bar text
-  
+    // For the search bar text
     final Campus effectiveCampus =
         _currentCampus != Campus.none ? _currentCampus : _selectedCampus;
 
-    
-    // ''  the search bar will just show "Search"
+    // '' the search bar will just show "Search"
     final String campusLabel = effectiveCampus == Campus.none
         ? ''
         : (effectiveCampus == Campus.loyola ? 'Loyola' : 'SGW');
@@ -255,14 +274,15 @@ Set<Polygon> _createBuildingPolygons() {
             ),
             myLocationEnabled: false, // Disabled to use custom marker
             myLocationButtonEnabled: false, // We'll add our own button
-            onMapCreated: (controller) => _mapController = controller,
+            onMapCreated: (controller) {
+              _mapController = controller;
+              _mapReady = true; // Map is ready to animate camera safely
+            },
             markers: _createMarkers(),
             circles: _createCircles(),
-	          polygons: _createBuildingPolygons(),
-
+            polygons: _createBuildingPolygons(),
           ),
 
-          
           // Positioned(
           //   top: 40, // distance from top
           //   left: 40, // horizontal margin
@@ -285,8 +305,7 @@ Set<Polygon> _createBuildingPolygons() {
                   heroTag: 'location_button',
                   mini: true,
                   onPressed: () {
-                    // Jump back to the user's current position.
-                    if (_currentLocation != null) {
+                    if (_currentLocation != null && _mapReady && _mapController != null) {
                       _mapController?.animateCamera(
                         CameraUpdate.newLatLngZoom(_currentLocation!, 17),
                       );
@@ -313,7 +332,7 @@ Set<Polygon> _createBuildingPolygons() {
             ),
           ),
 
-          // Toggle Button 
+          // Toggle Button
           Positioned(
             bottom: 20, // Distance from bottom
             left: 0,
@@ -336,6 +355,7 @@ Set<Polygon> _createBuildingPolygons() {
 
   @override
   void dispose() {
+    _positionSubscription?.cancel(); // cancel subscription to prevent memory leaks (fix for e2e test)
     _mapController?.dispose();
     super.dispose();
   }
