@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../services/location/googlemaps_livelocation.dart';
+import 'package:campus_app/services/location/googlemaps_livelocation.dart';
+import 'package:campus_app/shared/widgets/map_search_bar.dart';
 
+export 'package:campus_app/services/location/googlemaps_livelocation.dart' show Campus, OutdoorMapPage;  
 
 class ExploreScreen extends StatelessWidget {
   final bool isLoggedIn;
