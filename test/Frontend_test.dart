@@ -443,7 +443,6 @@ void main() {
       // Assert
       expect(find.text('Continue as a guest'), findsOneWidget);
     });
-
     testWidgets('Login page displays forgot password button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
