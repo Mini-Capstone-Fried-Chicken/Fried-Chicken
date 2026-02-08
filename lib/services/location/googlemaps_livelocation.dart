@@ -17,9 +17,12 @@ const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 
+// Padding used for popups at bottom of screen
+const double bottomPad = 20;
+
 enum Campus { sgw, loyola, none }
 
-//knowing which campus the user is in
+// knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -66,6 +69,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
 
+  // Needed for popup positioning (were missing before)
+  LatLng? _selectedBuildingCenter;
+  Offset? _anchorOffset;
+
   // Detect which building polygon the user is inside
   BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
     for (final b in buildingPolygons) {
@@ -103,8 +110,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   // _currentCampus = what GPS detects right now (can become Campus.none if you leave the zone)
-  Campus _currentCampus = Campus.none;
-
   Campus _currentCampus = Campus.none;
   Campus _selectedCampus = Campus.none;
 
@@ -163,7 +168,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         );
       }
     } catch (e) {
-      print('Error getting initial position: $e');
+      debugPrint('Error getting initial position: $e');
     }
 
     // Listen to location updates
@@ -175,7 +180,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
 
-      if (!mounted) return; // fix for the e2e test to display the map
+      if (!mounted) return;
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
@@ -218,20 +223,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   // Switch campus when user uses the toggle
   void _switchCampus(Campus newCampus) {
-    LatLng targetLocation;
-
-    switch (newCampus) {
-      case Campus.sgw:
-        targetLocation = concordiaSGW;
-        break;
-      case Campus.loyola:
-        targetLocation = concordiaLoyola;
-        break;
-      case Campus.none:
-        return;
-    }
-
-    // Only animate camera if map is ready
     if (_currentLocation != null && _mapReady && _mapController != null) {
       _mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(_currentLocation!, 17),
@@ -247,19 +238,26 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
+  // Close the "Learn More" popup
+  void _closeLearnMore() {
+    setState(() {
+      _showLearnMore = false;
+    });
+  }
+
+  // Recenter camera on user's current GPS location
+  void _goToMyLocation() {
+    if (_currentLocation != null && _mapReady && _mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(_currentLocation!, 17),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
-
-    // For the search bar text
-    final Campus effectiveCampus =
-        _currentCampus != Campus.none ? _currentCampus : _selectedCampus;
-
-    // '' the search bar will just show "Search"
-    final String campusLabel = effectiveCampus == Campus.none
-        ? ''
-        : (effectiveCampus == Campus.loyola ? 'Loyola' : 'SGW');
 
     return Scaffold(
       body: Stack(
@@ -269,50 +267,30 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               target: initialTarget,
               zoom: 16,
             ),
-            myLocationEnabled: false, // Disabled to use custom marker
-            myLocationButtonEnabled: false, // We'll add our own button
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
             onMapCreated: (controller) {
               _mapController = controller;
-              _mapReady = true; // Map is ready to animate camera safely
+              _mapReady = true;
             },
             markers: _createMarkers(),
             circles: _createCircles(),
             polygons: _createBuildingPolygons(),
           ),
 
-          // Positioned(
-          //   top: 40, // distance from top
-          //   left: 40, // horizontal margin
-          //   right: 20,
-          //   child: SizedBox(
-          //     height: 70,
-          //     child: MapSearchBar(campusLabel: campusLabel),
-          //   ),
-          // ),
-
-          // My Location + Campus Indicator
+          // My Location button (top-left)
           Positioned(
             top: 65,
             left: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Button that recenters the camera on the user's current GPS location
-                FloatingActionButton(
-                  heroTag: 'location_button',
-                  mini: true,
-                  onPressed: () {
-                    if (_currentLocation != null && _mapReady && _mapController != null) {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-                      );
-                    }
-                  },
-                  child: const Icon(Icons.my_location),
-                ),
-              ),
+            child: FloatingActionButton(
+              heroTag: 'location_button_top',
+              mini: true,
+              onPressed: _goToMyLocation,
+              child: const Icon(Icons.my_location),
             ),
+          ),
 
+          // Learn more popup
           if (_showLearnMore && _selectedBuildingPoly != null)
             Positioned(
               left: 20,
@@ -326,44 +304,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 ),
               ),
             ),
-
-         Positioned(
-  bottom: 70,
-  left: 20,
-  child: PointerInterceptor(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton(
-          heroTag: 'location_button',
-          mini: true,
-          onPressed: () {
-            final loc = _currentLocation;
-            if (loc == null) return;
-            _mapController?.animateCamera(
-              CameraUpdate.newLatLngZoom(loc, 17),
-            );
-          },
-          child: const Icon(Icons.my_location),
-        ),
-        const SizedBox(height: 10),
-        FloatingActionButton.extended(
-          heroTag: 'campus_button',
-          onPressed: _goToMyLocation,
-          icon: const Icon(Icons.school),
-          label: Text(
-            _currentCampus == Campus.sgw
-                ? 'SGW Campus'
-                : _currentCampus == Campus.loyola
-                    ? 'Loyola Campus'
-                    : 'Off Campus',
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
 
           // Toggle Button
           Positioned(
@@ -387,7 +327,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   @override
   void dispose() {
-    _positionSubscription?.cancel(); // cancel subscription to prevent memory leaks (fix for e2e test)
+    _positionSubscription?.cancel();
     _mapController?.dispose();
     _searchController.dispose();
     super.dispose();
