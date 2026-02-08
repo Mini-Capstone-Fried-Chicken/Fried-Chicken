@@ -128,7 +128,7 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
-  final String INTERNET_ERROR_MESSAGE = "Connection timeout. Please check your internet.";
+  final String internet_error_message = "Connection timeout. Please check your internet.";
 
 
   @override
@@ -200,7 +200,7 @@ class _SignInPageState extends State<SignInPage> {
               const Duration(seconds: 10),
               onTimeout: () {
                 throw Exception(
-                  INTERNET_ERROR_MESSAGE,
+                  internet_error_message,
                 );
               },
             );
@@ -226,7 +226,7 @@ class _SignInPageState extends State<SignInPage> {
               const Duration(seconds: 10),
               onTimeout: () {
                 throw Exception(
-                  INTERNET_ERROR_MESSAGE,
+                  internet_error_message,
                 );
               },
             );
@@ -248,7 +248,7 @@ class _SignInPageState extends State<SignInPage> {
               const Duration(seconds: 10),
               onTimeout: () {
                 throw Exception(
-                  INTERNET_ERROR_MESSAGE,
+                  internet_error_message,
                 );
               },
             );
