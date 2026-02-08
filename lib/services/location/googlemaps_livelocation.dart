@@ -14,7 +14,7 @@ const double campusRadius = 500; // meters
 
 enum Campus { sgw, loyola, none }
 
-// Knowing which campus the user is in
+//knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
