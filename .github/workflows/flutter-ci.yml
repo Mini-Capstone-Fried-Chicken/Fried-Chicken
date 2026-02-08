@@ -30,6 +30,10 @@ jobs:
       - name: Run Flutter tests with coverage
         run: flutter test --coverage
 
+      - name: Fix coverage paths (convert backslashes to forward slashes)
+        run: |
+          sed -i 's/\\/\//g' coverage/lcov.info
+
       - name: SonarCloud Scan
         if: always()
         uses: SonarSource/sonarcloud-github-action@master
