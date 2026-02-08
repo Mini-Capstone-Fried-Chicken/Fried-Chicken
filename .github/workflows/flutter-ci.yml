@@ -34,6 +34,14 @@ jobs:
         run: |
           sed -i 's/\\/\//g' coverage/lcov.info
 
+      - name: Upload coverage reports to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          fail_ci_if_error: true
+
       - name: SonarCloud Scan
         if: always()
         uses: SonarSource/sonarcloud-github-action@master
