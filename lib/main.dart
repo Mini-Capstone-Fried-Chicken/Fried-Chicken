@@ -132,8 +132,6 @@ class AppLogo extends StatelessWidget {
       width: 200,
       height: 200, 
       "assets/images/logo.png",
-      width: 180,
-      height: 180,
       fit: BoxFit.contain,
     );
   }
