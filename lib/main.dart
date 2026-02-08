@@ -183,10 +183,11 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key, required this.isLoggedIn});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.white,
+    body: SafeArea(
+      child: SingleChildScrollView(
         child: Column(
           children: <Widget>[
             SizedBox(
@@ -240,6 +241,7 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
