@@ -67,6 +67,28 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   StreamSubscription<Position>? _posSub;
 
+  Future<void> _goToMyLocation() async {
+  final controller = _mapController;
+  if (controller == null) return;
+
+  var loc = _currentLocation;
+
+  if (loc == null) {
+    try {
+      final p = await Geolocator.getCurrentPosition();
+      loc = LatLng(p.latitude, p.longitude);
+      if (mounted) setState(() => _currentLocation = loc);
+    } catch (_) {
+      return;
+    }
+  }
+
+  controller.animateCamera(
+    CameraUpdate.newLatLngZoom(loc, 17),
+  );
+}
+
+
   // Popup size (used for positioning math)
   static const double _popupW = 260;
   static const double _popupH = 230;
@@ -494,40 +516,43 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               ),
             ),
 
-          Positioned(
-            bottom: 70,
-            left: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton(
-                  heroTag: 'location_button',
-                  mini: true,
-                  onPressed: () {
-                    if (_currentLocation != null) {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-                      );
-                    }
-                  },
-                  child: const Icon(Icons.my_location),
-                ),
-                const SizedBox(height: 10),
-                FloatingActionButton.extended(
-                  heroTag: 'campus_button',
-                  onPressed: null,
-                  icon: const Icon(Icons.school),
-                  label: Text(
-                    _currentCampus == Campus.sgw
-                        ? 'SGW Campus'
-                        : _currentCampus == Campus.loyola
-                            ? 'Loyola Campus'
-                            : 'Off Campus',
-                  ),
-                ),
-              ],
-            ),
+         Positioned(
+  bottom: 70,
+  left: 20,
+  child: PointerInterceptor(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton(
+          heroTag: 'location_button',
+          mini: true,
+          onPressed: () {
+            final loc = _currentLocation;
+            if (loc == null) return;
+            _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(loc, 17),
+            );
+          },
+          child: const Icon(Icons.my_location),
+        ),
+        const SizedBox(height: 10),
+        FloatingActionButton.extended(
+          heroTag: 'campus_button',
+          onPressed: _goToMyLocation,
+          icon: const Icon(Icons.school),
+          label: Text(
+            _currentCampus == Campus.sgw
+                ? 'SGW Campus'
+                : _currentCampus == Campus.loyola
+                    ? 'Loyola Campus'
+                    : 'Off Campus',
           ),
+        ),
+      ],
+    ),
+  ),
+),
+
 
           Positioned(
             bottom: 20,
