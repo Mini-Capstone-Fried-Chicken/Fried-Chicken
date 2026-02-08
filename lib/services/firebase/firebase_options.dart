@@ -51,7 +51,6 @@ class DefaultFirebaseOptions {
   );
 
   // OLD API KEYS (only web working rn)
-  // TODO: Remove or replace eventually
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCT_le11Nu9HgExLm-FkYc_rb752yqzpNw',
     appId: '1:513179995905:android:0dc4addadb741ef7a45500',
