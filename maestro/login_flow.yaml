@@ -1,0 +1,27 @@
+appId: com.example.campus_app
+---
+- launchApp
+
+- assertVisible:
+    id: "login_email"
+
+- assertVisible:
+    id: "login_password"
+
+- assertVisible:
+    id: "login_button"
+
+- tapOn:
+    id: "login_email"
+- inputText: "hiba.tal05@gmail.com"
+
+- tapOn:
+    id: "login_password"
+- inputText: "123"
+
+- tapOn:
+    id: "login_button"
+
+# dashboard / app shell visible
+- assertVisible:
+    text: "Dashboard"
