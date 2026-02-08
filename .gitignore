@@ -1,42 +1,99 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+####################################
+# OS / Editor / General
+####################################
 .DS_Store
+Thumbs.db
+*.swp
+*.log
+*.class
+*.pyc
+
 .atom/
-.build/
-.buildlog/
-.history
+.history/
 .svn/
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+####################################
+# IDEs
+####################################
+# IntelliJ / Android Studio
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code (keep settings.json if your team wants)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+####################################
+# Dart / Flutter
+####################################
 .dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
+.packages
 .pub/
-/build/
-/coverage/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+build/
+**/doc/api/
 
-# Symbolication related
+####################################
+# Android
+####################################
+android/.gradle/
+android/local.properties
+android/**/build/
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+####################################
+# iOS
+####################################
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Flutter-Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+
+####################################
+# macOS
+####################################
+macos/Pods/
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Flutter/ephemeral/
+*.xcworkspace
+*.xcuserstate
+*.xcuserdata/
+
+####################################
+# Web
+####################################
+web/.dart_tool/
+web/build/
+web/flutter_service_worker.js
+web/flutter.js
+web/assets/
+web/index.html
+
+####################################
+# Linux / Windows
+####################################
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+../flutter/generated_plugin_registrant.cc
+../flutter/generated_plugin_registrant.h
+../flutter/generated_plugins.cmake
+
+####################################
+# Symbolication / Obfuscation
+####################################
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
 # Android Studio will place build artifacts here
@@ -46,3 +103,7 @@ app.*.map.json
 
 # Node.js dependencies
 node_modules/
+####################################
+# Debug helpers
+####################################
+flutter_lldb_helper.py
