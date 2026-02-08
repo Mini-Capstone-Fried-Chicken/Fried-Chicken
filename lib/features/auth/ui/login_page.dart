@@ -13,7 +13,6 @@ class UserField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
-
   const UserField({
     super.key,
     required this.label,
@@ -129,6 +128,8 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
+  final String INTERNET_ERROR_MESSAGE = "Connection timeout. Please check your internet.";
+
 
   @override
   void dispose() {
@@ -199,7 +200,7 @@ class _SignInPageState extends State<SignInPage> {
               const Duration(seconds: 10),
               onTimeout: () {
                 throw Exception(
-                  "Connection timeout. Please check your internet.",
+                  INTERNET_ERROR_MESSAGE,
                 );
               },
             );
@@ -225,7 +226,7 @@ class _SignInPageState extends State<SignInPage> {
               const Duration(seconds: 10),
               onTimeout: () {
                 throw Exception(
-                  "Connection timeout. Please check your internet.",
+                  INTERNET_ERROR_MESSAGE,
                 );
               },
             );
@@ -247,7 +248,7 @@ class _SignInPageState extends State<SignInPage> {
               const Duration(seconds: 10),
               onTimeout: () {
                 throw Exception(
-                  "Connection timeout. Please check your internet.",
+                  INTERNET_ERROR_MESSAGE,
                 );
               },
             );
