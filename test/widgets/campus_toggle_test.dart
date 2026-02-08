@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:campus_app/shared/widgets/campus_toggle.dart';
-import 'package:campus_app/services/location/googlemaps_livelocation.dart';
-import 'package:campus_app/features/indoor/data/building_info.dart';
+import 'package:campus_app/widgets/campus_toggle.dart';
+import 'package:campus_app/screens/googlemaps_livelocation.dart';
+import 'package:campus_app/data/building_info.dart';
 
 void main() {
   group('Campus Toggle Tests', () {
