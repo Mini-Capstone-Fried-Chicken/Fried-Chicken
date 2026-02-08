@@ -1,19 +1,26 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../shared/widgets/map_search_bar.dart';
 
 import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../utils/geo.dart';
+import '../../shared/widgets/building_info_popup.dart';
+import '../../shared/widgets/learn_more_popup.dart';
+import '../../features/indoor/data/building_info.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-//concordia campus coordinates
+// concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 
 enum Campus { sgw, loyola, none }
 
-//knowing which campus the user is in 
+// knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -47,127 +54,281 @@ class OutdoorMapPage extends StatefulWidget {
 }
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _cameraMoving = false;
+  bool _showLearnMore = false;
+
   GoogleMapController? _mapController;
 
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
+  BuildingPolygon? _selectedBuildingPoly;
+
+  StreamSubscription<Position>? _posSub;
+
+  Future<void> _goToMyLocation() async {
+  final controller = _mapController;
+  if (controller == null) return;
+
+  var loc = _currentLocation;
+
+  if (loc == null) {
+    try {
+      final p = await Geolocator.getCurrentPosition();
+      loc = LatLng(p.latitude, p.longitude);
+      if (mounted) setState(() => _currentLocation = loc);
+    } catch (_) {
+      return;
+    }
+  }
+
+  controller.animateCamera(
+    CameraUpdate.newLatLngZoom(loc, 17),
+  );
+}
+
+
+  // Popup size (used for positioning math)
+  static const double _popupW = 260;
+  static const double _popupH = 230;
+
+  // Popup anchor: building center (lat/lng) + its screen position
+  LatLng? _selectedBuildingCenter;
+  Offset? _anchorOffset; // logical px on screen
+  Timer? _popupDebounce;
+
+  // Polygon centroid (so the popup points to the middle of the building)
+  LatLng _polygonCenter(List<LatLng> pts) {
+    if (pts.length < 3) return pts.first;
+
+    double area = 0;
+    double cx = 0;
+    double cy = 0;
+
+    for (int i = 0; i < pts.length; i++) {
+      final p1 = pts[i];
+      final p2 = pts[(i + 1) % pts.length];
+
+      final x1 = p1.longitude;
+      final y1 = p1.latitude;
+      final x2 = p2.longitude;
+      final y2 = p2.latitude;
+
+      final cross = x1 * y2 - x2 * y1;
+      area += cross;
+      cx += (x1 + x2) * cross;
+      cy += (y1 + y2) * cross;
+    }
+
+    area *= 0.5;
+    if (area.abs() < 1e-12) return pts.first;
+
+    cx /= (6 * area);
+    cy /= (6 * area);
+
+    return LatLng(cy, cx);
+  }
+
+  void _schedulePopupUpdate() {
+    _popupDebounce?.cancel();
+    _popupDebounce = Timer(const Duration(milliseconds: 16), _updatePopupOffset);
+  }
+  // Convert building center  screen coordinate, so the popup stays anchored
+  Future<void> _updatePopupOffset() async {
+    final controller = _mapController;
+    final center = _selectedBuildingCenter;
+    if (!mounted || controller == null || center == null) return;
+
+    final sc = await controller.getScreenCoordinate(center);
+    if (!mounted) return;
+
+    double x = sc.x.toDouble();
+    double y = sc.y.toDouble();
+
+  
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    x = x / dpr;
+    y = y / dpr;
+
+    setState(() {
+      _anchorOffset = Offset(x, y);
+    });
+  }
+
+  void _openLearnMore() {
+    if (_selectedBuildingPoly == null) return;
+    setState(() => _showLearnMore = true);
+  }
+
+  void _closeLearnMore() {
+    setState(() => _showLearnMore = false);
+  }
+
+  void _onBuildingTapped(BuildingPolygon b) {
+    setState(() {
+      _showLearnMore = false;
+    });
+
+    final center = _polygonCenter(b.points);
+    final controller = _mapController;
+    final name = buildingInfoByCode[b.code]?.name ?? b.name;
+
+    _searchController.value = TextEditingValue(
+      text: name,
+      selection: TextSelection.collapsed(offset: name.length),
+    );
+
+    if (controller == null) return;
+
+    controller
+        .animateCamera(
+      CameraUpdate.newLatLngZoom(center, 18),
+    )
+        .then((_) {
+      if (!mounted) return;
+
+      controller.getScreenCoordinate(center).then((sc) {
+        if (!mounted) return;
+
+        double x = sc.x.toDouble();
+        double y = sc.y.toDouble();
+
+        final dpr = MediaQuery.of(context).devicePixelRatio;
+        x = x / dpr;
+        y = y / dpr;
+
+        setState(() {
+          _selectedBuildingPoly = b;
+          _selectedBuildingCenter = center;
+          _anchorOffset = Offset(x, y);
+        });
+      });
+    });
+  }
+
+  void _closePopup() {
+    setState(() {
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _showLearnMore = false;
+      _searchController.clear();
+    });
+  }
 
   BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
-  for (final b in buildingPolygons) {
-    if (pointInPolygon(userLocation, b.points)) return b;
-  }
-  return null;
-}
-
-Set<Polygon> _createBuildingPolygons() {
-  const burgundy = Color(0xFF800020);
-
-  final polys = <Polygon>{};
-
-  for (final b in buildingPolygons) {
-    final isCurrent = _currentBuildingPoly?.code == b.code;
-
-    polys.add(
-      Polygon(
-        polygonId: PolygonId('poly_${b.code}'),
-        points: b.points,
-        strokeWidth: isCurrent ? 3 : 2,
-        strokeColor: isCurrent ? Colors.blue.withOpacity(0.8) : burgundy.withOpacity(0.55),
-        fillColor: isCurrent ? Colors.blue.withOpacity(0.25) : burgundy.withOpacity(0.22),
-        zIndex: isCurrent ? 2 : 1,
-      ),
-    );
+    for (final b in buildingPolygons) {
+      if (pointInPolygon(userLocation, b.points)) return b;
+    }
+    return null;
   }
 
-  return polys;
-}
-  // _currentCampus = what GPS detects right now (can become Campus.none if you leave the zone)
+  Set<Polygon> _createBuildingPolygons() {
+    const burgundy = Color(0xFF800020);
+    const selectedBlue = Color(0xFF7F83C3);
+
+    final polys = <Polygon>{};
+
+    for (final b in buildingPolygons) {
+      final isCurrent = _currentBuildingPoly?.code == b.code;
+      final isSelected = _selectedBuildingPoly?.code == b.code;
+
+      final strokeColor = isSelected
+          ? selectedBlue.withOpacity(0.95)
+          : isCurrent
+              ? Colors.blue.withOpacity(0.8)
+              : burgundy.withOpacity(0.55);
+
+      final fillColor = isSelected
+          ? selectedBlue.withOpacity(0.25)
+          : isCurrent
+              ? Colors.blue.withOpacity(0.25)
+              : burgundy.withOpacity(0.22);
+
+      final strokeWidth = isSelected ? 3 : isCurrent ? 3 : 2;
+      final zIndex = isSelected ? 3 : isCurrent ? 2 : 1;
+
+      polys.add(
+        Polygon(
+          polygonId: PolygonId('poly_${b.code}'),
+          points: b.points,
+          strokeWidth: strokeWidth,
+          strokeColor: strokeColor,
+          fillColor: fillColor,
+          zIndex: zIndex,
+          consumeTapEvents: true,
+          onTap: () => _onBuildingTapped(b),
+        ),
+      );
+    }
+
+    return polys;
+  }
+
   Campus _currentCampus = Campus.none;
-
-  // _selectedCampus = what the user picked in the toggle (we keep it even if GPS goes off-campus)
   Campus _selectedCampus = Campus.none;
 
   @override
   void initState() {
     super.initState();
 
-    // Start the toggle on the campus passed to the page 
     _selectedCampus = widget.initialCampus;
 
     _createBlueDotIcon();
     _startLocationUpdates();
   }
 
-  // Create a custom blue dot icon
   Future<void> _createBlueDotIcon() async {
     _blueDotIcon = await BitmapDescriptor.fromAssetImage(
       const ImageConfiguration(size: Size(48, 48)),
-      'assets/blue_dot.png', // You can use default marker as fallback
+      'assets/blue_dot.png',
     ).catchError((_) {
-      // Fallback to default blue marker if custom icon fails
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     });
 
-    // If the above fails, just use the default blue marker
-    if (_blueDotIcon == null) {
-      _blueDotIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueAzure,
-      );
-    }
+    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueAzure,
+    );
   }
 
   Future<void> _startLocationUpdates() async {
-    // Check if location services are enabled
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      print('Location services are disabled.');
-      return;
-    }
+    if (!serviceEnabled) return;
 
-    // Check permission status
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        print('Location permissions are denied');
-        return;
-      }
+      if (permission == LocationPermission.denied) return;
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      print('Location permissions are permanently denied');
-      return;
-    }
+    if (permission == LocationPermission.deniedForever) return;
 
-    // Get initial position
     try {
       final position = await Geolocator.getCurrentPosition();
       final newLatLng = LatLng(position.latitude, position.longitude);
 
+      if (!mounted) return;
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
         _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
 
-      // Move camera to current location
       _mapController?.animateCamera(
         CameraUpdate.newLatLng(newLatLng),
       );
-    } catch (e) {
-      print('Error getting initial position: $e');
-    }
+    } catch (_) {}
 
-    // Listen to location updates
-    Geolocator.getPositionStream(
+    _posSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best,
-        distanceFilter: 5, // Update every 5 meters
+        distanceFilter: 5,
       ),
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
 
+      if (!mounted) return;
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
@@ -198,7 +359,7 @@ Set<Polygon> _createBuildingPolygons() {
       Circle(
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
-        radius: 20, // Accuracy circle in meters
+        radius: 20,
         fillColor: Colors.blue.withOpacity(0.1),
         strokeColor: Colors.blue.withOpacity(0.3),
         strokeWidth: 1,
@@ -217,7 +378,7 @@ Set<Polygon> _createBuildingPolygons() {
         targetLocation = concordiaLoyola;
         break;
       case Campus.none:
-        return; // Don't change if none
+        return;
     }
 
     _mapController?.animateCamera(
@@ -226,24 +387,54 @@ Set<Polygon> _createBuildingPolygons() {
 
     setState(() {
       _selectedCampus = newCampus;
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _showLearnMore = false;
     });
   }
-  
-@override
+
+  @override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
-    //for the search bar text
-  
-    final Campus effectiveCampus =
-        _currentCampus != Campus.none ? _currentCampus : _selectedCampus;
+    final Campus labelCampus =
+        _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
 
-    
-    // ''  the search bar will just show "Search"
-    final String campusLabel = effectiveCampus == Campus.none
-        ? ''
-        : (effectiveCampus == Campus.loyola ? 'Loyola' : 'SGW');
+    final String campusLabel = labelCampus == Campus.sgw
+        ? 'SGW'
+        : labelCampus == Campus.loyola
+            ? 'Loyola'
+            : '';
+
+    final screen = MediaQuery.of(context).size;
+    final topPad = MediaQuery.of(context).padding.top;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    double? popupLeft;
+    double? popupTop;
+
+    if (_anchorOffset != null && !_cameraMoving) {
+      final ax = _anchorOffset!.dx;
+      final ay = _anchorOffset!.dy;
+
+      final inView =
+          ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
+
+      if (inView) {
+        double left = ax - (_popupW / 2);
+        double top = ay - _popupH - 12;
+
+        // If it would go off the top, flip it under the anchor
+        if (top < topPad + 8.0) {
+          top = ay + 12;
+        }
+
+        popupLeft = left;
+        popupTop = top;
+      }
+    }
 
     return Scaffold(
       body: Stack(
@@ -253,73 +444,121 @@ Set<Polygon> _createBuildingPolygons() {
               target: initialTarget,
               zoom: 16,
             ),
-            myLocationEnabled: false, // Disabled to use custom marker
-            myLocationButtonEnabled: false, // We'll add our own button
-            onMapCreated: (controller) => _mapController = controller,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
+            onMapCreated: (controller) {
+              _mapController = controller;
+              if (_selectedBuildingCenter != null) {
+                _schedulePopupUpdate();
+              }
+            },
+            onCameraMoveStarted: () {
+              if (_selectedBuildingCenter == null) return;
+              setState(() {
+                _cameraMoving = true;
+              });
+            },
+            onCameraIdle: () {
+              if (_selectedBuildingCenter == null) return;
+              setState(() {
+                _cameraMoving = false;
+              });
+              _updatePopupOffset();
+            },
             markers: _createMarkers(),
             circles: _createCircles(),
-	          polygons: _createBuildingPolygons(),
-
+            polygons: _createBuildingPolygons(),
           ),
 
-          
-          // Positioned(
-          //   top: 40, // distance from top
-          //   left: 40, // horizontal margin
-          //   right: 20,
-          //   child: SizedBox(
-          //     height: 70,
-          //     child: MapSearchBar(campusLabel: campusLabel),
-          //   ),
-          // ),
-
-          // My Location + Campus Indicator
           Positioned(
-            bottom: 70,
+            top: 65,
             left: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Button that recenters the camera on the user's current GPS location
-                FloatingActionButton(
-                  heroTag: 'location_button',
-                  mini: true,
-                  onPressed: () {
-                    // Jump back to the user's current position.
-                    if (_currentLocation != null) {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-                      );
-                    }
-                  },
-                  child: const Icon(Icons.my_location),
-                ),
-                const SizedBox(height: 10),
-
-                // Simple label showing if GPS currently detects SGW/Loyola or none (Off Campus)
-                FloatingActionButton.extended(
-                  heroTag: 'campus_button',
-                  onPressed: null,
-                  icon: const Icon(Icons.school),
-                  label: Text(
-                    _currentCampus == Campus.sgw
-                        ? 'SGW Campus'
-                        : _currentCampus == Campus.loyola
-                            ? 'Loyola Campus'
-                            : 'Off Campus',
-                  ),
-                ),
-              ],
+            right: 20,
+            child: SizedBox(
+              height: 70,
+              child: MapSearchBar(
+                campusLabel: campusLabel,
+                controller: _searchController,
+              ),
             ),
           ),
 
-          // Toggle Button 
+          if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
+            Positioned(
+              left: popupLeft,
+              top: popupTop,
+              child: PointerInterceptor(
+                
+                child: BuildingInfoPopup(
+                  // Show full name + code 
+                  title:
+                      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
+                  description:
+                      buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
+                          'No description available.',
+                  onClose: _closePopup,
+                  onLearnMore: _openLearnMore,
+                ),
+              ),
+            ),
+
+          if (_showLearnMore && _selectedBuildingPoly != null)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: bottomPad + 180,
+              child: PointerInterceptor(
+                child: LearnMorePopup(
+                  onClose: _closeLearnMore,
+                  purposeText: 'No purpose available.',
+                  facilitiesText: 'No facilities available.',
+                ),
+              ),
+            ),
+
+         Positioned(
+  bottom: 70,
+  left: 20,
+  child: PointerInterceptor(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton(
+          heroTag: 'location_button',
+          mini: true,
+          onPressed: () {
+            final loc = _currentLocation;
+            if (loc == null) return;
+            _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(loc, 17),
+            );
+          },
+          child: const Icon(Icons.my_location),
+        ),
+        const SizedBox(height: 10),
+        FloatingActionButton.extended(
+          heroTag: 'campus_button',
+          onPressed: _goToMyLocation,
+          icon: const Icon(Icons.school),
+          label: Text(
+            _currentCampus == Campus.sgw
+                ? 'SGW Campus'
+                : _currentCampus == Campus.loyola
+                    ? 'Loyola Campus'
+                    : 'Off Campus',
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+
+
           Positioned(
-            bottom: 20, // Distance from bottom
+            bottom: 20,
             left: 0,
             right: 0,
             child: Center(
-              // Campus selector overlay
               child: SizedBox(
                 width: 800,
                 child: CampusToggle(
@@ -336,7 +575,10 @@ Set<Polygon> _createBuildingPolygons() {
 
   @override
   void dispose() {
+    _posSub?.cancel();
+    _popupDebounce?.cancel();
     _mapController?.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 }
