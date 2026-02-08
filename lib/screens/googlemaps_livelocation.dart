@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../data/building_polygons.dart';
+import '../utils/geo.dart';
+import '../widgets/campus_toggle.dart';
+import '../widgets/map_search_bar.dart';
 
 //concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -44,13 +48,53 @@ class OutdoorMapPage extends StatefulWidget {
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   GoogleMapController? _mapController;
-  Campus _currentCampus = Campus.none;
+
   LatLng? _currentLocation;
   BitmapDescriptor? _blueDotIcon;
+  BuildingPolygon? _currentBuildingPoly;
+
+  BuildingPolygon? _detectBuildingPoly(LatLng userLocation) {
+  for (final b in buildingPolygons) {
+    if (pointInPolygon(userLocation, b.points)) return b;
+  }
+  return null;
+}
+
+Set<Polygon> _createBuildingPolygons() {
+  const burgundy = Color(0xFF800020);
+
+  final polys = <Polygon>{};
+
+  for (final b in buildingPolygons) {
+    final isCurrent = _currentBuildingPoly?.code == b.code;
+
+    polys.add(
+      Polygon(
+        polygonId: PolygonId('poly_${b.code}'),
+        points: b.points,
+        strokeWidth: isCurrent ? 3 : 2,
+        strokeColor: isCurrent ? Colors.blue.withOpacity(0.8) : burgundy.withOpacity(0.55),
+        fillColor: isCurrent ? Colors.blue.withOpacity(0.25) : burgundy.withOpacity(0.22),
+        zIndex: isCurrent ? 2 : 1,
+      ),
+    );
+  }
+
+  return polys;
+}
+  // _currentCampus = what GPS detects right now (can become Campus.none if you leave the zone)
+  Campus _currentCampus = Campus.none;
+
+  // _selectedCampus = what the user picked in the toggle (we keep it even if GPS goes off-campus)
+  Campus _selectedCampus = Campus.none;
 
   @override
   void initState() {
     super.initState();
+
+    // Start the toggle on the campus passed to the page 
+    _selectedCampus = widget.initialCampus;
+
     _createBlueDotIcon();
     _startLocationUpdates();
   }
@@ -64,7 +108,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       // Fallback to default blue marker if custom icon fails
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     });
-    
+
     // If the above fails, just use the default blue marker
     if (_blueDotIcon == null) {
       _blueDotIcon = BitmapDescriptor.defaultMarkerWithHue(
@@ -90,7 +134,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         return;
       }
     }
-    
+
     if (permission == LocationPermission.deniedForever) {
       print('Location permissions are permanently denied');
       return;
@@ -100,11 +144,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     try {
       final position = await Geolocator.getCurrentPosition();
       final newLatLng = LatLng(position.latitude, position.longitude);
+
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
+        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
-      
+
       // Move camera to current location
       _mapController?.animateCamera(
         CameraUpdate.newLatLng(newLatLng),
@@ -121,16 +167,18 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       ),
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
+
       setState(() {
         _currentLocation = newLatLng;
         _currentCampus = detectCampus(newLatLng);
+        _currentBuildingPoly = _detectBuildingPoly(newLatLng);
       });
     });
   }
 
   Set<Marker> _createMarkers() {
     if (_currentLocation == null) return {};
-    
+
     return {
       Marker(
         markerId: const MarkerId('current_location'),
@@ -145,7 +193,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Set<Circle> _createCircles() {
     if (_currentLocation == null) return {};
-    
+
     return {
       Circle(
         circleId: const CircleId('current_location_accuracy'),
@@ -158,51 +206,127 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     };
   }
 
-  @override
+  void _switchCampus(Campus newCampus) {
+    LatLng targetLocation;
+
+    switch (newCampus) {
+      case Campus.sgw:
+        targetLocation = concordiaSGW;
+        break;
+      case Campus.loyola:
+        targetLocation = concordiaLoyola;
+        break;
+      case Campus.none:
+        return; // Don't change if none
+    }
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(targetLocation, 16),
+    );
+
+    setState(() {
+      _selectedCampus = newCampus;
+    });
+  }
+  
+@override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
-        widget.initialCampus == Campus.sgw ? concordiaSGW : concordiaLoyola;
+        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+
+    //for the search bar text
+  
+    final Campus effectiveCampus =
+        _currentCampus != Campus.none ? _currentCampus : _selectedCampus;
+
+    
+    // ''  the search bar will just show "Search"
+    final String campusLabel = effectiveCampus == Campus.none
+        ? ''
+        : (effectiveCampus == Campus.loyola ? 'Loyola' : 'SGW');
 
     return Scaffold(
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: initialTarget,
-          zoom: 16,
-        ),
-        myLocationEnabled: false, // Disabled to use custom marker
-        myLocationButtonEnabled: false, // We'll add our own button
-        onMapCreated: (controller) => _mapController = controller,
-        markers: _createMarkers(),
-        circles: _createCircles(),
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+      body: Stack(
         children: [
-          // My Location Button
-          FloatingActionButton(
-            heroTag: 'location_button',
-            mini: true,
-            onPressed: () {
-              if (_currentLocation != null) {
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLngZoom(_currentLocation!, 17),
-                );
-              }
-            },
-            child: const Icon(Icons.my_location),
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: initialTarget,
+              zoom: 16,
+            ),
+            myLocationEnabled: false, // Disabled to use custom marker
+            myLocationButtonEnabled: false, // We'll add our own button
+            onMapCreated: (controller) => _mapController = controller,
+            markers: _createMarkers(),
+            circles: _createCircles(),
+	          polygons: _createBuildingPolygons(),
+
           ),
-          const SizedBox(height: 16),
-          // Campus Indicator
-          FloatingActionButton.extended(
-            heroTag: 'campus_button',
-            onPressed: null,
-            icon: const Icon(Icons.school),
-            label: Text(
-              _currentCampus == Campus.sgw
-                  ? 'SGW Campus'
-                  : _currentCampus == Campus.loyola
-                      ? 'Loyola Campus'
-                      : 'Off Campus',
+
+          
+          Positioned(
+            top: 40, // distance from top
+            left: 40, // horizontal margin
+            right: 20,
+            child: SizedBox(
+              height: 70,
+              child: MapSearchBar(campusLabel: campusLabel),
+            ),
+          ),
+
+          // My Location + Campus Indicator
+          Positioned(
+            bottom: 70,
+            left: 20,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Button that recenters the camera on the user's current GPS location
+                FloatingActionButton(
+                  heroTag: 'location_button',
+                  mini: true,
+                  onPressed: () {
+                    // Jump back to the user's current position.
+                    if (_currentLocation != null) {
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(_currentLocation!, 17),
+                      );
+                    }
+                  },
+                  child: const Icon(Icons.my_location),
+                ),
+                const SizedBox(height: 10),
+
+                // Simple label showing if GPS currently detects SGW/Loyola or none (Off Campus)
+                FloatingActionButton.extended(
+                  heroTag: 'campus_button',
+                  onPressed: null,
+                  icon: const Icon(Icons.school),
+                  label: Text(
+                    _currentCampus == Campus.sgw
+                        ? 'SGW Campus'
+                        : _currentCampus == Campus.loyola
+                            ? 'Loyola Campus'
+                            : 'Off Campus',
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Toggle Button 
+          Positioned(
+            bottom: 20, // Distance from bottom
+            left: 0,
+            right: 0,
+            child: Center(
+              // Campus selector overlay
+              child: SizedBox(
+                width: 800,
+                child: CampusToggle(
+                  currentCampus: _selectedCampus,
+                  onCampusChanged: _switchCampus,
+                ),
+              ),
             ),
           ),
         ],
