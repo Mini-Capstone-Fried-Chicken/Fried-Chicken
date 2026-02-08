@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:campus_app/shared/widgets/app_widgets.dart' show HomePage, AppLogo, AppButton;
-import 'package:campus_app/features/auth/ui/login_page.dart' show SignInPage, LoginToggle, UserField;
-import 'package:campus_app/features/auth/ui/forgot_password_page.dart' show ForgotPassword;
+import 'package:campus_app/main.dart' show HomePage, AppLogo, AppButton;
+import 'package:campus_app/screens/login_page.dart' show SignInPage, LoginToggle, UserField;
+import 'package:campus_app/screens/forgot_password_page.dart' show ForgotPassword;
 
 void main() {
   group('Welcome Page Tests', () {
@@ -443,7 +443,6 @@ void main() {
       // Assert
       expect(find.text('Continue as a guest'), findsOneWidget);
     });
-
     testWidgets('Login page displays forgot password button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
