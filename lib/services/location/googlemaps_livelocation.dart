@@ -7,9 +7,7 @@ import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
-import '../../utils/geo.dart';
 import '../../shared/widgets/building_info_popup.dart';
-import '../../shared/widgets/learn_more_popup.dart';
 import '../../features/indoor/data/building_info.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
@@ -56,7 +54,7 @@ class OutdoorMapPage extends StatefulWidget {
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
-  bool _showLearnMore = false;
+
 
   GoogleMapController? _mapController;
 
@@ -156,20 +154,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-  void _openLearnMore() {
-    if (_selectedBuildingPoly == null) return;
-    setState(() => _showLearnMore = true);
-  }
-
-  void _closeLearnMore() {
-    setState(() => _showLearnMore = false);
-  }
+ 
 
   void _onBuildingTapped(BuildingPolygon b) {
-    setState(() {
-      _showLearnMore = false;
-    });
-
+   
     final center = _polygonCenter(b.points);
     final controller = _mapController;
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
@@ -212,7 +200,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
       _anchorOffset = null;
-      _showLearnMore = false;
       _searchController.clear();
     });
   }
@@ -383,7 +370,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
       _anchorOffset = null;
-      _showLearnMore = false;
     });
   }
 
@@ -490,25 +476,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                       buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
                           'No description available.',
                   onClose: _closePopup,
-                  onLearnMore: _openLearnMore,
                 ),
               ),
             ),
 
-          if (_showLearnMore && _selectedBuildingPoly != null)
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: bottomPad + 180,
-              child: PointerInterceptor(
-                child: LearnMorePopup(
-                  onClose: _closeLearnMore,
-                  purposeText: 'No purpose available.',
-                  facilitiesText: 'No facilities available.',
-                ),
-              ),
-            ),
-
+            
          Positioned(
   bottom: 70,
   left: 20,
