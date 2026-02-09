@@ -22,9 +22,6 @@ void main() {
             onClose: () {
               closePressed = true;
             },
-            onLearnMore: () {
-              learnMorePressed = true;
-            },
           ),
         ),
       );
@@ -50,9 +47,7 @@ void main() {
                           closePressed = true;
                           Navigator.of(context).pop();
                         },
-                        onLearnMore: () {
-                          learnMorePressed = true;
-                        },
+                        
                       ),
                     );
                   },

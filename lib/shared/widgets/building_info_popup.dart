@@ -1,19 +1,43 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-class BuildingInfoPopup extends StatelessWidget {
+class BuildingInfoPopup extends StatefulWidget {
   final String title;
   final String description;
   final VoidCallback onClose;
-  final VoidCallback onLearnMore;
 
   const BuildingInfoPopup({
     super.key,
     required this.title,
     required this.description,
     required this.onClose,
-    required this.onLearnMore,
   });
+
+  @override
+  State<BuildingInfoPopup> createState() => _BuildingInfoPopupState();
+}
+
+class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
+  bool _isSaved = false; // Track whether the building is saved or not
+
+  // Reusable method to build an icon button with tooltip
+  Widget _buildIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    const burgundy = Color(0xFF76263D);
+    return Tooltip(
+      message: tooltip, // Tooltip text
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          color: burgundy,
+        ),
+        iconSize: 30, 
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,16 +62,22 @@ class BuildingInfoPopup extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // quick icons row 
-                const Icon(Icons.wc, size: 18, color: burgundy),
-                const SizedBox(width: 6),
-                const Icon(Icons.accessible, size: 18, color: burgundy),
+                _buildIconButton(
+                  icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  tooltip: _isSaved ? 'Unsave' : 'Save',
+                  onPressed: () {
+                    setState(() {
+                      _isSaved = !_isSaved; // Toggle the saved state
+                    });
+                  },
+                ),
                 const Spacer(),
                 IconButton(
-                  onPressed: onClose,
+                  onPressed: widget.onClose,
                   icon: const Icon(Icons.close),
                   color: burgundy,
                   padding: EdgeInsets.zero,
@@ -57,9 +87,9 @@ class BuildingInfoPopup extends StatelessWidget {
             ),
             const SizedBox(height: 2),
 
-            // building name + code 
+            // Building name + code 
             Text(
-              title,
+              widget.title,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -69,49 +99,37 @@ class BuildingInfoPopup extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // short description from building_info.dart
+            // Short description
             Text(
-              description,
+              widget.description,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12.5, color: Colors.black54),
             ),
             const SizedBox(height: 12),
 
-            // buttons 
-            _pillButton('Get directions', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Indoor map', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Save', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Learn more', burgundy, () {
-              // only logs in debug mode
-              if (kDebugMode) {
-                debugPrint('[BuildingInfoPopup] Learn more pressed for: $title');
-              }
-              onLearnMore();
-            }),
-          ],
-        ),
-      ),
-    );
-  }
+            // Row for Get Directions and Indoor Map icons 
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center, // Center icons horizontally
+              children: [
+                _buildIconButton(
+                  icon: Icons.directions, // Direction icon
+                  tooltip: 'Get directions',
+                  onPressed: () {
+                    // Future implementation getting directions here
+                  },
+                ),
+                const SizedBox(width: 10), 
 
-  Widget _pillButton(String text, Color color, VoidCallback onPressed) {
-    return SizedBox(
-      width: 190,
-      height: 36,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: const StadiumBorder(),
-          elevation: 0,
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                _buildIconButton(
+                  icon: Icons.map, // Indoor map icon
+                  tooltip: 'Indoor map',
+                  onPressed: () {
+                    // Future implementation for indoor map here
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
