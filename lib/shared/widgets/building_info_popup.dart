@@ -8,6 +8,8 @@ class BuildingInfoPopup extends StatefulWidget {
   final List<String> facilities;
   final VoidCallback? onMore;
 
+  final bool isLoggedIn;
+
   const BuildingInfoPopup({
     super.key,
     required this.title,
@@ -16,6 +18,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.accessibility = false,
     this.facilities = const [],
     this.onMore,
+    required this.isLoggedIn,
   });
 
   @override
@@ -40,6 +43,8 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
           color: burgundy,
         ),
         iconSize: 25,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
       ),
     );
   }
@@ -61,13 +66,10 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     const burgundy = Color(0xFF76263D);
     return Tooltip(
       message: tooltip,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 9),
-        child: Icon(
-          icon,
-          color: burgundy,
-          size: 22,
-        ),
+      child: Icon(
+        icon,
+        color: burgundy,
+        size: 22,
       ),
     );
   }
@@ -123,16 +125,18 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildIconButton(
-                  icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  tooltip: _isSaved ? 'Unsave' : 'Save',
-                  onPressed: () {
-                    setState(() {
-                      _isSaved = !_isSaved;
-                    });
-                  },
-                ),
-                const SizedBox(width: 4),
+                if (widget.isLoggedIn) ...[
+                  _buildIconButton(
+                    icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    tooltip: _isSaved ? 'Unsave' : 'Save',
+                    onPressed: () {
+                      setState(() {
+                        _isSaved = !_isSaved;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 if (topIcons.isNotEmpty)
                   Expanded(
                     child: Padding(
@@ -171,7 +175,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
               style: const TextStyle(fontSize: 12.5, color: Colors.black54),
             ),
             const SizedBox(height: 12),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -188,9 +191,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 ),
               ],
             ),
-
             const SizedBox(height: 6),
-
             Opacity(
               opacity: 0.7,
               child: TextButton(

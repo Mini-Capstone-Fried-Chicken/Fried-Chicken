@@ -43,10 +43,12 @@ Campus detectCampus(LatLng userLocation) {
 
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
+  final bool isLoggedIn;
 
   const OutdoorMapPage({
     super.key,
     required this.initialCampus,
+    required this.isLoggedIn,
   });
 
   @override
@@ -463,26 +465,25 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               left: popupLeft,
               top: popupTop,
               child: PointerInterceptor(
-                child: BuildingInfoPopup(
-                  title:
-                      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
-                 description: buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
-    'No description available.',
+               child: BuildingInfoPopup(
+  title:
+      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
+  description: buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
+      'No description available.',
+  accessibility:
+      buildingInfoByCode[_selectedBuildingPoly!.code]?.accessibility ?? false,
+  facilities:
+      buildingInfoByCode[_selectedBuildingPoly!.code]?.facilities ?? const [],
+  onMore: () {
+    final link = buildingInfoByCode[_selectedBuildingPoly!.code]?.link ?? '';
+    _openLink(link);
+  },
+  onClose: _closePopup,
 
-                  accessibility: buildingInfoByCode[_selectedBuildingPoly!.code]
-                          ?.accessibility ??
-                      false,
-                  facilities: buildingInfoByCode[_selectedBuildingPoly!.code]
-                          ?.facilities ??
-                      const [],
-                  onMore: () {
-                    final link =
-                        buildingInfoByCode[_selectedBuildingPoly!.code]?.link ??
-                            '';
-                    _openLink(link);
-                  },
-                  onClose: _closePopup,
-                ),
+  isLoggedIn: widget.isLoggedIn,
+
+),
+
               ),
             ),
           Positioned(
