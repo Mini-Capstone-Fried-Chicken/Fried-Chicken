@@ -5,15 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('BuildingInfoPopup Widget Tests', () {
     late bool closePressed;
-    late bool learnMorePressed;
+    late bool morePressed;
 
     setUp(() {
       closePressed = false;
-      learnMorePressed = false;
+      morePressed = false;
     });
 
-    //pop up tests
-    Widget createPopupUnderTest() {
+    Widget createPopupUnderTest({required bool isLoggedIn}) {
       return MaterialApp(
         home: Scaffold(
           body: BuildingInfoPopup(
@@ -22,13 +21,16 @@ void main() {
             onClose: () {
               closePressed = true;
             },
+            onMore: () {
+              morePressed = true;
+            },
+            isLoggedIn: isLoggedIn,
           ),
         ),
       );
     }
 
-    //clicking on building pop up
-    Widget createBuildingWithPopup() {
+    Widget createBuildingWithPopup({required bool isLoggedIn}) {
       return MaterialApp(
         home: Scaffold(
           body: Builder(
@@ -47,7 +49,10 @@ void main() {
                           closePressed = true;
                           Navigator.of(context).pop();
                         },
-                        
+                        onMore: () {
+                          morePressed = true;
+                        },
+                        isLoggedIn: isLoggedIn,
                       ),
                     );
                   },
@@ -60,109 +65,181 @@ void main() {
     }
 
     testWidgets('renders title and description', (WidgetTester tester) async {
-      await tester.pumpWidget(createPopupUnderTest());
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       expect(find.text('Test Building'), findsOneWidget);
       expect(find.text('This is a test building description.'), findsOneWidget);
     });
 
-    testWidgets('renders all buttons', (WidgetTester tester) async {
-      await tester.pumpWidget(createPopupUnderTest());
+    testWidgets('renders core controls (close + More + action icons)', (WidgetTester tester) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
-      expect(find.text('Get directions'), findsOneWidget);
-      expect(find.text('Indoor map'), findsOneWidget);
-      expect(find.text('Save'), findsOneWidget);
-      expect(find.text('Learn more'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(find.text('More'), findsOneWidget);
+
+      expect(find.widgetWithIcon(IconButton, Icons.directions), findsOneWidget);
+      expect(find.widgetWithIcon(IconButton, Icons.map), findsOneWidget);
+    });
+
+    testWidgets('save button is hidden when logged out', (WidgetTester tester) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: false));
+
+      expect(find.byIcon(Icons.bookmark_border), findsNothing);
+      expect(find.byIcon(Icons.bookmark), findsNothing);
+    });
+
+    testWidgets('save button is visible when logged in', (WidgetTester tester) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
+
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+    });
+
+    testWidgets('tapping save toggles to unsave', (WidgetTester tester) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
+
+      await tester.tap(find.byIcon(Icons.bookmark_border));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.bookmark), findsOneWidget);
     });
 
     testWidgets('close button triggers onClose callback', (WidgetTester tester) async {
-      await tester.pumpWidget(createPopupUnderTest());
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
-      final closeButton = find.byIcon(Icons.close);
-      expect(closeButton, findsOneWidget);
-
-      await tester.tap(closeButton);
+      await tester.tap(find.byIcon(Icons.close));
       await tester.pump();
 
       expect(closePressed, isTrue);
     });
 
-    testWidgets('learn more button triggers onLearnMore callback', (WidgetTester tester) async {
-      await tester.pumpWidget(createPopupUnderTest());
+    testWidgets('More button triggers onMore callback', (WidgetTester tester) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
-      final learnMoreButton = find.widgetWithText(ElevatedButton, 'Learn more');
-      expect(learnMoreButton, findsOneWidget);
-
-      await tester.tap(learnMoreButton);
+      await tester.tap(find.text('More'));
       await tester.pump();
 
-      expect(learnMorePressed, isTrue);
+      expect(morePressed, isTrue);
     });
 
-    testWidgets('other buttons can be tapped', (WidgetTester tester) async {
-      await tester.pumpWidget(createPopupUnderTest());
+    testWidgets('other icon buttons can be tapped', (WidgetTester tester) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Get directions'));
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.directions));
       await tester.pump();
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Indoor map'));
-      await tester.pump();
-
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.map));
       await tester.pump();
     });
 
-
-    testWidgets('clicking a building opens popup with correct info',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(createBuildingWithPopup());
-
-      //tapping building button
-      final buildingButton = find.byKey(const Key('buildingButton'));
-      expect(buildingButton, findsOneWidget);
-      await tester.tap(buildingButton);
-      await tester.pumpAndSettle();
-
-      //verify building information is displayed
-      expect(find.text('Test Building'), findsOneWidget);
-      expect(find.text('This is a test building description.'), findsOneWidget);
-
-      //ensure all the buttons are in the pop up 
-      expect(find.text('Get directions'), findsOneWidget);
-      expect(find.text('Indoor map'), findsOneWidget);
-      expect(find.text('Save'), findsOneWidget);
-      expect(find.text('Learn more'), findsOneWidget);
-    });
-
-    testWidgets('popup can be closed after opening from building tap',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(createBuildingWithPopup());
+    testWidgets('clicking a building opens popup with correct info', (WidgetTester tester) async {
+      await tester.pumpWidget(createBuildingWithPopup(isLoggedIn: true));
 
       await tester.tap(find.byKey(const Key('buildingButton')));
       await tester.pumpAndSettle();
 
-      final closeButton = find.byIcon(Icons.close);
-      expect(closeButton, findsOneWidget);
-      await tester.tap(closeButton);
+      expect(find.text('Test Building'), findsOneWidget);
+      expect(find.text('This is a test building description.'), findsOneWidget);
+
+      expect(find.widgetWithIcon(IconButton, Icons.directions), findsOneWidget);
+      expect(find.widgetWithIcon(IconButton, Icons.map), findsOneWidget);
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+      expect(find.text('More'), findsOneWidget);
+    });
+
+    testWidgets('popup can be closed after opening from building tap', (WidgetTester tester) async {
+      await tester.pumpWidget(createBuildingWithPopup(isLoggedIn: true));
+
+      await tester.tap(find.byKey(const Key('buildingButton')));
       await tester.pumpAndSettle();
 
-      //closing pop up
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
       expect(find.text('Test Building'), findsNothing);
       expect(closePressed, isTrue);
     });
 
-    testWidgets('learn more button works when popup opened from building tap',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(createBuildingWithPopup());
+    testWidgets('More button works when popup opened from building tap', (WidgetTester tester) async {
+      await tester.pumpWidget(createBuildingWithPopup(isLoggedIn: true));
 
       await tester.tap(find.byKey(const Key('buildingButton')));
       await tester.pumpAndSettle();
 
-      final learnMoreButton = find.widgetWithText(ElevatedButton, 'Learn more');
-      await tester.tap(learnMoreButton);
+      await tester.tap(find.text('More'));
       await tester.pump();
 
-      expect(learnMorePressed, isTrue);
+      expect(morePressed, isTrue);
+    });
+
+    testWidgets('shows top icons for accessibility and facilities', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BuildingInfoPopup(
+              title: 'Test Building',
+              description: 'desc',
+              onClose: () {},
+              onMore: () {},
+              isLoggedIn: true,
+              accessibility: true,
+              facilities: const [
+                'Washrooms',
+                'Coffee shop',
+                'Restaurant',
+                'Zen den',
+                'Metro',
+                'Parking',
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.accessible), findsOneWidget);
+      expect(find.byIcon(Icons.wc), findsOneWidget);
+      expect(find.byIcon(Icons.local_cafe), findsOneWidget);
+      expect(find.byIcon(Icons.restaurant), findsOneWidget);
+      expect(find.byIcon(Icons.self_improvement), findsOneWidget);
+      expect(find.byIcon(Icons.subway), findsOneWidget);
+      expect(find.byIcon(Icons.local_parking), findsOneWidget);
+    });
+
+    testWidgets('facility matching is case-insensitive', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BuildingInfoPopup(
+              title: 'T',
+              description: 'D',
+              onClose: () {},
+              onMore: () {},
+              isLoggedIn: false,
+              facilities: const ['COFFEE SHOP'],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.local_cafe), findsOneWidget);
+    });
+
+    testWidgets('facility matching supports typos like washroms', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BuildingInfoPopup(
+              title: 'T',
+              description: 'D',
+              onClose: () {},
+              onMore: () {},
+              isLoggedIn: false,
+              facilities: const ['washroms near entrance'],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.wc), findsOneWidget);
     });
   });
 }

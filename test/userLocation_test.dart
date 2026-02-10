@@ -119,7 +119,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+           body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -135,7 +139,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+            body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -163,7 +171,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+           body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -189,7 +201,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+            body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -243,7 +259,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+           body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -265,7 +285,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+            body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -287,7 +311,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+            body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -315,7 +343,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+           body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
@@ -338,7 +370,11 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: OutdoorMapPage(initialCampus: Campus.sgw),
+           body: OutdoorMapPage(
+  initialCampus: Campus.sgw,
+  isLoggedIn: false,
+),
+
           ),
         ),
       );
