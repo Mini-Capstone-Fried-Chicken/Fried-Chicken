@@ -4,12 +4,18 @@ class BuildingInfoPopup extends StatefulWidget {
   final String title;
   final String description;
   final VoidCallback onClose;
+  final bool accessibility;
+  final List<String> facilities;
+  final VoidCallback? onMore;
 
   const BuildingInfoPopup({
     super.key,
     required this.title,
     required this.description,
     required this.onClose,
+    this.accessibility = false,
+    this.facilities = const [],
+    this.onMore,
   });
 
   @override
@@ -17,9 +23,8 @@ class BuildingInfoPopup extends StatefulWidget {
 }
 
 class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
-  bool _isSaved = false; // Track whether the building is saved or not
+  bool _isSaved = false;
 
-  // Reusable method to build an icon button with tooltip
   Widget _buildIconButton({
     required IconData icon,
     required String tooltip,
@@ -27,14 +32,42 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   }) {
     const burgundy = Color(0xFF76263D);
     return Tooltip(
-      message: tooltip, // Tooltip text
+      message: tooltip,
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(
           icon,
           color: burgundy,
         ),
-        iconSize: 30, 
+        iconSize: 25,
+      ),
+    );
+  }
+
+  bool _hasFacility(List<String> keywords) {
+    final list = widget.facilities.map((e) => e.toLowerCase()).toList();
+    for (final f in list) {
+      for (final k in keywords) {
+        if (f.contains(k)) return true;
+      }
+    }
+    return false;
+  }
+
+  Widget _topIcon({
+    required IconData icon,
+    required String tooltip,
+  }) {
+    const burgundy = Color(0xFF76263D);
+    return Tooltip(
+      message: tooltip,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 9),
+        child: Icon(
+          icon,
+          color: burgundy,
+          size: 22,
+        ),
       ),
     );
   }
@@ -43,10 +76,35 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
 
+    final topIcons = <Widget>[];
+
+    if (widget.accessibility) {
+      topIcons.add(_topIcon(icon: Icons.accessible, tooltip: 'Accessible'));
+    }
+
+    if (_hasFacility(['washroom', 'washrooms', 'washroms', 'restroom', 'toilet'])) {
+      topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
+    }
+    if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
+      topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
+    }
+    if (_hasFacility(['restaurant', 'restaurants', 'food'])) {
+      topIcons.add(_topIcon(icon: Icons.restaurant, tooltip: 'Restaurants'));
+    }
+    if (_hasFacility(['zen den', 'zen', 'yoga', 'meditation'])) {
+      topIcons.add(_topIcon(icon: Icons.self_improvement, tooltip: 'Zen Den'));
+    }
+    if (_hasFacility(['metro', 'subway'])) {
+      topIcons.add(_topIcon(icon: Icons.subway, tooltip: 'Metro'));
+    }
+    if (_hasFacility(['parking'])) {
+      topIcons.add(_topIcon(icon: Icons.local_parking, tooltip: 'Parking'));
+    }
+
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 260,
+        width: 300,
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -62,7 +120,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -71,11 +128,23 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                   tooltip: _isSaved ? 'Unsave' : 'Save',
                   onPressed: () {
                     setState(() {
-                      _isSaved = !_isSaved; // Toggle the saved state
+                      _isSaved = !_isSaved;
                     });
                   },
                 ),
-                const Spacer(),
+                const SizedBox(width: 4),
+                if (topIcons.isNotEmpty)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 2),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.start,
+                        children: topIcons,
+                      ),
+                    ),
+                  ),
                 IconButton(
                   onPressed: widget.onClose,
                   icon: const Icon(Icons.close),
@@ -86,8 +155,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
               ],
             ),
             const SizedBox(height: 2),
-
-            // Building name + code 
             Text(
               widget.title,
               textAlign: TextAlign.center,
@@ -98,8 +165,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
               ),
             ),
             const SizedBox(height: 6),
-
-            // Short description
             Text(
               widget.description,
               textAlign: TextAlign.center,
@@ -107,27 +172,36 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             ),
             const SizedBox(height: 12),
 
-            // Row for Get Directions and Indoor Map icons 
             Row(
-              mainAxisAlignment: MainAxisAlignment.center, // Center icons horizontally
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildIconButton(
-                  icon: Icons.directions, // Direction icon
+                  icon: Icons.directions,
                   tooltip: 'Get directions',
-                  onPressed: () {
-                    // Future implementation getting directions here
-                  },
+                  onPressed: () {},
                 ),
-                const SizedBox(width: 10), 
-
+                const SizedBox(width: 10),
                 _buildIconButton(
-                  icon: Icons.map, // Indoor map icon
+                  icon: Icons.map,
                   tooltip: 'Indoor map',
-                  onPressed: () {
-                    // Future implementation for indoor map here
-                  },
+                  onPressed: () {},
                 ),
               ],
+            ),
+
+            const SizedBox(height: 6),
+
+            Opacity(
+              opacity: 0.7,
+              child: TextButton(
+                onPressed: widget.onMore ?? () {},
+                style: TextButton.styleFrom(
+                  foregroundColor: burgundy,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Text('More'),
+              ),
             ),
           ],
         ),

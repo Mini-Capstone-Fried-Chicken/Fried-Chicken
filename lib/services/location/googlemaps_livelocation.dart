@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../features/indoor/data/building_info.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -55,7 +57,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
 
-
   GoogleMapController? _mapController;
 
   LatLng? _currentLocation;
@@ -66,37 +67,40 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   StreamSubscription<Position>? _posSub;
 
   Future<void> _goToMyLocation() async {
-  final controller = _mapController;
-  if (controller == null) return;
+    final controller = _mapController;
+    if (controller == null) return;
 
-  var loc = _currentLocation;
+    var loc = _currentLocation;
 
-  if (loc == null) {
-    try {
-      final p = await Geolocator.getCurrentPosition();
-      loc = LatLng(p.latitude, p.longitude);
-      if (mounted) setState(() => _currentLocation = loc);
-    } catch (_) {
-      return;
+    if (loc == null) {
+      try {
+        final p = await Geolocator.getCurrentPosition();
+        loc = LatLng(p.latitude, p.longitude);
+        if (mounted) setState(() => _currentLocation = loc);
+      } catch (_) {
+        return;
+      }
     }
+
+    controller.animateCamera(
+      CameraUpdate.newLatLngZoom(loc, 17),
+    );
   }
 
-  controller.animateCamera(
-    CameraUpdate.newLatLngZoom(loc, 17),
-  );
-}
+  Future<void> _openLink(String url) async {
+    if (url.trim().isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
+  static const double _popupW = 300;
+  static const double _popupH = 260;
 
-  // Popup size (used for positioning math)
-  static const double _popupW = 260;
-  static const double _popupH = 230;
-
-  // Popup anchor: building center (lat/lng) + its screen position
   LatLng? _selectedBuildingCenter;
-  Offset? _anchorOffset; // logical px on screen
+  Offset? _anchorOffset; 
   Timer? _popupDebounce;
 
-  // Polygon centroid (so the popup points to the middle of the building)
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
 
@@ -132,7 +136,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _popupDebounce?.cancel();
     _popupDebounce = Timer(const Duration(milliseconds: 16), _updatePopupOffset);
   }
-  // Convert building center  screen coordinate, so the popup stays anchored
+
   Future<void> _updatePopupOffset() async {
     final controller = _mapController;
     final center = _selectedBuildingCenter;
@@ -144,7 +148,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     double x = sc.x.toDouble();
     double y = sc.y.toDouble();
 
-  
     final dpr = MediaQuery.of(context).devicePixelRatio;
     x = x / dpr;
     y = y / dpr;
@@ -154,10 +157,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
- 
-
   void _onBuildingTapped(BuildingPolygon b) {
-   
     final center = _polygonCenter(b.points);
     final controller = _mapController;
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
@@ -389,7 +389,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     final screen = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
 
     double? popupLeft;
     double? popupTop;
@@ -405,7 +404,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         double left = ax - (_popupW / 2);
         double top = ay - _popupH - 12;
 
-        // If it would go off the top, flip it under the anchor
         if (top < topPad + 8.0) {
           top = ay + 12;
         }
@@ -448,7 +446,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             circles: _createCircles(),
             polygons: _createBuildingPolygons(),
           ),
-
           Positioned(
             top: 65,
             left: 20,
@@ -461,64 +458,69 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               ),
             ),
           ),
-
           if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
             Positioned(
               left: popupLeft,
               top: popupTop,
               child: PointerInterceptor(
-                
                 child: BuildingInfoPopup(
-                  // Show full name + code 
                   title:
                       '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
-                  description:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
-                          'No description available.',
+                 description: buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
+    'No description available.',
+
+                  accessibility: buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.accessibility ??
+                      false,
+                  facilities: buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.facilities ??
+                      const [],
+                  onMore: () {
+                    final link =
+                        buildingInfoByCode[_selectedBuildingPoly!.code]?.link ??
+                            '';
+                    _openLink(link);
+                  },
                   onClose: _closePopup,
                 ),
               ),
             ),
-
-            
-         Positioned(
-  bottom: 70,
-  left: 20,
-  child: PointerInterceptor(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton(
-          heroTag: 'location_button',
-          mini: true,
-          onPressed: () {
-            final loc = _currentLocation;
-            if (loc == null) return;
-            _mapController?.animateCamera(
-              CameraUpdate.newLatLngZoom(loc, 17),
-            );
-          },
-          child: const Icon(Icons.my_location),
-        ),
-        const SizedBox(height: 10),
-        FloatingActionButton.extended(
-          heroTag: 'campus_button',
-          onPressed: _goToMyLocation,
-          icon: const Icon(Icons.school),
-          label: Text(
-            _currentCampus == Campus.sgw
-                ? 'SGW Campus'
-                : _currentCampus == Campus.loyola
-                    ? 'Loyola Campus'
-                    : 'Off Campus',
+          Positioned(
+            bottom: 70,
+            left: 20,
+            child: PointerInterceptor(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'location_button',
+                    mini: true,
+                    onPressed: () {
+                      final loc = _currentLocation;
+                      if (loc == null) return;
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(loc, 17),
+                      );
+                    },
+                    child: const Icon(Icons.my_location),
+                  ),
+                  const SizedBox(height: 10),
+                  FloatingActionButton.extended(
+                    heroTag: 'campus_button',
+                    onPressed: _goToMyLocation,
+                    icon: const Icon(Icons.school),
+                    label: Text(
+                      _currentCampus == Campus.sgw
+                          ? 'SGW Campus'
+                          : _currentCampus == Campus.loyola
+                              ? 'Loyola Campus'
+                              : 'Off Campus',
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
-    ),
-  ),
-),
-
-
           Positioned(
             bottom: 20,
             left: 0,

@@ -8,9 +8,12 @@ environment:
   sdk: ^3.10.7
 
 dependencies:
+  url_launcher: any
+  http: ^1.6.0
   flutter:
     sdk: flutter
   pointer_interceptor: ^0.10.1
+  
 
   cupertino_icons: ^1.0.8
 
