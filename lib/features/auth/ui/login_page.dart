@@ -13,6 +13,8 @@ class UserField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
+  final Key? fieldKey;
+
   const UserField({
     super.key,
     required this.label,
@@ -21,6 +23,7 @@ class UserField extends StatelessWidget {
     this.keyboardType,
     this.textInputAction,
     this.autofillHints,
+    this.fieldKey,
   });
 
   @override
@@ -29,6 +32,7 @@ class UserField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
+          key: fieldKey,
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
@@ -324,6 +328,7 @@ class _SignInPageState extends State<SignInPage> {
                     const Text("Email address", style: TextStyle(fontSize: 15)),
                     const SizedBox(height: 10),
                     UserField(
+                      fieldKey: const Key("login_email"),
                       label: "Your email",
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -334,6 +339,7 @@ class _SignInPageState extends State<SignInPage> {
                     const Text("Password", style: TextStyle(fontSize: 15)),
                     const SizedBox(height: 10),
                     UserField(
+                      fieldKey: const Key('login_password'),
                       label: "Password",
                       obscureText: true,
                       controller: passwordController,
@@ -381,6 +387,7 @@ class _SignInPageState extends State<SignInPage> {
                     ],
                     const SizedBox(height: 50),
                     AppButton(
+                      key: const Key('login_button'),
                       text: isLogin ? "Sign In" : "Sign Up",
                       onPressed: _handleAuth,
                       isLoading: isLoading,

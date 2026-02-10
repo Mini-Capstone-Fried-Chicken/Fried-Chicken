@@ -96,6 +96,13 @@ windows/flutter/ephemeral/
 app.*.symbols
 app.*.map.json
 
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Node.js dependencies
+node_modules/
 ####################################
 # Debug helpers
 ####################################
