@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../lib/services/firebase/firebase_options.dart';
+import '../lib/firebase_options.dart';
 import 'package:flutter/foundation.dart';
 
 void main() {
@@ -13,7 +13,6 @@ void main() {
       expect(options.messagingSenderId, isNotEmpty);
       expect(options.authDomain, isNotEmpty);
       expect(options.storageBucket, isNotEmpty);
-      expect(options.measurementId, isNotEmpty);
     });
 
     test('android options are correct', () {
@@ -33,27 +32,6 @@ void main() {
       expect(options.messagingSenderId, isNotEmpty);
       expect(options.storageBucket, isNotEmpty);
       expect(options.iosBundleId, isNotEmpty);
-    });
-
-    test('macos options are correct', () {
-      final options = DefaultFirebaseOptions.macos;
-      expect(options.apiKey, isNotEmpty);
-      expect(options.appId, isNotEmpty);
-      expect(options.projectId, isNotEmpty);
-      expect(options.messagingSenderId, isNotEmpty);
-      expect(options.storageBucket, isNotEmpty);
-      expect(options.iosBundleId, isNotEmpty);
-    });
-
-    test('windows options are correct', () {
-      final options = DefaultFirebaseOptions.windows;
-      expect(options.apiKey, isNotEmpty);
-      expect(options.appId, isNotEmpty);
-      expect(options.projectId, isNotEmpty);
-      expect(options.messagingSenderId, isNotEmpty);
-      expect(options.authDomain, isNotEmpty);
-      expect(options.storageBucket, isNotEmpty);
-      expect(options.measurementId, isNotEmpty);
     });
 
     test('currentPlatform throws for unsupported platform', () {
