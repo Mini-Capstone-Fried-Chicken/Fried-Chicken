@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class BuildingInfoPopup extends StatefulWidget {
@@ -7,7 +8,6 @@ class BuildingInfoPopup extends StatefulWidget {
   final bool accessibility;
   final List<String> facilities;
   final VoidCallback? onMore;
-
   final bool isLoggedIn;
 
   const BuildingInfoPopup({
@@ -28,6 +28,13 @@ class BuildingInfoPopup extends StatefulWidget {
 class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   bool _isSaved = false;
 
+  TooltipTriggerMode? get _triggerMode {
+    final isTouch = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    return isTouch ? TooltipTriggerMode.tap : null; // null = default hover on desktop/web
+  }
+
   Widget _buildIconButton({
     required IconData icon,
     required String tooltip,
@@ -36,12 +43,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     const burgundy = Color(0xFF76263D);
     return Tooltip(
       message: tooltip,
+      triggerMode: _triggerMode,
+      showDuration: const Duration(seconds: 1),
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(
-          icon,
-          color: burgundy,
-        ),
+        icon: Icon(icon, color: burgundy),
         iconSize: 25,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints.tightFor(width: 32, height: 32),
@@ -64,12 +70,18 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     required String tooltip,
   }) {
     const burgundy = Color(0xFF76263D);
+
     return Tooltip(
       message: tooltip,
-      child: Icon(
-        icon,
-        color: burgundy,
-        size: 22,
+      triggerMode: _triggerMode,
+      showDuration: const Duration(seconds: 1),
+      child: GestureDetector(
+        onTap: () {},
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(icon, color: burgundy, size: 22),
+        ),
       ),
     );
   }
@@ -83,7 +95,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     if (widget.accessibility) {
       topIcons.add(_topIcon(icon: Icons.accessible, tooltip: 'Accessible'));
     }
-
     if (_hasFacility(['washroom', 'washrooms', 'washroms', 'restroom', 'toilet'])) {
       topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
     }
@@ -149,12 +160,17 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                       ),
                     ),
                   ),
-                IconButton(
-                  onPressed: widget.onClose,
-                  icon: const Icon(Icons.close),
-                  color: burgundy,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                Tooltip(
+                  message: 'Close',
+                  triggerMode: _triggerMode,
+                  showDuration: const Duration(seconds: 1),
+                  child: IconButton(
+                    onPressed: widget.onClose,
+                    icon: const Icon(Icons.close),
+                    color: burgundy,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                  ),
                 ),
               ],
             ),

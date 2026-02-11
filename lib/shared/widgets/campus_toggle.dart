@@ -18,12 +18,12 @@ class CampusToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Outer pill container (background + border)
+    
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: Container(
         width: double.infinity,
-        height: 34,
+        height: 40,
         padding: const EdgeInsets.all(3), // inner padding to create the inset look
         decoration: BoxDecoration(
           color: _pillBg,
@@ -67,7 +67,7 @@ class CampusToggle extends StatelessWidget {
     final bool isSelected = currentCampus == campus;
 
     return Material(
-      color: Colors.transparent, // needed for InkWell ripple to render correctly
+      color: Colors.transparent, 
       child: InkWell(
         onTap: () => onCampusChanged(campus),
         borderRadius: BorderRadius.circular(999),
