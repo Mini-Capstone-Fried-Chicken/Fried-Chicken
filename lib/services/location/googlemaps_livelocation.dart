@@ -12,13 +12,18 @@ import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../features/indoor/data/building_info.dart';
+
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
-const double campusRadius = 500;// meters
+const double campusRadius = 500; // meters
+
+// when camera center is within this distance auto-switch toggle
+const double campusAutoSwitchRadius = 500; // meters
 
 enum Campus { sgw, loyola, none }
-// knowing which campus the user is in
+
+// knowing which campus the user is in 
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -86,6 +91,62 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   StreamSubscription<Position>? _posSub;
 
+  Timer? _popupDebounce;
+
+  static const double _popupW = 300;
+  static const double _popupH = 260;
+
+  LatLng? _selectedBuildingCenter;
+  Offset? _anchorOffset;
+
+  Campus _currentCampus = Campus.none;
+  Campus _selectedCampus = Campus.none;
+
+  Campus _campusFromPoint(LatLng p) {
+    final dSgw = Geolocator.distanceBetween(
+      p.latitude,
+      p.longitude,
+      concordiaSGW.latitude,
+      concordiaSGW.longitude,
+    );
+
+    final dLoy = Geolocator.distanceBetween(
+      p.latitude,
+      p.longitude,
+      concordiaLoyola.latitude,
+      concordiaLoyola.longitude,
+    );
+
+    final minDist = dSgw < dLoy ? dSgw : dLoy;
+    if (minDist > campusAutoSwitchRadius) return Campus.none;
+
+    return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
+  }
+
+  Future<void> _syncToggleWithCameraCenter() async {
+    final controller = _mapController;
+    if (!mounted || controller == null) return;
+
+    LatLng center;
+
+    try {
+      final bounds = await controller.getVisibleRegion();
+      final lat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+      final lng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+      center = LatLng(lat, lng);
+    } catch (_) {
+      return;
+    }
+
+    final newCampus = _campusFromPoint(center);
+
+    if (newCampus == _selectedCampus) return;
+
+    setState(() {
+      _selectedCampus = newCampus; 
+    });
+  }
+
   Future<void> _goToMyLocation() async {
     final controller = _mapController;
     if (controller == null) return;
@@ -113,13 +174,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
-
-  static const double _popupW = 300;
-  static const double _popupH = 260;
-
-  LatLng? _selectedBuildingCenter;
-  Offset? _anchorOffset;
-  Timer? _popupDebounce;
 
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
@@ -204,30 +258,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       selection: TextSelection.collapsed(offset: name.length),
     );
 
+    setState(() {
+      _selectedBuildingPoly = b;
+      _selectedBuildingCenter = center;
+      _anchorOffset = null;
+      _cameraMoving = true;
+    });
+
     if (controller == null) return;
 
-    controller
-        .animateCamera(
-      CameraUpdate.newLatLngZoom(center, 18),
-    )
-        .then((_) {
+    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((_) async {
       if (!mounted) return;
-
-      controller.getScreenCoordinate(center).then((sc) {
-        if (!mounted) return;
-
-        double x = sc.x.toDouble();
-        double y = sc.y.toDouble();
-
-        final dpr = MediaQuery.of(context).devicePixelRatio;
-        x = x / dpr;
-        y = y / dpr;
-
-        setState(() {
-          _selectedBuildingPoly = b;
-          _selectedBuildingCenter = center;
-          _anchorOffset = Offset(x, y);
-        });
+      await _updatePopupOffset();
+      if (!mounted) return;
+      setState(() {
+        _cameraMoving = false;
       });
     });
   }
@@ -283,9 +328,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return polys;
   }
 
-  Campus _currentCampus = Campus.none;
-  Campus _selectedCampus = Campus.none;
-
   @override
   void initState() {
     super.initState();
@@ -314,9 +356,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     });
 
-    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
-      BitmapDescriptor.hueAzure,
-    );
+    _blueDotIcon ??=
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
   }
 
   Future<void> _startLocationUpdates() async {
@@ -395,38 +436,41 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _switchCampus(Campus newCampus) {
-    LatLng targetLocation;
+  LatLng targetLocation;
 
-    switch (newCampus) {
-      case Campus.sgw:
-        targetLocation = concordiaSGW;
-        break;
-      case Campus.loyola:
-        targetLocation = concordiaLoyola;
-        break;
-      case Campus.none:
-        return;
-    }
-
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(targetLocation, 16),
-    );
-
-    setState(() {
-      _selectedCampus = newCampus;
-      _selectedBuildingPoly = null;
-      _selectedBuildingCenter = null;
-      _anchorOffset = null;
-    });
+  switch (newCampus) {
+    case Campus.sgw:
+      targetLocation = concordiaSGW;
+      break;
+    case Campus.loyola:
+      targetLocation = concordiaLoyola;
+      break;
+    case Campus.none:
+      return;
   }
+
+  _mapController?.animateCamera(
+    CameraUpdate.newLatLngZoom(targetLocation, 16),
+  );
+
+  setState(() {
+    _selectedCampus = newCampus;
+    _selectedBuildingPoly = null;
+    _selectedBuildingCenter = null;
+    _anchorOffset = null;
+    _cameraMoving = false;
+    _searchController.clear(); 
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
-    final Campus labelCampus =
-        _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
+    //  campus label follows the camera
+    final Campus labelCampus = _selectedCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
         ? 'SGW'
@@ -482,6 +526,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               myLocationButtonEnabled: false,
               onMapCreated: (controller) {
                 _mapController = controller;
+              },
+              onCameraMove: (pos) {
                 if (_selectedBuildingCenter != null) {
                   _schedulePopupUpdate();
                 }
@@ -493,6 +539,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 });
               },
               onCameraIdle: () {
+                _syncToggleWithCameraCenter();
+
                 if (_selectedBuildingCenter == null) return;
                 setState(() {
                   _cameraMoving = false;
