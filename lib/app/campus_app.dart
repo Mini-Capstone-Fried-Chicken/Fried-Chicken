@@ -4,8 +4,20 @@ import "package:campus_app/features/indoor/ui/pages/indoor_page.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 
-class CampusApp extends StatelessWidget {
+class CampusApp extends StatefulWidget {
   const CampusApp({super.key});
+
+  @override
+  State<CampusApp> createState() => _CampusAppState();
+}
+
+class _CampusAppState extends State<CampusApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Clear any existing Firebase Auth session to always start at login page
+    FirebaseAuth.instance.signOut();
+  }
 
   static const Map<String, String> indoorAssetsById = {
     // SVGs
