@@ -4,6 +4,7 @@ class BuildingInfo {
   final String campus;
 
   final String address;
+  final String note;
 
   final List<String> floors;
   final List<String> facilities;
@@ -16,6 +17,7 @@ class BuildingInfo {
     required this.name,
     required this.campus,
     required this.address,
+    this.note = '',
     required this.floors,
     required this.facilities,
     required this.accessibility,
@@ -26,32 +28,47 @@ class BuildingInfo {
   String get description {
     final addr = address.trim();
     final dept = department.trim();
+    final n = note.trim();
+
+    final deptSentence = departmentSentence(dept);
+    final noteSentence = ensurePeriod(n);
+
+    final parts = <String>[
+      'Located at $addr.',
+      if (deptSentence.isNotEmpty) deptSentence,
+      if (noteSentence.isNotEmpty) noteSentence,
+    ];
+
+    return parts.join(' ').trim();
+  }
+
+  String departmentSentence(String dept) {
+    if (dept.isEmpty) return '';
 
     if (dept == Departments.various) {
-      return 'Located at $addr. Part of Various departments.';
+      return 'Part of various departments.';
     }
+
     if (dept == Departments.residences || dept.toLowerCase() == 'residence') {
-      return 'Located at $addr. Hosts student residences.';
+      return 'Hosts student residences.';
     }
-
-    if (dept.isEmpty) {
-      return 'Located at $addr.';
-    }
-
-    final deptLower = dept.toLowerCase();
-    final needsWordDepartment = !deptLower.contains('department');
 
     if (dept.endsWith('.')) {
-      return 'Located at $addr. $dept'.trim();
+      return dept;
     }
 
-    final deptText = needsWordDepartment ? '$dept Department.' : dept;
-    return 'Located at $addr. $deptText'.trim();
+    return 'Part of $dept department.';
+  }
+
+  String ensurePeriod(String text) {
+    if (text.isEmpty) return '';
+    return text.endsWith('.') ? text : '$text.';
   }
 }
 
-class Floors {
-  static const groundOnly = <String>['0'];
+class Campuses {
+  static const sgw = 'SGW';
+  static const loyola = 'Loyola';
 }
 
 class Facilities {
@@ -84,713 +101,516 @@ class Departments {
   static const religionsCultures = 'Religions and Cultures';
   static const csuDaycareNursery = 'CSU Daycare & Nursery';
   static const artHistoryEducation = 'Art History and Education';
-  static const liberalArtsCollege = 'Liberal Arts College.';
+  static const liberalArtsCollege = 'Liberal Arts College';
 }
 
-const Map<String, BuildingInfo> buildingInfoByCode = {
-  "LB": BuildingInfo(
+const String linkBase = 'https://www.concordia.ca/maps/buildings/';
+
+BuildingInfo building({
+  required String code,
+  required String name,
+  required String campus,
+  required String address,
+  List<String> floors = const ['0'],
+  List<String> facilities = const [Facilities.washrooms],
+  bool accessibility = true,
+  String department = Departments.various,
+  String note = '',
+  String? link,
+}) {
+  return BuildingInfo(
+    code: code,
+    name: name,
+    campus: campus,
+    address: address,
+    note: note,
+    floors: floors,
+    facilities: facilities,
+    accessibility: accessibility,
+    department: department,
+    link: link ?? '$linkBase${code.toLowerCase()}.html',
+  );
+}
+
+final Map<String, BuildingInfo> buildingInfoByCode = {
+  "LB": building(
     code: "LB",
     name: "LB Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1400 De Maisonneuve Blvd. W.",
-    floors: ["1", "2", "3", "4", "5"],
-    facilities: [Facilities.washrooms, Facilities.coffeeShop, Facilities.metro],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/lb.html",
+    floors: const ["1", "2", "3", "4", "5"],
+    facilities: const [
+      Facilities.washrooms,
+      Facilities.coffeeShop,
+      Facilities.metro
+    ],
   ),
-  "MB": BuildingInfo(
+  "MB": building(
     code: "MB",
     name: "John Molson Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1450 Guy St.",
-    floors: ["1", "S2"],
-    facilities: [Facilities.washrooms, Facilities.metro, Facilities.zenDen],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/mb.html",
+    floors: const ["1", "S2"],
+    facilities: const [Facilities.washrooms, Facilities.metro, Facilities.zenDen],
   ),
-  "H": BuildingInfo(
+  "H": building(
     code: "H",
     name: "Hall Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1455 De Maisonneuve Blvd. W.",
-    floors: ["1", "2", "8", "9"],
-    facilities: [
+    floors: const ["1", "2", "8", "9"],
+    facilities: const [
       Facilities.washrooms,
       Facilities.metro,
       Facilities.restaurants,
       Facilities.coffeeShop,
       Facilities.zenDen,
     ],
-    accessibility: true,
     department: Departments.engineeringComputerScience,
-    link: "https://www.concordia.ca/maps/buildings/h.html",
   ),
-  "EV": BuildingInfo(
+  "EV": building(
     code: "EV",
     name: "Engineering, Computer Science and Visual Arts Integrated Complex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1515 Ste-Catherine St. W.",
-    floors: ["1", "2", "3"],
-    facilities: [
+    floors: const ["1", "2", "3"],
+    facilities: const [
       Facilities.washrooms,
       Facilities.zenDen,
       Facilities.coffeeShop,
       Facilities.metro,
     ],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/ev.html",
   ),
-  "GM": BuildingInfo(
+  "GM": building(
     code: "GM",
     name: "Guy-De Maisonneuve Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1550 De Maisonneuve Blvd. W.",
-    floors: Floors.groundOnly,
-    facilities: [
+    facilities: const [
       Facilities.washrooms,
       Facilities.zenDen,
       Facilities.metro,
       Facilities.coffeeShop,
     ],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/gm.html",
   ),
-  "FG": BuildingInfo(
+  "FG": building(
     code: "FG",
     name: "Faubourg Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1610 Ste-Catherine St. W.",
-    floors: ["1", "2"],
-    facilities: [Facilities.washrooms, Facilities.restaurants],
-    accessibility: true,
+    floors: const ["1", "2"],
+    facilities: const [Facilities.washrooms, Facilities.restaurants],
     department: Departments.education,
-    link: "https://www.concordia.ca/maps/buildings/fg.html",
   ),
-  "B": BuildingInfo(
+  "B": building(
     code: "B",
     name: "B annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2160 Bishop St.",
-    floors: ["1", "2"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1", "2"],
     accessibility: false,
     department: Departments.engineeringComputerScience,
-    link: "https://www.concordia.ca/maps/buildings/b.html",
   ),
-  "CI": BuildingInfo(
+  "CI": building(
     code: "CI",
     name: "CI annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2149 Mackay St.",
-    floors: ["1"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1"],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/ci.html",
   ),
-  "CL": BuildingInfo(
+  "CL": building(
     code: "CL",
     name: "CL annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1665 Ste-Catherine St. W.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/cl.html",
   ),
-  "D": BuildingInfo(
+  "D": building(
     code: "D",
     name: "D annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2140 Bishop St.",
-    floors: ["1"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1"],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/d.html",
   ),
-  "EN": BuildingInfo(
+  "EN": building(
     code: "EN",
     name: "EN annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2070 Mackay St.",
-    floors: ["1"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1"],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/en.html",
   ),
-  "ER": BuildingInfo(
+  "ER": building(
     code: "ER",
     name: "ER building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2155 Guy St.",
-    floors: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/er.html",
+    floors: const ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
   ),
-  "FA": BuildingInfo(
+  "FA": building(
     code: "FA",
     name: "FA annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2060 Mackay St.",
-    floors: ["1", "2", "3"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1", "2", "3"],
     accessibility: false,
     department: Departments.religionsCultures,
-    link: "https://www.concordia.ca/maps/buildings/fa.html",
   ),
-  "FB": BuildingInfo(
+  "FB": building(
     code: "FB",
     name: "FB - Faubourg Tower",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1250 Guy St. (main entrance), 1600 Ste-Catherine St. W.",
-    floors: ["1", "2", "3"],
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/fb.html",
+    floors: const ["1", "2", "3"],
+    facilities: const [Facilities.washrooms, Facilities.parking],
   ),
-  "GN": BuildingInfo(
+  "GN": building(
     code: "GN",
     name: "Grey Nuns Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address:
         "1190 Guy St. (main entrance) / 1175 St-Mathieu St. / 1185 St-Mathieu St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.philosophy,
-    link: "https://www.concordia.ca/maps/buildings/gn.html",
   ),
-  "GS": BuildingInfo(
+  "GS": building(
     code: "GS",
     name: "GS",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1538 Sherbrooke St. W.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/gs.html",
   ),
-  "K": BuildingInfo(
+  "K": building(
     code: "K",
     name: "K Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2150 Bishop St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/k.html",
   ),
-  "LD": BuildingInfo(
+  "LD": building(
     code: "LD",
     name: "LD",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1424 Bishop St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
+    facilities: const [Facilities.washrooms, Facilities.parking],
     department: Departments.csuDaycareNursery,
-    link: "https://www.concordia.ca/maps/buildings/ld.html",
   ),
-  "LS": BuildingInfo(
+  "LS": building(
     code: "LS",
     name: "Learning Square",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1535 De Maisonneuve Blvd. W.",
-    floors: ["1", "2"],
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/ls.html",
+    floors: const ["1", "2"],
   ),
-  "M": BuildingInfo(
+  "M": building(
     code: "M",
     name: "M Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2135 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/m.html",
   ),
-  "MI": BuildingInfo(
+  "MI": building(
     code: "MI",
     name: "MI Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2130 Bishop St.",
-    floors: ["1", "2"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1", "2"],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/mi.html",
   ),
-  "MU": BuildingInfo(
+  "MU": building(
     code: "MU",
     name: "MU",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2170 Bishop St.",
-    floors: ["1", "2"],
-    facilities: [Facilities.washrooms],
+    floors: const ["1", "2"],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/mu.html",
   ),
-  "P": BuildingInfo(
+  "P": building(
     code: "P",
     name: "P",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2020 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/p.html",
   ),
-  "PR": BuildingInfo(
+  "PR": building(
     code: "PR",
     name: "PR Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2100 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/pr.html",
   ),
-  "Q": BuildingInfo(
+  "Q": building(
     code: "Q",
     name: "Q Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2010 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/q.html",
   ),
-  "R": BuildingInfo(
+  "R": building(
     code: "R",
     name: "R Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2050 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/r.html",
   ),
-  "RR": BuildingInfo(
+  "RR": building(
     code: "RR",
     name: "RR Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2040 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
     department: Departments.liberalArtsCollege,
-    link: "https://www.concordia.ca/maps/buildings/rr.html",
   ),
-  "S": BuildingInfo(
+  "S": building(
     code: "S",
     name: "S Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2145 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
     department: Departments.philosophy,
-    link: "https://www.concordia.ca/maps/buildings/s.html",
   ),
-  "SB": BuildingInfo(
+  "SB": building(
     code: "SB",
     name: "Samuel Bronfman Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1590 Docteur Penfield",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/sb.html",
   ),
-  "T": BuildingInfo(
+  "T": building(
     code: "T",
     name: "T Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2030 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/t.html",
   ),
-  "TD": BuildingInfo(
+  "TD": building(
     code: "TD",
     name: "Toronto-Dominion Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1410 Guy St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/td.html",
   ),
-  "V": BuildingInfo(
+  "V": building(
     code: "V",
     name: "V Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2110 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/v.html",
   ),
-  "VA": BuildingInfo(
+  "VA": building(
     code: "VA",
     name: "Visual Arts Building",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "1395 René-Lévesque Blvd. W.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.artHistoryEducation,
-    link: "https://www.concordia.ca/maps/buildings/va.html",
   ),
-  "X": BuildingInfo(
+  "X": building(
     code: "X",
     name: "X Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2080 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/x.html",
   ),
-  "Z": BuildingInfo(
+  "Z": building(
     code: "Z",
     name: "Z Annex",
-    campus: "SGW",
+    campus: Campuses.sgw,
     address: "2090 Mackay St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/z.html",
   ),
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-  "AD": BuildingInfo(
+  // Loyola
+  "AD": building(
     code: "AD",
     name: "Administration Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.facultyArtsScience,
-    link: "https://www.concordia.ca/maps/buildings/ad.html",
   ),
-  "BB": BuildingInfo(
+  "BB": building(
     code: "BB",
     name: "BB Annex",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: "3502 Belmore Ave.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/bb.html",
   ),
-  "BH": BuildingInfo(
+  "BH": building(
     code: "BH",
     name: "BH Annex",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: "3500 Belmore Ave.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/bh.html",
   ),
-  "CC": BuildingInfo(
+  "CC": building(
     code: "CC",
     name: "Central Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.zenDen],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/cc.html",
+    facilities: const [Facilities.washrooms, Facilities.zenDen],
   ),
-  "CJ": BuildingInfo(
+  "CJ": building(
     code: "CJ",
     name: "Communication Studies and Journalism Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.communicationStudiesJournalism,
-    link: "https://www.concordia.ca/maps/buildings/cj.html",
   ),
-  "DO": BuildingInfo(
+  "DO": building(
     code: "DO",
     name: "Stinger Dome",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
     department: Departments.athletics,
-    link: "https://www.concordia.ca/maps/buildings/do.html",
   ),
-  "FC": BuildingInfo(
+  "FC": building(
     code: "FC",
     name: "F.C. Smith Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/fc.html",
   ),
-  "GE": BuildingInfo(
+  "GE": building(
     code: "GE",
     name: "Centre for Structural and Functional Genomics",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.research,
-    link: "https://www.concordia.ca/maps/buildings/ge.html",
   ),
-  "HA": BuildingInfo(
+  "HA": building(
     code: "HA",
     name: "Hingston Hall, wing HA",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
+    facilities: const [Facilities.washrooms, Facilities.parking],
     department: Departments.residences,
-    link: "https://www.concordia.ca/maps/buildings/ha.html",
   ),
-  "HB": BuildingInfo(
+  "HB": building(
     code: "HB",
     name: "Hingston Hall, wing HB",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
+    facilities: const [Facilities.washrooms, Facilities.parking],
     accessibility: false,
     department: Departments.residences,
-    link: "https://www.concordia.ca/maps/buildings/hb.html",
   ),
-  "HC": BuildingInfo(
+  "HC": building(
     code: "HC",
     name: "Hingston Hall, wing HC",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
+    facilities: const [Facilities.washrooms, Facilities.parking],
     department: Departments.residences,
-    link: "https://www.concordia.ca/maps/buildings/hc.html",
   ),
-  "HU": BuildingInfo(
+  "HU": building(
     code: "HU",
     name: "Applied Science Hub",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/hu.html",
   ),
-  "JR": BuildingInfo(
+  "JR": building(
     code: "JR",
     name: "Jesuit Residence",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
+    facilities: const [Facilities.washrooms, Facilities.parking],
     department: Departments.residences,
-    link: "https://www.concordia.ca/maps/buildings/jr.html",
   ),
-  "PC": BuildingInfo(
+  "PC": building(
     code: "PC",
     name: "PERFORM Centre",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaOther,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/pc.html",
+    facilities: const [Facilities.washrooms, Facilities.parking],
   ),
-  "PS": BuildingInfo(
+  "PS": building(
     code: "PS",
     name: "Physical Services Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/ps.html",
   ),
-  "PT": BuildingInfo(
+  "PT": building(
     code: "PT",
     name: "Oscar Peterson Concert Hall",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/pt.html",
   ),
-  "PY": BuildingInfo(
+  "PY": building(
     code: "PY",
     name: "Psychology Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.psychology,
-    link: "https://www.concordia.ca/maps/buildings/py.html",
   ),
-  "QA": BuildingInfo(
+  "QA": building(
     code: "QA",
     name: "Quadrangle",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/qa.html",
   ),
-  "RA": BuildingInfo(
+  "RA": building(
     code: "RA",
     name: "Recreation and Athletics Complex",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaOther,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/ra.html",
+    facilities: const [Facilities.washrooms, Facilities.parking],
   ),
-  "RF": BuildingInfo(
+  "RF": building(
     code: "RF",
     name: "Loyola Jesuit Hall and Conference Centre",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaOther,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/rf.html",
   ),
-  "SC": BuildingInfo(
+  "SC": building(
     code: "SC",
     name: "Student Centre",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [
+    facilities: const [
       Facilities.washrooms,
       Facilities.coffeeShop,
-      Facilities.restaurants,
+      Facilities.restaurants
     ],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/sc.html",
   ),
-  "SH": BuildingInfo(
+  "SH": building(
     code: "SH",
     name: "Future Buildings Laboratory",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.research,
-    link: "https://www.concordia.ca/maps/buildings/sh.html",
   ),
-  "SI": BuildingInfo(
+  "SI": building(
     code: "SI",
     name: "St. Ignatius of Loyola Church",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: "4455 Broadway St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/si.html",
   ),
-  "SP": BuildingInfo(
+  "SP": building(
     code: "SP",
     name: "Richard J. Renaud Science Complex",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.coffeeShop],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/sp.html",
+    facilities: const [Facilities.washrooms, Facilities.coffeeShop],
   ),
-  "TA": BuildingInfo(
+  "TA": building(
     code: "TA",
     name: "Terrebonne Building",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: "7079 Terrebonne St.",
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms, Facilities.parking],
+    facilities: const [Facilities.washrooms, Facilities.parking],
     accessibility: false,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/ta.html",
   ),
-  "VE": BuildingInfo(
+  "VE": building(
     code: "VE",
     name: "Vanier Extension",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
     department: Departments.appliedHumanSciences,
-    link: "https://www.concordia.ca/maps/buildings/ve.html",
   ),
-  "VL": BuildingInfo(
+  "VL": building(
     code: "VL",
     name: "Vanier Library",
-    campus: "Loyola",
+    campus: Campuses.loyola,
     address: Addresses.loyolaMain,
-    floors: Floors.groundOnly,
-    facilities: [Facilities.washrooms],
-    accessibility: true,
-    department: Departments.various,
-    link: "https://www.concordia.ca/maps/buildings/vl.html",
+    note: "Library on Loyola campus",
   ),
 };
