@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -13,13 +12,13 @@ import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../features/indoor/data/building_info.dart';
-
+// concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
-const double campusRadius = 500;
+const double campusRadius = 500;// meters
 
 enum Campus { sgw, loyola, none }
-
+// knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -585,7 +584,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             right: 0,
             child: Center(
               child: SizedBox(
-                width: 800,
+                width: 290,
                 child: CampusToggle(
                   currentCampus: _selectedCampus,
                   onCampusChanged: _switchCampus,

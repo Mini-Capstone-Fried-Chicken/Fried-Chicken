@@ -265,4 +265,45 @@ testWidgets('More button calls launcher when link is set', (tester) async {
 
   expect(launchedCalls.isEmpty, isTrue);
 });
+
+String readSearchHint(WidgetTester tester) {
+  final tf = find.descendant(
+    of: find.byType(MapSearchBar),
+    matching: find.byType(TextField),
+  );
+
+  final w = tester.widget<TextField>(tf.first);
+  final deco = w.decoration;
+  return deco?.hintText ?? '';
+}
+
+testWidgets('search hint updates when campus toggle is tapped', (tester) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: OutdoorMapPage(
+        initialCampus: Campus.sgw,
+        isLoggedIn: true,
+        debugDisableMap: true,
+        debugDisableLocation: true,
+      ),
+    ),
+  );
+
+  await tester.pumpAndSettle();
+
+  expect(readSearchHint(tester), 'Search Concordia SGW');
+
+  await tester.tap(find.text('Loyola'));
+  await tester.pumpAndSettle();
+
+  expect(readSearchHint(tester), 'Search Concordia Loyola');
+
+  await tester.tap(find.text('Sir George William'));
+  await tester.pumpAndSettle();
+
+  expect(readSearchHint(tester), 'Search Concordia SGW');
+});
+
+
+
 }
