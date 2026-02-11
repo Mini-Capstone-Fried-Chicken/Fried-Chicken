@@ -23,7 +23,7 @@ const double campusAutoSwitchRadius = 500; // meters
 
 enum Campus { sgw, loyola, none }
 
-// knowing which campus the user is in 
+// knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -102,6 +102,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Campus _currentCampus = Campus.none;
   Campus _selectedCampus = Campus.none;
 
+  LatLng? _lastCameraTarget;
+
   Campus _campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
       p.latitude,
@@ -124,18 +126,22 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _syncToggleWithCameraCenter() async {
-    final controller = _mapController;
-    if (!mounted || controller == null) return;
+    if (!mounted) return;
 
-    LatLng center;
+    LatLng? center = _lastCameraTarget;
 
-    try {
-      final bounds = await controller.getVisibleRegion();
-      final lat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-      final lng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
-      center = LatLng(lat, lng);
-    } catch (_) {
-      return;
+    if (center == null) {
+      final controller = _mapController;
+      if (controller == null) return;
+
+      try {
+        final bounds = await controller.getVisibleRegion();
+        final lat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+        final lng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+        center = LatLng(lat, lng);
+      } catch (_) {
+        return;
+      }
     }
 
     final newCampus = _campusFromPoint(center);
@@ -143,7 +149,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (newCampus == _selectedCampus) return;
 
     setState(() {
-      _selectedCampus = newCampus; 
+      _selectedCampus = newCampus;
     });
   }
 
@@ -334,6 +340,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     _selectedCampus = widget.initialCampus;
 
+    _lastCameraTarget =
+        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+
     _createBlueDotIcon();
     if (!widget.debugDisableLocation) {
       _startLocationUpdates();
@@ -436,40 +445,40 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _switchCampus(Campus newCampus) {
-  LatLng targetLocation;
+    LatLng targetLocation;
 
-  switch (newCampus) {
-    case Campus.sgw:
-      targetLocation = concordiaSGW;
-      break;
-    case Campus.loyola:
-      targetLocation = concordiaLoyola;
-      break;
-    case Campus.none:
-      return;
+    switch (newCampus) {
+      case Campus.sgw:
+        targetLocation = concordiaSGW;
+        break;
+      case Campus.loyola:
+        targetLocation = concordiaLoyola;
+        break;
+      case Campus.none:
+        return;
+    }
+
+    _lastCameraTarget = targetLocation;
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(targetLocation, 16),
+    );
+
+    setState(() {
+      _selectedCampus = newCampus;
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _cameraMoving = false;
+      _searchController.clear();
+    });
   }
-
-  _mapController?.animateCamera(
-    CameraUpdate.newLatLngZoom(targetLocation, 16),
-  );
-
-  setState(() {
-    _selectedCampus = newCampus;
-    _selectedBuildingPoly = null;
-    _selectedBuildingCenter = null;
-    _anchorOffset = null;
-    _cameraMoving = false;
-    _searchController.clear(); 
-  });
-}
-
 
   @override
   Widget build(BuildContext context) {
     final LatLng initialTarget =
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
-    //  campus label follows the camera
     final Campus labelCampus = _selectedCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
@@ -528,6 +537,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 _mapController = controller;
               },
               onCameraMove: (pos) {
+                _lastCameraTarget = pos.target;
                 if (_selectedBuildingCenter != null) {
                   _schedulePopupUpdate();
                 }
