@@ -6,8 +6,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
+import '../../data/building_names.dart';
+import '../building_search_service.dart';
 import '../../shared/widgets/campus_toggle.dart';
-import '../../utils/geo.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/learn_more_popup.dart';
 import '../../features/indoor/data/building_info.dart';
@@ -57,6 +58,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
   bool _showLearnMore = false;
+  List<BuildingName> _searchSuggestions = [];
 
   GoogleMapController? _mapController;
 
@@ -208,13 +210,58 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _closePopup() {
+    _clearSelectedBuilding(clearSearch: true);
+  }
+
+  void _clearSelectedBuilding({bool clearSearch = false}) {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
       _anchorOffset = null;
       _showLearnMore = false;
-      _searchController.clear();
+      if (clearSearch) {
+        _searchController.clear();
+      }
     });
+  }
+
+  void _hideBuildingPopup() {
+    if (_selectedBuildingPoly == null) return;
+
+    _clearSelectedBuilding();
+  }
+
+  void _onSearchSubmitted(String query) {
+    if (query.trim().isEmpty) return;
+
+    // Use the search service to find the building
+    final building = BuildingSearchService.searchBuilding(query);
+
+    if (building != null) {
+      // Highlight and show the building just like when it's clicked
+      _onBuildingTapped(building);
+    } else {
+      // Show a message that the building wasn't found
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Building "$query" not found'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFF800020),
+        ),
+      );
+      // Clear the search bar
+      _searchController.clear();
+    }
+  }
+
+  void _onSuggestionSelected(BuildingName building) {
+    // Find the building polygon by code
+    final buildingPolygon = BuildingSearchService.searchBuilding(building.code);
+    if (buildingPolygon == null) return;
+
+    // Highlight and show the building just like when it's clicked
+    _onBuildingTapped(buildingPolygon);
   }
 
   Set<Polygon> _createBuildingPolygons() {
@@ -270,6 +317,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     _createBlueDotIcon();
     _startLocationUpdates();
+
+    // Listen to search input changes
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text;
+    setState(() {
+      _searchSuggestions = BuildingSearchService.getSuggestions(query);
+    });
   }
 
   Future<void> _createBlueDotIcon() async {
@@ -467,12 +524,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             top: 65,
             left: 20,
             right: 20,
-            child: SizedBox(
-              height: 70,
-              child: MapSearchBar(
-                campusLabel: campusLabel,
-                controller: _searchController,
-              ),
+            child: MapSearchBar(
+              campusLabel: campusLabel,
+              controller: _searchController,
+              onSubmitted: _onSearchSubmitted,
+              suggestions: _searchSuggestions,
+              onSuggestionSelected: _onSuggestionSelected,
+              onFocus: _hideBuildingPopup,
             ),
           ),
 
@@ -571,6 +629,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _posSub?.cancel();
     _popupDebounce?.cancel();
     _mapController?.dispose();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
