@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -13,14 +14,12 @@ import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../features/indoor/data/building_info.dart';
 
-// concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
-const double campusRadius = 500; // meters
+const double campusRadius = 500;
 
 enum Campus { sgw, loyola, none }
 
-// knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
     userLocation.latitude,
@@ -45,10 +44,30 @@ class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
   final bool isLoggedIn;
 
+  @visibleForTesting
+  final BuildingPolygon? debugSelectedBuilding;
+
+  @visibleForTesting
+  final Offset? debugAnchorOffset;
+
+  @visibleForTesting
+  final bool debugDisableMap;
+
+  @visibleForTesting
+  final bool debugDisableLocation;
+
+  @visibleForTesting
+  final String? debugLinkOverride;
+
   const OutdoorMapPage({
     super.key,
     required this.initialCampus,
     required this.isLoggedIn,
+    this.debugSelectedBuilding,
+    this.debugAnchorOffset,
+    this.debugDisableMap = false,
+    this.debugDisableLocation = false,
+    this.debugLinkOverride,
   });
 
   @override
@@ -100,7 +119,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   static const double _popupH = 260;
 
   LatLng? _selectedBuildingCenter;
-  Offset? _anchorOffset; 
+  Offset? _anchorOffset;
   Timer? _popupDebounce;
 
   LatLng _polygonCenter(List<LatLng> pts) {
@@ -156,6 +175,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     setState(() {
       _anchorOffset = Offset(x, y);
+    });
+  }
+
+  void _selectBuildingWithoutMap(BuildingPolygon b) {
+    final center = _polygonCenter(b.points);
+    final name = buildingInfoByCode[b.code]?.name ?? b.name;
+
+    _searchController.value = TextEditingValue(
+      text: name,
+      selection: TextSelection.collapsed(offset: name.length),
+    );
+
+    setState(() {
+      _selectedBuildingPoly = b;
+      _selectedBuildingCenter = center;
+      _anchorOffset = widget.debugAnchorOffset ?? const Offset(200, 420);
+      _cameraMoving = false;
     });
   }
 
@@ -258,7 +294,17 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _selectedCampus = widget.initialCampus;
 
     _createBlueDotIcon();
-    _startLocationUpdates();
+    if (!widget.debugDisableLocation) {
+      _startLocationUpdates();
+    }
+
+    final debugB = widget.debugSelectedBuilding;
+    if (debugB != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _selectBuildingWithoutMap(debugB);
+      });
+    }
   }
 
   Future<void> _createBlueDotIcon() async {
@@ -404,11 +450,18 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
       if (inView) {
         double left = ax - (_popupW / 2);
-        double top = ay - _popupH - 12;
+        double top = ay - (_popupH / 2);
 
-        if (top < topPad + 8.0) {
-          top = ay + 12;
-        }
+        const margin = 8.0;
+        final minLeft = margin;
+        final maxLeft = screen.width - _popupW - margin;
+        final minTop = topPad + margin;
+        final maxTop = screen.height - _popupH - margin;
+
+        if (left < minLeft) left = minLeft;
+        if (left > maxLeft) left = maxLeft;
+        if (top < minTop) top = minTop;
+        if (top > maxTop) top = maxTop;
 
         popupLeft = left;
         popupTop = top;
@@ -418,36 +471,39 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: initialTarget,
-              zoom: 16,
+          if (widget.debugDisableMap)
+            const SizedBox.expand()
+          else
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: initialTarget,
+                zoom: 16,
+              ),
+              myLocationEnabled: false,
+              myLocationButtonEnabled: false,
+              onMapCreated: (controller) {
+                _mapController = controller;
+                if (_selectedBuildingCenter != null) {
+                  _schedulePopupUpdate();
+                }
+              },
+              onCameraMoveStarted: () {
+                if (_selectedBuildingCenter == null) return;
+                setState(() {
+                  _cameraMoving = true;
+                });
+              },
+              onCameraIdle: () {
+                if (_selectedBuildingCenter == null) return;
+                setState(() {
+                  _cameraMoving = false;
+                });
+                _updatePopupOffset();
+              },
+              markers: _createMarkers(),
+              circles: _createCircles(),
+              polygons: _createBuildingPolygons(),
             ),
-            myLocationEnabled: false,
-            myLocationButtonEnabled: false,
-            onMapCreated: (controller) {
-              _mapController = controller;
-              if (_selectedBuildingCenter != null) {
-                _schedulePopupUpdate();
-              }
-            },
-            onCameraMoveStarted: () {
-              if (_selectedBuildingCenter == null) return;
-              setState(() {
-                _cameraMoving = true;
-              });
-            },
-            onCameraIdle: () {
-              if (_selectedBuildingCenter == null) return;
-              setState(() {
-                _cameraMoving = false;
-              });
-              _updatePopupOffset();
-            },
-            markers: _createMarkers(),
-            circles: _createCircles(),
-            polygons: _createBuildingPolygons(),
-          ),
           Positioned(
             top: 65,
             left: 20,
@@ -465,25 +521,26 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               left: popupLeft,
               top: popupTop,
               child: PointerInterceptor(
-               child: BuildingInfoPopup(
-  title:
-      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
-  description: buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
-      'No description available.',
-  accessibility:
-      buildingInfoByCode[_selectedBuildingPoly!.code]?.accessibility ?? false,
-  facilities:
-      buildingInfoByCode[_selectedBuildingPoly!.code]?.facilities ?? const [],
-  onMore: () {
-    final link = buildingInfoByCode[_selectedBuildingPoly!.code]?.link ?? '';
-    _openLink(link);
-  },
-  onClose: _closePopup,
-
-  isLoggedIn: widget.isLoggedIn,
-
-),
-
+                child: BuildingInfoPopup(
+                  title:
+                      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
+                  description:
+                      buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
+                          'No description available.',
+                  accessibility:
+                      buildingInfoByCode[_selectedBuildingPoly!.code]?.accessibility ??
+                          false,
+                  facilities:
+                      buildingInfoByCode[_selectedBuildingPoly!.code]?.facilities ??
+                          const [],
+                  onMore: () {
+                    final link = widget.debugLinkOverride ??
+                        (buildingInfoByCode[_selectedBuildingPoly!.code]?.link ?? '');
+                    _openLink(link);
+                  },
+                  onClose: _closePopup,
+                  isLoggedIn: widget.isLoggedIn,
+                ),
               ),
             ),
           Positioned(
