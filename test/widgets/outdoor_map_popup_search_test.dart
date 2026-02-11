@@ -304,6 +304,76 @@ testWidgets('search hint updates when campus toggle is tapped', (tester) async {
   expect(readSearchHint(tester), 'Search Concordia SGW');
 });
 
+testWidgets('initialCampus none -> search hint is "Search"', (tester) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: OutdoorMapPage(
+        initialCampus: Campus.none,
+        isLoggedIn: true,
+        debugDisableMap: true,
+        debugDisableLocation: true,
+      ),
+    ),
+  );
+
+  await tester.pumpAndSettle();
+
+  expect(readSearchHint(tester), 'Search');
+});
+
+testWidgets('switching campus clears popup + search text', (tester) async {
+  final b = buildingPolygons.first;
+
+  await tester.pumpWidget(
+    MaterialApp(
+      home: OutdoorMapPage(
+        initialCampus: Campus.sgw,
+        isLoggedIn: true,
+        debugDisableMap: true,
+        debugDisableLocation: true,
+        debugSelectedBuilding: b,
+        debugAnchorOffset: const Offset(200, 180),
+      ),
+    ),
+  );
+
+  await tester.pumpAndSettle();
+
+  expect(find.byType(BuildingInfoPopup), findsOneWidget);
+  expect(_readSearchText(tester).isNotEmpty, isTrue);
+
+  await tester.tap(find.text('Loyola'));
+  await tester.pumpAndSettle();
+
+  expect(find.byType(BuildingInfoPopup), findsNothing);
+  expect(_readSearchText(tester), '');
+});
+testWidgets('switching campus clears popup when going back to SGW', (tester) async {
+  final b = buildingPolygons.first;
+
+  await tester.pumpWidget(
+    MaterialApp(
+      home: OutdoorMapPage(
+        initialCampus: Campus.loyola,
+        isLoggedIn: true,
+        debugDisableMap: true,
+        debugDisableLocation: true,
+        debugSelectedBuilding: b,
+        debugAnchorOffset: const Offset(200, 180),
+      ),
+    ),
+  );
+
+  await tester.pumpAndSettle();
+
+  expect(find.byType(BuildingInfoPopup), findsOneWidget);
+
+  await tester.tap(find.text('Sir George William'));
+  await tester.pumpAndSettle();
+
+  expect(find.byType(BuildingInfoPopup), findsNothing);
+  expect(_readSearchText(tester), '');
+});
 
 
 }
