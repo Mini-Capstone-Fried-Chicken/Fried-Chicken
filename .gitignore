@@ -42,6 +42,13 @@ build/
 **/doc/api/
 
 ####################################
+# Firebase configuration files
+####################################
+**/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+
+####################################
 # Android
 ####################################
 android/.gradle/
