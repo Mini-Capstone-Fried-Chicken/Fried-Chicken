@@ -11,309 +11,137 @@ class BuildingName {
   });
 }
 
+BuildingName _building({
+  required String code,
+  String? name,
+  List<String> searchTerms = const [],
+}) {
+  return BuildingName(
+    code: code,
+    name: name ?? code,
+    searchTerms: searchTerms,
+  );
+}
+
+BuildingName _annex(String code, List<String> searchTerms) {
+  return _building(
+    code: code,
+    name: "$code annex",
+    searchTerms: searchTerms,
+  );
+}
+
 /// List of all Concordia buildings with their codes and full names
-const List<BuildingName> concordiaBuildingNames = [
+final List<BuildingName> concordiaBuildingNames = [
   // SGW Campus
-  BuildingName(
-    code: "LB",
-    name: "LB Building",
-    searchTerms: ["lb"],
-  ),
-  BuildingName(
-    code: "MB",
-    name: "MB Building",
-    searchTerms: ["mb"],
-  ),
-  BuildingName(
-    code: "HALL",
-    name: "Hall Building",
-    searchTerms: ["hall", "h"],
-  ),
-  BuildingName(
+  _building(code: "LB", name: "LB Building", searchTerms: ["lb"]),
+  _building(code: "MB", name: "MB Building", searchTerms: ["mb"]),
+  _building(code: "HALL", name: "Hall Building", searchTerms: ["hall", "h"]),
+  _building(
     code: "EV",
     name: "EV Building",
     searchTerms: ["ev", "engineering", "visual arts"],
   ),
-  BuildingName(
-    code: "GM",
-    name: "GM Building",
-    searchTerms: ["gm", "guy metro"],
-  ),
-  BuildingName(
-    code: "FG",
-    name: "Faubourg Building",
-    searchTerms: ["faubourg", "fg"],
-  ),
-  BuildingName(
-    code: "B",
-    name: "B annex",
-    searchTerms: ["b", "annex"],
-  ),
-  BuildingName(
-    code: "CI",
-    name: "CI annex",
-    searchTerms: ["ci", "annex"],
-  ),
-  BuildingName(
-    code: "CL",
-    name: "CL annex",
-    searchTerms: ["cl", "annex"],
-  ),
-  BuildingName(
-    code: "D",
-    name: "D annex",
-    searchTerms: ["d", "annex"],
-  ),
-  BuildingName(
-    code: "EN",
-    name: "EN annex",
-    searchTerms: ["en", "annex"],
-  ),
-  BuildingName(
-    code: "ER",
-    name: "ER building",
-    searchTerms: ["er"],
-  ),
-  BuildingName(
-    code: "FA",
-    name: "FA annex",
-    searchTerms: ["fa", "annex"],
-  ),
-  BuildingName(
-    code: "FB",
-    name: "FB - Faubourg Tower",
-    searchTerms: ["fb", "faubourg", "tower"],
-  ),
-  BuildingName(
-    code: "GN",
-    name: "Grey Nuns Building",
-    searchTerms: ["grey nuns", "gn"],
-  ),
-  BuildingName(
-    code: "GS",
-    name: "GS",
-    searchTerms: ["gs"],
-  ),
-  BuildingName(
-    code: "K",
-    name: "K",
-    searchTerms: ["k"],
-  ),
-  BuildingName(
-    code: "LD",
-    name: "LD",
-    searchTerms: ["ld"],
-  ),
-  BuildingName(
-    code: "LS",
-    name: "Learning Square",
-    searchTerms: ["learning square", "ls"],
-  ),
-  BuildingName(
-    code: "M",
-    name: "M",
-    searchTerms: ["m"],
-  ),
-  BuildingName(
-    code: "MI",
-    name: "MI",
-    searchTerms: ["mi"],
-  ),
-  BuildingName(
-    code: "MU",
-    name: "MU",
-    searchTerms: ["mu"],
-  ),
-  BuildingName(
-    code: "P",
-    name: "P",
-    searchTerms: ["p"],
-  ),
-  BuildingName(
-    code: "PR",
-    name: "PR",
-    searchTerms: ["pr"],
-  ),
-  BuildingName(
-    code: "Q",
-    name: "Q",
-    searchTerms: ["q"],
-  ),
-  BuildingName(
-    code: "R",
-    name: "R",
-    searchTerms: ["r"],
-  ),
-  BuildingName(
-    code: "RR",
-    name: "RR",
-    searchTerms: ["rr"],
-  ),
-  BuildingName(
-    code: "S",
-    name: "S",
-    searchTerms: ["s"],
-  ),
-  BuildingName(
-    code: "SB",
-    name: "SB",
-    searchTerms: ["sb"],
-  ),
-  BuildingName(
-    code: "T",
-    name: "T",
-    searchTerms: ["t"],
-  ),
-  BuildingName(
-    code: "TD",
-    name: "TD",
-    searchTerms: ["td"],
-  ),
-  BuildingName(
-    code: "V",
-    name: "V",
-    searchTerms: ["v"],
-  ),
-  BuildingName(
-    code: "VA",
-    name: "VA",
-    searchTerms: ["va", "visual arts"],
-  ),
+  _building(code: "GM", name: "GM Building", searchTerms: ["gm", "guy metro"]),
+  _building(code: "FG", name: "Faubourg Building", searchTerms: ["faubourg", "fg"]),
+  _annex("B", ["b", "annex"]),
+  _annex("CI", ["ci", "annex"]),
+  _annex("CL", ["cl", "annex"]),
+  _annex("D", ["d", "annex"]),
+  _annex("EN", ["en", "annex"]),
+  _building(code: "ER", name: "ER building", searchTerms: ["er"]),
+  _annex("FA", ["fa", "annex"]),
+  _building(code: "FB", name: "FB - Faubourg Tower", searchTerms: ["fb", "faubourg", "tower"]),
+  _building(code: "GN", name: "Grey Nuns Building", searchTerms: ["grey nuns", "gn"]),
+  _building(code: "GS", searchTerms: ["gs"]),
+  _building(code: "K", searchTerms: ["k"]),
+  _building(code: "LD", searchTerms: ["ld"]),
+  _building(code: "LS", name: "Learning Square", searchTerms: ["learning square", "ls"]),
+  _building(code: "M", searchTerms: ["m"]),
+  _building(code: "MI", searchTerms: ["mi"]),
+  _building(code: "MU", searchTerms: ["mu"]),
+  _building(code: "P", searchTerms: ["p"]),
+  _building(code: "PR", searchTerms: ["pr"]),
+  _building(code: "Q", searchTerms: ["q"]),
+  _building(code: "R", searchTerms: ["r"]),
+  _building(code: "RR", searchTerms: ["rr"]),
+  _building(code: "S", searchTerms: ["s"]),
+  _building(code: "SB", searchTerms: ["sb"]),
+  _building(code: "T", searchTerms: ["t"]),
+  _building(code: "TD", searchTerms: ["td"]),
+  _building(code: "V", searchTerms: ["v"]),
+  _building(code: "VA", searchTerms: ["va", "visual arts"]),
 
   // Loyola Campus
-  BuildingName(
+  _building(
     code: "AD",
     name: "Administration Building",
     searchTerms: ["administration", "ad", "admin"],
   ),
-  BuildingName(
-    code: "BB",
-    name: "BB annex",
-    searchTerms: ["bb", "annex"],
-  ),
-  BuildingName(
-    code: "BH",
-    name: "BH annex",
-    searchTerms: ["bh", "annex"],
-  ),
-  BuildingName(
-    code: "CC",
-    name: "Central Building",
-    searchTerms: ["central", "cc"],
-  ),
-  BuildingName(
+  _annex("BB", ["bb", "annex"]),
+  _annex("BH", ["bh", "annex"]),
+  _building(code: "CC", name: "Central Building", searchTerms: ["central", "cc"]),
+  _building(
     code: "CJ",
     name: "Communication Studies and Journalism building",
     searchTerms: ["communication", "journalism", "cj", "comm"],
   ),
-  BuildingName(
-    code: "DO",
-    name: "Stinger Dome",
-    searchTerms: ["stinger", "dome", "do"],
-  ),
-  BuildingName(
-    code: "FC",
-    name: "F.C. Smith building",
-    searchTerms: ["fc", "smith"],
-  ),
-  BuildingName(
+  _building(code: "DO", name: "Stinger Dome", searchTerms: ["stinger", "dome", "do"]),
+  _building(code: "FC", name: "F.C. Smith building", searchTerms: ["fc", "smith"]),
+  _building(
     code: "GE",
     name: "Center for structural and functional genomics",
     searchTerms: ["genomics", "ge", "center"],
   ),
-  BuildingName(
-    code: "HA",
-    name: "Hingston Hall, wing HA",
-    searchTerms: ["hingston", "ha", "hall"],
-  ),
-  BuildingName(
-    code: "HB",
-    name: "Hingston Hall, wing HB",
-    searchTerms: ["hingston", "hb", "hall"],
-  ),
-  BuildingName(
-    code: "HC",
-    name: "Hingston Hall, wing HC",
-    searchTerms: ["hingston", "hc", "hall"],
-  ),
-  BuildingName(
-    code: "HU",
-    name: "Applied Science Hub",
-    searchTerms: ["applied science", "hub", "hu"],
-  ),
-  BuildingName(
-    code: "JR",
-    name: "Jesuit Residence",
-    searchTerms: ["jesuit", "residence", "jr"],
-  ),
-  BuildingName(
-    code: "PC",
-    name: "PERFORM center",
-    searchTerms: ["perform", "pc", "center"],
-  ),
-  BuildingName(
+  _building(code: "HA", name: "Hingston Hall, wing HA", searchTerms: ["hingston", "ha", "hall"]),
+  _building(code: "HB", name: "Hingston Hall, wing HB", searchTerms: ["hingston", "hb", "hall"]),
+  _building(code: "HC", name: "Hingston Hall, wing HC", searchTerms: ["hingston", "hc", "hall"]),
+  _building(code: "HU", name: "Applied Science Hub", searchTerms: ["applied science", "hub", "hu"]),
+  _building(code: "JR", name: "Jesuit Residence", searchTerms: ["jesuit", "residence", "jr"]),
+  _building(code: "PC", name: "PERFORM center", searchTerms: ["perform", "pc", "center"]),
+  _building(
     code: "PS",
     name: "Physical Services building",
     searchTerms: ["physical services", "ps"],
   ),
-  BuildingName(
+  _building(
     code: "PT",
     name: "Oscar Peterson Concert Hall",
     searchTerms: ["oscar peterson", "concert", "hall", "pt"],
   ),
-  BuildingName(
-    code: "PY",
-    name: "Psychology building",
-    searchTerms: ["psychology", "py", "psych"],
-  ),
-  BuildingName(
-    code: "QA",
-    name: "Quadrangle",
-    searchTerms: ["quadrangle", "qa", "quad"],
-  ),
-  BuildingName(
+  _building(code: "PY", name: "Psychology building", searchTerms: ["psychology", "py", "psych"]),
+  _building(code: "QA", name: "Quadrangle", searchTerms: ["quadrangle", "qa", "quad"]),
+  _building(
     code: "RA",
     name: "Recreation and Athletic Complex",
     searchTerms: ["recreation", "athletic", "ra", "rec"],
   ),
-  BuildingName(
+  _building(
     code: "RF",
     name: "Loyola Jesuit Hall and Conference Centre",
     searchTerms: ["loyola", "jesuit", "conference", "rf"],
   ),
-  BuildingName(
+  _building(
     code: "SC",
     name: "Student Centre",
     searchTerms: ["student", "centre", "center", "sc"],
   ),
-  BuildingName(
+  _building(
     code: "SH",
     name: "Future Buildings Laboratory",
     searchTerms: ["future buildings", "laboratory", "sh", "lab"],
   ),
-  BuildingName(
+  _building(
     code: "SI",
     name: "St. Ignatus of Loyola Church",
     searchTerms: ["st ignatus", "loyola", "church", "si", "saint"],
   ),
-  BuildingName(
+  _building(
     code: "SP",
     name: "Richard J. Renaud Science Complex",
     searchTerms: ["richard renaud", "science", "sp", "complex"],
   ),
-  BuildingName(
-    code: "TA",
-    name: "Terrebonne Building",
-    searchTerms: ["terrebonne", "ta"],
-  ),
-  BuildingName(
-    code: "VE",
-    name: "Vanier Extension",
-    searchTerms: ["vanier", "extension", "ve"],
-  ),
-  BuildingName(
-    code: "VL",
-    name: "Vanier Library",
-    searchTerms: ["vanier", "library", "vl"],
-  ),
+  _building(code: "TA", name: "Terrebonne Building", searchTerms: ["terrebonne", "ta"]),
+  _building(code: "VE", name: "Vanier Extension", searchTerms: ["vanier", "extension", "ve"]),
+  _building(code: "VL", name: "Vanier Library", searchTerms: ["vanier", "library", "vl"]),
 ];
