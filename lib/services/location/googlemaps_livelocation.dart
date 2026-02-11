@@ -9,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
+import '../../data/building_names.dart';
+import '../building_search_service.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../features/indoor/data/building_info.dart';
@@ -82,6 +84,7 @@ class OutdoorMapPage extends StatefulWidget {
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
+  List<BuildingName> _searchSuggestions = [];
 
   GoogleMapController? _mapController;
 
@@ -247,23 +250,6 @@ Future<void> _openLink(String url) async {
     });
   }
 
-  void _selectBuildingWithoutMap(BuildingPolygon b) {
-    final center = _polygonCenter(b.points);
-    final name = buildingInfoByCode[b.code]?.name ?? b.name;
-
-    _searchController.value = TextEditingValue(
-      text: name,
-      selection: TextSelection.collapsed(offset: name.length),
-    );
-
-    setState(() {
-      _selectedBuildingPoly = b;
-      _selectedBuildingCenter = center;
-      _anchorOffset = widget.debugAnchorOffset ?? const Offset(200, 420);
-      _cameraMoving = false;
-    });
-  }
-
   void _onBuildingTapped(BuildingPolygon b) {
     final center = _polygonCenter(b.points);
     final controller = _mapController;
@@ -294,12 +280,58 @@ Future<void> _openLink(String url) async {
   }
 
   void _closePopup() {
+    _clearSelectedBuilding(clearSearch: true);
+  }
+
+  void _clearSelectedBuilding({bool clearSearch = false}) {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
       _anchorOffset = null;
-      _searchController.clear();
+      _showLearnMore = false;
+      if (clearSearch) {
+        _searchController.clear();
+      }
     });
+  }
+
+  void _hideBuildingPopup() {
+    if (_selectedBuildingPoly == null) return;
+
+    _clearSelectedBuilding();
+  }
+
+  void _onSearchSubmitted(String query) {
+    if (query.trim().isEmpty) return;
+
+    // Use the search service to find the building
+    final building = BuildingSearchService.searchBuilding(query);
+
+    if (building != null) {
+      // Highlight and show the building just like when it's clicked
+      _onBuildingTapped(building);
+    } else {
+      // Show a message that the building wasn't found
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Building "$query" not found'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFF800020),
+        ),
+      );
+      // Clear the search bar
+      _searchController.clear();
+    }
+  }
+
+  void _onSuggestionSelected(BuildingName building) {
+    // Find the building polygon by code
+    final buildingPolygon = BuildingSearchService.searchBuilding(building.code);
+    if (buildingPolygon == null) return;
+
+    // Highlight and show the building just like when it's clicked
+    _onBuildingTapped(buildingPolygon);
   }
 
   Set<Polygon> _createBuildingPolygons() {
@@ -354,17 +386,17 @@ Future<void> _openLink(String url) async {
         widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
     _createBlueDotIcon();
-    if (!widget.debugDisableLocation) {
-      _startLocationUpdates();
-    }
+    _startLocationUpdates();
 
-    final debugB = widget.debugSelectedBuilding;
-    if (debugB != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _selectBuildingWithoutMap(debugB);
-      });
-    }
+    // Listen to search input changes
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text;
+    setState(() {
+      _searchSuggestions = BuildingSearchService.getSuggestions(query);
+    });
   }
 
   Future<void> _createBlueDotIcon() async {
@@ -572,14 +604,18 @@ Future<void> _openLink(String url) async {
               polygons: _createBuildingPolygons(),
             ),
           Positioned(
-  top: 65,
-  left: 20,
-  right: 20,
-  child: MapSearchBar(
-    campusLabel: campusLabel,
-    controller: _searchController,
-  ),
-),
+            top: 65,
+            left: 20,
+            right: 20,
+            child: MapSearchBar(
+              campusLabel: campusLabel,
+              controller: _searchController,
+              onSubmitted: _onSearchSubmitted,
+              suggestions: _searchSuggestions,
+              onSuggestionSelected: _onSuggestionSelected,
+              onFocus: _hideBuildingPopup,
+            ),
+          ),
 
           if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
             Positioned(
@@ -668,6 +704,7 @@ Future<void> _openLink(String url) async {
     _posSub?.cancel();
     _popupDebounce?.cancel();
     _mapController?.dispose();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
