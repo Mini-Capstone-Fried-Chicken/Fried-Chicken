@@ -23,16 +23,32 @@ class MapSearchBar extends StatelessWidget {
         elevation: 4,
         borderRadius: BorderRadius.circular(8),
         color: burgundy,
-        child: TextField(
-          controller: controller,
-          enabled: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white70),
-            prefixIcon: const Icon(Icons.search, color: Colors.white),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        clipBehavior: Clip.antiAlias, // prevents overflow outside rounded corners
+        child: SizedBox(
+          height: 48,
+          child: TextField(
+            controller: controller,
+            maxLines: 1,
+            textAlignVertical: TextAlignVertical.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              height: 1,
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              isCollapsed: true,
+              hintText: hint,
+              hintStyle: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                height: 1,
+              ),
+              prefixIcon: const Icon(Icons.search, color: Colors.white, size: 22),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
           ),
         ),
       ),

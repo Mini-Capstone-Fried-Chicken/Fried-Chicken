@@ -1,28 +1,202 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-class BuildingInfoPopup extends StatelessWidget {
+class BuildingInfoPopup extends StatefulWidget {
   final String title;
   final String description;
   final VoidCallback onClose;
-  final VoidCallback onLearnMore;
+  final bool accessibility;
+  final List<String> facilities;
+  final VoidCallback? onMore;
+  final bool isLoggedIn;
 
   const BuildingInfoPopup({
     super.key,
     required this.title,
     required this.description,
     required this.onClose,
-    required this.onLearnMore,
+    this.accessibility = false,
+    this.facilities = const [],
+    this.onMore,
+    required this.isLoggedIn,
   });
+
+  @override
+  State<BuildingInfoPopup> createState() => _BuildingInfoPopupState();
+}
+
+class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
+  bool _isSaved = false;
+
+  OverlayEntry? _labelEntry;
+  Timer? _labelTimer;
+
+  TooltipTriggerMode? get _triggerMode {
+    final isTouch = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    return isTouch ? TooltipTriggerMode.longPress : null;
+  }
+
+  void _hideIconLabel() {
+    _labelTimer?.cancel();
+    _labelTimer = null;
+    _labelEntry?.remove();
+    _labelEntry = null;
+  }
+
+  void _showIconLabel(LayerLink link, String label) {
+    _hideIconLabel();
+
+    final overlay = Overlay.of(context);
+    if (overlay == null) return;
+
+    _labelEntry = OverlayEntry(
+      builder: (_) {
+        return Positioned.fill(
+          child: IgnorePointer(
+            ignoring: true,
+            child: Stack(
+              children: [
+                CompositedTransformFollower(
+                  link: link,
+                  showWhenUnlinked: false,
+                  targetAnchor: Alignment.topCenter,
+                  followerAnchor: Alignment.bottomCenter,
+                  offset: const Offset(0, -6),
+                  child: AnimatedOpacity(
+                    opacity: 1,
+                    duration: const Duration(milliseconds: 120),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.92),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.black12),
+                          boxShadow: [
+                            BoxShadow(
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                              color: Colors.black.withOpacity(0.12),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.none,
+                            decorationColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(_labelEntry!);
+    _labelTimer = Timer(const Duration(milliseconds: 900), _hideIconLabel);
+  }
+
+  Widget _buildIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    const burgundy = Color(0xFF76263D);
+    return Tooltip(
+      message: tooltip,
+      triggerMode: _triggerMode,
+      showDuration: const Duration(seconds: 1),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: burgundy),
+        iconSize: 25,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+      ),
+    );
+  }
+
+  bool _hasFacility(List<String> keywords) {
+    final list = widget.facilities.map((e) => e.toLowerCase()).toList();
+    for (final f in list) {
+      for (final k in keywords) {
+        if (f.contains(k)) return true;
+      }
+    }
+    return false;
+  }
+
+  Widget _topIcon({
+    required IconData icon,
+    required String tooltip,
+  }) {
+    const burgundy = Color(0xFF76263D);
+    final link = LayerLink();
+
+    return CompositedTransformTarget(
+      link: link,
+      child: IconButton(
+        onPressed: () => _showIconLabel(link, tooltip),
+        icon: Icon(icon, color: burgundy, size: 22),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 22, height: 22),
+        splashRadius: 18,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
 
+    final topIcons = <Widget>[];
+
+    if (widget.accessibility) {
+      topIcons.add(_topIcon(icon: Icons.accessible, tooltip: 'Accessible'));
+    }
+    if (_hasFacility(['washroom', 'washrooms', 'washroms', 'restroom', 'toilet'])) {
+      topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
+    }
+    if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
+      topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
+    }
+    if (_hasFacility(['restaurant', 'restaurants', 'food'])) {
+      topIcons.add(_topIcon(icon: Icons.restaurant, tooltip: 'Restaurants'));
+    }
+    if (_hasFacility(['zen den', 'zen', 'yoga', 'meditation'])) {
+      topIcons.add(_topIcon(icon: Icons.self_improvement, tooltip: 'Zen Den'));
+    }
+    if (_hasFacility(['metro', 'subway'])) {
+      topIcons.add(_topIcon(icon: Icons.subway, tooltip: 'Metro'));
+    }
+    if (_hasFacility(['parking'])) {
+      topIcons.add(_topIcon(icon: Icons.local_parking, tooltip: 'Parking'));
+    }
+
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 260,
+        width: 300,
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -41,25 +215,46 @@ class BuildingInfoPopup extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // quick icons row 
-                const Icon(Icons.wc, size: 18, color: burgundy),
-                const SizedBox(width: 6),
-                const Icon(Icons.accessible, size: 18, color: burgundy),
-                const Spacer(),
-                IconButton(
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close),
-                  color: burgundy,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                if (widget.isLoggedIn) ...[
+                  _buildIconButton(
+                    icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    tooltip: _isSaved ? 'Unsave' : 'Save',
+                    onPressed: () {
+                      setState(() {
+                        _isSaved = !_isSaved;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                if (topIcons.isNotEmpty)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 2),
+                      child: Wrap(
+                        spacing: -15,
+                        runSpacing: -15,
+                        children: topIcons,
+                      ),
+                    ),
+                  ),
+                Tooltip(
+                  message: 'Close',
+                  triggerMode: _triggerMode,
+                  showDuration: const Duration(seconds: 1),
+                  child: IconButton(
+                    onPressed: widget.onClose,
+                    icon: const Icon(Icons.close),
+                    color: burgundy,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 2),
-
-            // building name + code 
             Text(
-              title,
+              widget.title,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -68,52 +263,50 @@ class BuildingInfoPopup extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-
-            // short description from building_info.dart
             Text(
-              description,
+              widget.description,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12.5, color: Colors.black54),
             ),
             const SizedBox(height: 12),
-
-            // buttons 
-            _pillButton('Get directions', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Indoor map', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Save', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Learn more', burgundy, () {
-              // only logs in debug mode
-              if (kDebugMode) {
-                debugPrint('[BuildingInfoPopup] Learn more pressed for: $title');
-              }
-              onLearnMore();
-            }),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildIconButton(
+                  icon: Icons.directions,
+                  tooltip: 'Get directions',
+                  onPressed: () {},
+                ),
+                const SizedBox(width: 10),
+                _buildIconButton(
+                  icon: Icons.map,
+                  tooltip: 'Indoor map',
+                  onPressed: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Opacity(
+              opacity: 0.7,
+              child: TextButton(
+                onPressed: widget.onMore ?? () {},
+                style: TextButton.styleFrom(
+                  foregroundColor: burgundy,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Text('More'),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _pillButton(String text, Color color, VoidCallback onPressed) {
-    return SizedBox(
-      width: 190,
-      height: 36,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: const StadiumBorder(),
-          elevation: 0,
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _hideIconLabel();
+    super.dispose();
   }
 }
