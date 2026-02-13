@@ -42,7 +42,7 @@ const List<BuildingPolygon> buildingPolygons = [
     ],
   ),
   BuildingPolygon(
-    code: "HALL",
+    code: "H",
     name: "Hall Building",
     points: [ 
       LatLng(45.4968353759908, -73.57884914394536),

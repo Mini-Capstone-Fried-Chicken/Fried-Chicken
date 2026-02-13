@@ -12,7 +12,10 @@ class ExploreScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          const OutdoorMapPage(initialCampus: Campus.none),
+          OutdoorMapPage(
+  initialCampus: Campus.none,
+  isLoggedIn: isLoggedIn,
+),
           // App logo
           Positioned(
             left: MediaQuery.of(context).size.width / 2 - 30, // center horizontally
