@@ -84,7 +84,7 @@ class CampusToggle extends StatelessWidget {
             child: Text(
               label,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis, // prevents overflow for long labels
+              overflow: TextOverflow.ellipsis, 
               style: TextStyle(
                 color: isSelected ? Colors.white : _maroon,
                 fontWeight: FontWeight.w600,

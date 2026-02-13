@@ -44,6 +44,7 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
+
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
   final bool isLoggedIn;
@@ -174,12 +175,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
   }
 
-  Future<void> _openLink(String url) async {
-    if (url.trim().isEmpty) return;
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+Future<void> _openLink(String url) async {
+  if (url.trim().isEmpty) return;
+
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+
+  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!ok) {
+    // optional: show a snackbar
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Could not open link")),
+    );
   }
+}
 
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
@@ -562,17 +572,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               polygons: _createBuildingPolygons(),
             ),
           Positioned(
-            top: 65,
-            left: 20,
-            right: 20,
-            child: SizedBox(
-              height: 70,
-              child: MapSearchBar(
-                campusLabel: campusLabel,
-                controller: _searchController,
-              ),
-            ),
-          ),
+  top: 65,
+  left: 20,
+  right: 20,
+  child: MapSearchBar(
+    campusLabel: campusLabel,
+    controller: _searchController,
+  ),
+),
+
           if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
             Positioned(
               left: popupLeft,

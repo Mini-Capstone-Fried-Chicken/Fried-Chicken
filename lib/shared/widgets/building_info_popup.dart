@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -28,11 +30,87 @@ class BuildingInfoPopup extends StatefulWidget {
 class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   bool _isSaved = false;
 
+  OverlayEntry? _labelEntry;
+  Timer? _labelTimer;
+
   TooltipTriggerMode? get _triggerMode {
     final isTouch = !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
-    return isTouch ? TooltipTriggerMode.tap : null; // null = default hover on desktop/web
+    return isTouch ? TooltipTriggerMode.longPress : null;
+  }
+
+  void _hideIconLabel() {
+    _labelTimer?.cancel();
+    _labelTimer = null;
+    _labelEntry?.remove();
+    _labelEntry = null;
+  }
+
+  void _showIconLabel(LayerLink link, String label) {
+    _hideIconLabel();
+
+    final overlay = Overlay.of(context);
+    if (overlay == null) return;
+
+    _labelEntry = OverlayEntry(
+      builder: (_) {
+        return Positioned.fill(
+          child: IgnorePointer(
+            ignoring: true,
+            child: Stack(
+              children: [
+                CompositedTransformFollower(
+                  link: link,
+                  showWhenUnlinked: false,
+                  targetAnchor: Alignment.topCenter,
+                  followerAnchor: Alignment.bottomCenter,
+                  offset: const Offset(0, -6),
+                  child: AnimatedOpacity(
+                    opacity: 1,
+                    duration: const Duration(milliseconds: 120),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.92),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.black12),
+                          boxShadow: [
+                            BoxShadow(
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                              color: Colors.black.withOpacity(0.12),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.none,
+                            decorationColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(_labelEntry!);
+    _labelTimer = Timer(const Duration(milliseconds: 900), _hideIconLabel);
   }
 
   Widget _buildIconButton({
@@ -70,18 +148,19 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     required String tooltip,
   }) {
     const burgundy = Color(0xFF76263D);
+    final link = LayerLink();
 
-    return Tooltip(
-      message: tooltip,
-      triggerMode: _triggerMode,
-      showDuration: const Duration(seconds: 1),
-      child: GestureDetector(
-        onTap: () {},
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(icon, color: burgundy, size: 22),
-        ),
+    return CompositedTransformTarget(
+      link: link,
+      child: IconButton(
+        onPressed: () => _showIconLabel(link, tooltip),
+        icon: Icon(icon, color: burgundy, size: 22),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 22, height: 22),
+        splashRadius: 18,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
       ),
     );
   }
@@ -146,16 +225,15 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                       });
                     },
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                 ],
                 if (topIcons.isNotEmpty)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(left: 2),
                       child: Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        alignment: WrapAlignment.start,
+                        spacing: -15,
+                        runSpacing: -15,
                         children: topIcons,
                       ),
                     ),
@@ -224,5 +302,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _hideIconLabel();
+    super.dispose();
   }
 }
