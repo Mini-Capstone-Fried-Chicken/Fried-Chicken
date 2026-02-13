@@ -1,5 +1,5 @@
 import "package:campus_app/app/campus_app.dart";
-import "package:campus_app/services/firebase/firebase_options.dart";
+import "package:campus_app/firebase_options.dart";
 import "package:firebase_core/firebase_core.dart";
 import "package:flutter/material.dart";
 

@@ -12,13 +12,6 @@ class CampusApp extends StatefulWidget {
 }
 
 class _CampusAppState extends State<CampusApp> {
-  @override
-  void initState() {
-    super.initState();
-    // Clear any existing Firebase Auth session to always start at login page
-    FirebaseAuth.instance.signOut();
-  }
-
   static const Map<String, String> indoorAssetsById = {
     // SVGs
     "MB-1": "assets/indoor_svg/MB-1.svg",

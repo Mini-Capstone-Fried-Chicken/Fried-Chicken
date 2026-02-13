@@ -522,7 +522,7 @@ void main() {
       expect(find.text('Email address'), findsOneWidget);
     });
 
-    testWidgets('Forgot password page displays verify button', (WidgetTester tester) async {
+    testWidgets('Forgot password page displays send reset link button', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
@@ -536,7 +536,7 @@ void main() {
       );
 
       // Assert
-      expect(find.text('Verify'), findsOneWidget);
+      expect(find.text('Send Reset Link'), findsOneWidget);
       expect(find.byType(AppButton), findsOneWidget);
     });
 
@@ -591,16 +591,16 @@ void main() {
         ),
       );
 
-      // Assert - All required elements are present
+      // Assert - Firebase password reset flow has: back button, title, one email field, and send button
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
       expect(find.text('Forgot Password?'), findsOneWidget);
       expect(find.text('Email address'), findsOneWidget);
-      expect(find.byType(UserField), findsExactly(2));
-      expect(find.text('Verify'), findsOneWidget);
+      expect(find.byType(UserField), findsOneWidget);
+      expect(find.text('Send Reset Link'), findsOneWidget);
       expect(find.byType(AppButton), findsOneWidget);
     });
 
-    testWidgets('Verify button is functional', (WidgetTester tester) async {
+    testWidgets('Send reset link button is functional', (WidgetTester tester) async {
       // Set device size to avoid layout overflow
       addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
       tester.binding.window.physicalSizeTestValue = const Size(1080, 3000);
@@ -613,38 +613,30 @@ void main() {
         ),
       );
 
-      // Initial verification - Verify button should exist and be tappable
-      expect(find.text('Verify'), findsOneWidget);
+      // Initial verification - Send Reset Link button should exist and be tappable
+      expect(find.text('Send Reset Link'), findsOneWidget);
       expect(find.byType(AppButton), findsOneWidget);
 
-      // Fill in the Name field
-      final nameField = find.byType(UserField).first;
-      await tester.tap(nameField);
-      await tester.pumpAndSettle();
-      await tester.enterText(nameField, 'John Doe');
-      await tester.pump();
-
       // Fill in the Email field
-      final emailField = find.byType(UserField).last;
+      final emailField = find.byType(UserField);
       await tester.tap(emailField);
       await tester.pumpAndSettle();
       await tester.enterText(emailField, 'john@example.com');
       await tester.pump();
 
-      // Verify the fields have been filled
-      expect(find.text('John Doe'), findsOneWidget);
+      // Verify the email field has been filled
       expect(find.text('john@example.com'), findsOneWidget);
 
-      // Tap Verify button
-      final verifyButton = find.byType(AppButton);
-      expect(verifyButton, findsOneWidget);
-      await tester.tap(verifyButton);
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      // Tap Send Reset Link button
+      final sendButton = find.byType(AppButton);
+      expect(sendButton, findsOneWidget);
+      await tester.tap(sendButton);
+      await tester.pump();
 
       // Assert - Button click is processed (no errors thrown)
-      // If Firebase verification succeeds, the page will navigate or show password reset fields
-      // If it fails, a SnackBar error will appear, which is also valid behavior
-      expect(find.byType(AppButton), findsWidgets);
+      // Firebase will send a password reset email if the account exists
+      // The UI should show either a success message or an error SnackBar
+      expect(find.byType(ForgotPassword), findsOneWidget);
     });
   });
 }
