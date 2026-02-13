@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   pointer_interceptor: ^0.10.1
+  
 
   cupertino_icons: ^1.0.8
 
