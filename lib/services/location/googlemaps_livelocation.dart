@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -17,8 +18,6 @@ import '../../features/indoor/data/building_info.dart';
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
-
-// when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
 
 enum Campus { sgw, loyola, none }
@@ -44,7 +43,6 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
-
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
   final bool isLoggedIn;
@@ -67,12 +65,12 @@ class OutdoorMapPage extends StatefulWidget {
   const OutdoorMapPage({
     super.key,
     required this.initialCampus,
-    required this.isLoggedIn,
     this.debugSelectedBuilding,
     this.debugAnchorOffset,
     this.debugDisableMap = false,
     this.debugDisableLocation = false,
     this.debugLinkOverride,
+    required this.isLoggedIn,
   });
 
   @override
@@ -138,7 +136,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       try {
         final bounds = await controller.getVisibleRegion();
         final lat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-        final lng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+        final lng =
+            (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
         center = LatLng(lat, lng);
       } catch (_) {
         return;
@@ -170,26 +169,24 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       }
     }
 
-    controller.animateCamera(
-      CameraUpdate.newLatLngZoom(loc, 17),
-    );
+    controller.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
   }
 
-Future<void> _openLink(String url) async {
-  if (url.trim().isEmpty) return;
+  Future<void> _openLink(String url) async {
+    if (url.trim().isEmpty) return;
 
-  final uri = Uri.tryParse(url);
-  if (uri == null) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
 
-  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!ok) {
-    // optional: show a snackbar
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Could not open link")),
-    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) {
+      // optional: show a snackbar
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Could not open link")));
+    }
   }
-}
 
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
@@ -224,7 +221,10 @@ Future<void> _openLink(String url) async {
 
   void _schedulePopupUpdate() {
     _popupDebounce?.cancel();
-    _popupDebounce = Timer(const Duration(milliseconds: 16), _updatePopupOffset);
+    _popupDebounce = Timer(
+      const Duration(milliseconds: 16),
+      _updatePopupOffset,
+    );
   }
 
   Future<void> _updatePopupOffset() async {
@@ -281,9 +281,18 @@ Future<void> _openLink(String url) async {
       _cameraMoving = true;
     });
 
+    setState(() {
+      _selectedBuildingPoly = b;
+      _selectedBuildingCenter = center;
+      _anchorOffset = null;
+      _cameraMoving = true;
+    });
+
     if (controller == null) return;
 
-    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((_) async {
+    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((
+      _,
+    ) async {
       if (!mounted) return;
       await _updatePopupOffset();
       if (!mounted) return;
@@ -315,17 +324,25 @@ Future<void> _openLink(String url) async {
       final strokeColor = isSelected
           ? selectedBlue.withOpacity(0.95)
           : isCurrent
-              ? Colors.blue.withOpacity(0.8)
-              : burgundy.withOpacity(0.55);
+          ? Colors.blue.withOpacity(0.8)
+          : burgundy.withOpacity(0.55);
 
       final fillColor = isSelected
           ? selectedBlue.withOpacity(0.25)
           : isCurrent
-              ? Colors.blue.withOpacity(0.25)
-              : burgundy.withOpacity(0.22);
+          ? Colors.blue.withOpacity(0.25)
+          : burgundy.withOpacity(0.22);
 
-      final strokeWidth = isSelected ? 3 : isCurrent ? 3 : 2;
-      final zIndex = isSelected ? 3 : isCurrent ? 2 : 1;
+      final strokeWidth = isSelected
+          ? 3
+          : isCurrent
+          ? 3
+          : 2;
+      final zIndex = isSelected
+          ? 3
+          : isCurrent
+          ? 2
+          : 1;
 
       polys.add(
         Polygon(
@@ -350,12 +367,27 @@ Future<void> _openLink(String url) async {
 
     _selectedCampus = widget.initialCampus;
 
-    _lastCameraTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    _lastCameraTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
+
+    _lastCameraTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
     _createBlueDotIcon();
     if (!widget.debugDisableLocation) {
-      _startLocationUpdates();
+      if (!widget.debugDisableLocation) {
+        _startLocationUpdates();
+      }
+
+      final debugB = widget.debugSelectedBuilding;
+      if (debugB != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _selectBuildingWithoutMap(debugB);
+        });
+      }
     }
 
     final debugB = widget.debugSelectedBuilding;
@@ -368,15 +400,19 @@ Future<void> _openLink(String url) async {
   }
 
   Future<void> _createBlueDotIcon() async {
-    _blueDotIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/blue_dot.png',
-    ).catchError((_) {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
-    });
+    _blueDotIcon =
+        await BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(48, 48)),
+          'assets/blue_dot.png',
+        ).catchError((_) {
+          return BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueBlue,
+          );
+        });
 
-    _blueDotIcon ??=
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueAzure,
+    );
   }
 
   Future<void> _startLocationUpdates() async {
@@ -402,26 +438,25 @@ Future<void> _openLink(String url) async {
         _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
 
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLng(newLatLng),
-      );
+      _mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
     } catch (_) {}
 
-    _posSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
-      ),
-    ).listen((position) {
-      final newLatLng = LatLng(position.latitude, position.longitude);
+    _posSub =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            distanceFilter: 5,
+          ),
+        ).listen((position) {
+          final newLatLng = LatLng(position.latitude, position.longitude);
 
-      if (!mounted) return;
-      setState(() {
-        _currentLocation = newLatLng;
-        _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = detectBuildingPoly(newLatLng);
-      });
-    });
+          if (!mounted) return;
+          setState(() {
+            _currentLocation = newLatLng;
+            _currentCampus = detectCampus(newLatLng);
+            _currentBuildingPoly = detectBuildingPoly(newLatLng);
+          });
+        });
   }
 
   Set<Marker> _createMarkers() {
@@ -470,6 +505,8 @@ Future<void> _openLink(String url) async {
 
     _lastCameraTarget = targetLocation;
 
+    _lastCameraTarget = targetLocation;
+
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(targetLocation, 16),
     );
@@ -486,16 +523,19 @@ Future<void> _openLink(String url) async {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    final LatLng initialTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
-    final Campus labelCampus = _selectedCampus;
+    final Campus labelCampus = _selectedCampus != Campus.none
+        ? _selectedCampus
+        : _currentCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
         ? 'SGW'
         : labelCampus == Campus.loyola
-            ? 'Loyola'
-            : '';
+        ? 'Loyola'
+        : '';
 
     final screen = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
@@ -535,6 +575,8 @@ Future<void> _openLink(String url) async {
         children: [
           if (widget.debugDisableMap)
             const SizedBox.expand()
+          else if (widget.debugDisableMap)
+            const SizedBox.expand()
           else
             GoogleMap(
               initialCameraPosition: CameraPosition(
@@ -546,6 +588,10 @@ Future<void> _openLink(String url) async {
               onMapCreated: (controller) {
                 _mapController = controller;
               },
+
+              // onCameraMove: (pos) {
+              //_lastCameraTarget = pos.target;
+              // },
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
                 if (_selectedBuildingCenter != null) {
@@ -561,6 +607,8 @@ Future<void> _openLink(String url) async {
               onCameraIdle: () {
                 _syncToggleWithCameraCenter();
 
+                _syncToggleWithCameraCenter();
+
                 if (_selectedBuildingCenter == null) return;
                 setState(() {
                   _cameraMoving = false;
@@ -572,35 +620,44 @@ Future<void> _openLink(String url) async {
               polygons: _createBuildingPolygons(),
             ),
           Positioned(
-  top: 65,
-  left: 20,
-  right: 20,
-  child: MapSearchBar(
-    campusLabel: campusLabel,
-    controller: _searchController,
-  ),
-),
+            top: 65,
+            left: 20,
+            right: 20,
+            child: MapSearchBar(
+              campusLabel: campusLabel,
+              controller: _searchController,
+            ),
+          ),
 
-          if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
+          if (_selectedBuildingPoly != null &&
+              popupLeft != null &&
+              popupTop != null)
             Positioned(
               left: popupLeft,
               top: popupTop,
               child: PointerInterceptor(
                 child: BuildingInfoPopup(
+                  // Show full name + code
                   title:
                       '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
                   description:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
-                          'No description available.',
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.description ??
+                      'No description available.',
                   accessibility:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.accessibility ??
-                          false,
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.accessibility ??
+                      false,
                   facilities:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.facilities ??
-                          const [],
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.facilities ??
+                      const [],
                   onMore: () {
-                    final link = widget.debugLinkOverride ??
-                        (buildingInfoByCode[_selectedBuildingPoly!.code]?.link ?? '');
+                    final link =
+                        widget.debugLinkOverride ??
+                        (buildingInfoByCode[_selectedBuildingPoly!.code]
+                                ?.link ??
+                            '');
                     _openLink(link);
                   },
                   onClose: _closePopup,
@@ -636,14 +693,15 @@ Future<void> _openLink(String url) async {
                       _currentCampus == Campus.sgw
                           ? 'SGW Campus'
                           : _currentCampus == Campus.loyola
-                              ? 'Loyola Campus'
-                              : 'Off Campus',
+                          ? 'Loyola Campus'
+                          : 'Off Campus',
                     ),
                   ),
                 ],
               ),
             ),
           ),
+
           Positioned(
             bottom: 20,
             left: 0,
