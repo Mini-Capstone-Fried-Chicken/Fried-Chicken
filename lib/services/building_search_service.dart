@@ -176,7 +176,7 @@ class BuildingSearchService {
     // Get Concordia building suggestions
     final concordiaSuggestions = getSuggestions(query);
     print('Found ${concordiaSuggestions.length} Concordia building suggestions');
-    for (final building in concordiaSuggestions.take(5)) {
+    for (final building in concordiaSuggestions.take(2)) {
       suggestions.add(SearchSuggestion.fromConcordiaBuilding(building));
     }
 
