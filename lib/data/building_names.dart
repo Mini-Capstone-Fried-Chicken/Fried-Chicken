@@ -36,7 +36,7 @@ final List<BuildingName> concordiaBuildingNames = [
   // SGW Campus
   _building(code: "LB", name: "LB Building", searchTerms: ["lb"]),
   _building(code: "MB", name: "JSMB Building", searchTerms: ["mb, jsmb"]),
-  _building(code: "H", name: "Hall Building", searchTerms: ["hall", "h", "HALL"]),
+  _building(code: "HALL", name: "Hall Building", searchTerms: ["hall", "h", "HALL"]),
   _building(
     code: "EV",
     name: "EV Building",
