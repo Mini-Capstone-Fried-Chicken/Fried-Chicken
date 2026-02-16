@@ -10,6 +10,49 @@ class BuildingPolygon {
     required this.name,
     required this.points,
   });
+
+  /// Calculate the center point of the building polygon
+  LatLng get center {
+    if (points.isEmpty) {
+      return const LatLng(0, 0);
+    }
+    
+    double latSum = 0;
+    double lngSum = 0;
+    
+    for (final point in points) {
+      latSum += point.latitude;
+      lngSum += point.longitude;
+    }
+    
+    return LatLng(
+      latSum / points.length,
+      lngSum / points.length,
+    );
+  }
+
+  /// Check if a point is inside this building polygon
+  bool containsPoint(LatLng point) {
+    if (points.length < 3) return false;
+
+    bool inside = false;
+    int j = points.length - 1;
+
+    for (int i = 0; i < points.length; i++) {
+      if (((points[i].latitude > point.latitude) !=
+              (points[j].latitude > point.latitude)) &&
+          (point.longitude <
+              (points[j].longitude - points[i].longitude) *
+                      (point.latitude - points[i].latitude) /
+                      (points[j].latitude - points[i].latitude) +
+                  points[i].longitude)) {
+        inside = !inside;
+      }
+      j = i;
+    }
+
+    return inside;
+  }
 }
 
 // Start with 1–2 buildings, then add more

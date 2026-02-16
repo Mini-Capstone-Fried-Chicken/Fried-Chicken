@@ -7,7 +7,10 @@ import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../data/building_names.dart';
+import '../../data/search_result.dart';
+import '../../data/search_suggestion.dart';
 import '../building_search_service.dart';
+import '../google_places_service.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/learn_more_popup.dart';
@@ -58,7 +61,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
   bool _showLearnMore = false;
-  List<BuildingName> _searchSuggestions = [];
+  List<SearchSuggestion> _searchSuggestions = [];
+  Timer? _debounceTimer;
 
   GoogleMapController? _mapController;
 
@@ -66,6 +70,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
+  SearchResult? _selectedSearchResult; // For non-Concordia places
 
   StreamSubscription<Position>? _posSub;
 
@@ -217,6 +222,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedSearchResult = null;
       _anchorOffset = null;
       _showLearnMore = false;
       if (clearSearch) {
@@ -231,21 +237,40 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _clearSelectedBuilding();
   }
 
-  void _onSearchSubmitted(String query) {
+  Future<void> _onSearchSubmitted(String query) async {
     if (query.trim().isEmpty) return;
 
-    // Use the search service to find the building
-    final building = BuildingSearchService.searchBuilding(query);
+    // First try to find in Concordia buildings
+    final concordiaBuilding = BuildingSearchService.searchBuilding(query);
 
-    if (building != null) {
+    if (concordiaBuilding != null) {
       // Highlight and show the building just like when it's clicked
-      _onBuildingTapped(building);
+      _onBuildingTapped(concordiaBuilding);
+      return;
+    }
+
+    // If not found in Concordia buildings, use Google Places API
+    final results = await BuildingSearchService.searchWithGooglePlaces(
+      query,
+      userLocation: _currentLocation,
+    );
+
+    if (results.isNotEmpty) {
+      final firstResult = results.first;
+      
+      if (firstResult.isConcordiaBuilding && firstResult.buildingPolygon != null) {
+        // It's a Concordia building found via Google Places
+        _onBuildingTapped(firstResult.buildingPolygon!);
+      } else {
+        // It's a non-Concordia place
+        _onPlaceSelected(firstResult);
+      }
     } else {
-      // Show a message that the building wasn't found
+      // Show a message that the place wasn't found
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Building "$query" not found'),
+          content: Text('"$query" not found'),
           duration: const Duration(seconds: 2),
           backgroundColor: const Color(0xFF800020),
         ),
@@ -255,13 +280,75 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
-  void _onSuggestionSelected(BuildingName building) {
-    // Find the building polygon by code
-    final buildingPolygon = BuildingSearchService.searchBuilding(building.code);
-    if (buildingPolygon == null) return;
+  void _onPlaceSelected(SearchResult result) {
+    final controller = _mapController;
+    if (controller == null) return;
 
-    // Highlight and show the building just like when it's clicked
-    _onBuildingTapped(buildingPolygon);
+    // Clear any selected building polygon
+    setState(() {
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _showLearnMore = false;
+      _selectedSearchResult = result;
+    });
+
+    // Update search bar with place name
+    _searchController.value = TextEditingValue(
+      text: result.name,
+      selection: TextSelection.collapsed(offset: result.name.length),
+    );
+
+    // Animate camera to the place
+    controller.animateCamera(
+      CameraUpdate.newLatLngZoom(result.location, 18),
+    );
+
+    // Show info about whether it's a Concordia building
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.isConcordiaBuilding
+              ? '${result.name} is a Concordia building'
+              : '${result.name} is not a Concordia building',
+        ),
+        duration: const Duration(seconds: 3),
+        backgroundColor: result.isConcordiaBuilding
+            ? const Color(0xFF800020)
+            : Colors.grey[700],
+      ),
+    );
+  }
+
+  Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
+    if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
+      // Concordia building selected
+      final buildingPolygon = BuildingSearchService.searchBuilding(suggestion.buildingName!.code);
+      if (buildingPolygon == null) return;
+      _onBuildingTapped(buildingPolygon);
+    } else if (suggestion.placeId != null) {
+      // Google Place selected - fetch details first
+      final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId!);
+      if (placeDetails != null) {
+        // Check if it's a Concordia building
+        final concordiaBuilding = BuildingSearchService.searchBuilding(suggestion.name);
+        
+        if (concordiaBuilding != null) {
+          // Found it in Concordia buildings
+          _onBuildingTapped(concordiaBuilding);
+        } else {
+          // Not a Concordia building
+          final searchResult = SearchResult.fromGooglePlace(
+            name: placeDetails.name,
+            address: placeDetails.formattedAddress,
+            location: placeDetails.location,
+            isConcordiaBuilding: false,
+            placeId: placeDetails.placeId,
+          );
+          _onPlaceSelected(searchResult);
+        }
+      }
+    }
   }
 
   Set<Polygon> _createBuildingPolygons() {
@@ -323,9 +410,33 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text;
-    setState(() {
-      _searchSuggestions = BuildingSearchService.getSuggestions(query);
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+    
+    // Set a new timer to delay the API call
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      final query = _searchController.text;
+      try {
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          query,
+          userLocation: _currentLocation,
+        );
+        if (mounted) {
+          setState(() {
+            _searchSuggestions = suggestions;
+          });
+        }
+      } catch (e) {
+        print('Error getting search suggestions: $e');
+        // On error, just show Concordia buildings
+        if (mounted) {
+          setState(() {
+            _searchSuggestions = BuildingSearchService.getSuggestions(query)
+                .map((b) => SearchSuggestion.fromConcordiaBuilding(b))
+                .toList();
+          });
+        }
+      }
     });
   }
 
@@ -388,18 +499,38 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Set<Marker> _createMarkers() {
-    if (_currentLocation == null) return {};
+    final markers = <Marker>{};
 
-    return {
-      Marker(
-        markerId: const MarkerId('current_location'),
-        position: _currentLocation!,
-        icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
-        anchor: const Offset(0.5, 0.5),
-        flat: true,
-        zIndex: 999,
-      ),
-    };
+    // Add current location marker
+    if (_currentLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_location'),
+          position: _currentLocation!,
+          icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+          zIndex: 999,
+        ),
+      );
+    }
+
+    // Add marker for selected non-Concordia place
+    if (_selectedSearchResult != null && !_selectedSearchResult!.isConcordiaBuilding) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('selected_place'),
+          position: _selectedSearchResult!.location,
+          infoWindow: InfoWindow(
+            title: _selectedSearchResult!.name,
+            snippet: _selectedSearchResult!.address ?? 'Not a Concordia building',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
+
+    return markers;
   }
 
   Set<Circle> _createCircles() {
@@ -628,6 +759,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   void dispose() {
     _posSub?.cancel();
     _popupDebounce?.cancel();
+    _debounceTimer?.cancel();
     _mapController?.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();

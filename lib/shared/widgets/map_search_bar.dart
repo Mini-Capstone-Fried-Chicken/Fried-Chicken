@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../data/building_names.dart';
+import '../../data/search_suggestion.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -8,8 +9,8 @@ class MapSearchBar extends StatefulWidget {
   final String campusLabel;
   final TextEditingController? controller;
   final Function(String)? onSubmitted;
-  final List<BuildingName>? suggestions;
-  final Function(BuildingName)? onSuggestionSelected;
+  final List<SearchSuggestion>? suggestions;
+  final Function(SearchSuggestion)? onSuggestionSelected;
   final VoidCallback? onFocus;
 
   const MapSearchBar({
@@ -71,9 +72,9 @@ class _MapSearchBarState extends State<MapSearchBar> {
     _updateSuggestionsVisibility();
   }
 
-  void _selectSuggestion(BuildingName building) {
-    widget.controller?.text = building.name;
-    widget.onSuggestionSelected?.call(building);
+  void _selectSuggestion(SearchSuggestion suggestion) {
+    widget.controller?.text = suggestion.name;
+    widget.onSuggestionSelected?.call(suggestion);
     _focusNode.unfocus();
     setState(() {
       _showSuggestions = false;
@@ -83,7 +84,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
   @override
   Widget build(BuildContext context) {
     final String hint =
-        widget.campusLabel.trim().isEmpty ? "Search" : "Search Concordia ${widget.campusLabel}";
+        widget.campusLabel.trim().isEmpty ? "Search anywhere" : "Search anywhere near ${widget.campusLabel}";
 
     return TapRegion(
       onTapOutside: (_) {
@@ -136,12 +137,31 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     shrinkWrap: true,
                     itemCount: widget.suggestions!.length,
                     itemBuilder: (context, index) {
-                      final building = widget.suggestions![index];
+                      final suggestion = widget.suggestions![index];
                       return ListTile(
-                        title: Text(building.name),
-                        subtitle: Text(building.code, style: const TextStyle(fontSize: 12)),
+                        leading: Icon(
+                          suggestion.isConcordiaBuilding 
+                              ? Icons.school 
+                              : Icons.place,
+                          color: suggestion.isConcordiaBuilding 
+                              ? burgundy 
+                              : Colors.grey,
+                          size: 20,
+                        ),
+                        title: Text(suggestion.name),
+                        subtitle: suggestion.subtitle != null
+                            ? Text(
+                                suggestion.subtitle!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: suggestion.isConcordiaBuilding 
+                                      ? burgundy.withOpacity(0.7)
+                                      : Colors.grey[600],
+                                ),
+                              )
+                            : null,
                         dense: true,
-                        onTap: () => _selectSuggestion(building),
+                        onTap: () => _selectSuggestion(suggestion),
                         hoverColor: burgundy.withOpacity(0.1),
                       );
                     },
