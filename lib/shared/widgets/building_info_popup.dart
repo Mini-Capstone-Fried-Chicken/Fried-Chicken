@@ -11,6 +11,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final List<String> facilities;
   final VoidCallback? onMore;
   final bool isLoggedIn;
+  final VoidCallback onGetDirections;
 
   const BuildingInfoPopup({
     super.key,
@@ -164,6 +165,9 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       ),
     );
   }
+    required this.onLearnMore,
+    required this.onGetDirections,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -298,6 +302,21 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 child: const Text('More'),
               ),
             ),
+
+            // buttons 
+            _pillButton('Get directions', burgundy, onGetDirections),
+            const SizedBox(height: 10),
+            _pillButton('Indoor map', burgundy, () {}),
+            const SizedBox(height: 10),
+            _pillButton('Save', burgundy, () {}),
+            const SizedBox(height: 10),
+            _pillButton('Learn more', burgundy, () {
+              // only logs in debug mode
+              if (kDebugMode) {
+                debugPrint('[BuildingInfoPopup] Learn more pressed for: $title');
+              }
+              onLearnMore();
+            }),
           ],
         ),
       ),

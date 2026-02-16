@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('BuildingInfoPopup Widget Tests', () {
     late bool closePressed;
-    late bool morePressed;
+    late bool learnMorePressed;
 
     setUp(() {
       closePressed = false;
-      morePressed = false;
+      learnMorePressed = false;
     });
 
     Widget createPopupUnderTest({required bool isLoggedIn}) {
@@ -24,7 +24,6 @@ void main() {
             onMore: () {
               morePressed = true;
             },
-            isLoggedIn: isLoggedIn,
           ),
         ),
       );
@@ -52,7 +51,6 @@ void main() {
                         onMore: () {
                           morePressed = true;
                         },
-                        isLoggedIn: isLoggedIn,
                       ),
                     );
                   },

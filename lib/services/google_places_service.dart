@@ -121,7 +121,17 @@ class GooglePlacesService {
   /// Get place details by place ID
   static Future<PlaceResult?> getPlaceDetails(String placeId) async {
     try {
-      final uri = Uri.parse('$_baseUrl/$placeId');
+      print('[DEBUG] Fetching place details for placeId: $placeId');
+      
+      // Ensure we have the full resource name format (places/ChIJ...)
+      String resourceName = placeId;
+      if (!placeId.startsWith('places/')) {
+        resourceName = 'places/$placeId';
+        print('[DEBUG] Added places/ prefix: $resourceName');
+      }
+      
+      final uri = Uri.parse('$_baseUrl/$resourceName');
+      print('[DEBUG] Request URI: $uri');
 
       final response = await http.get(
         uri,
@@ -132,12 +142,16 @@ class GooglePlacesService {
         },
       );
 
+      print('[DEBUG] Place details response status: ${response.statusCode}');
+      print('[DEBUG] Place details response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
+        print('[DEBUG] Parsed place details: $data');
         final location = data['location'] as Map<String, dynamic>?;
         final displayName = data['displayName'] as Map<String, dynamic>?;
         
-        return PlaceResult(
+        final result = PlaceResult(
           placeId: data['id'] as String? ?? placeId,
           name: displayName?['text'] as String? ?? 'Unknown',
           formattedAddress: data['formattedAddress'] as String?,
@@ -146,11 +160,15 @@ class GooglePlacesService {
             location?['longitude'] as double? ?? 0.0,
           ),
         );
+        print('[DEBUG] Created PlaceResult: ${result.name} at ${result.location}');
+        return result;
+      } else {
+        print('[ERROR] HTTP error ${response.statusCode}: ${response.body}');
       }
 
       return null;
     } catch (e) {
-      print('Error getting place details: $e');
+      print('[ERROR] Error getting place details: $e');
       return null;
     }
   }
@@ -171,6 +189,7 @@ class GooglePlacesService {
       
       final body = <String, dynamic>{
         'input': query,
+        'languageCode': 'en',
       };
       
       if (location != null) {
@@ -183,9 +202,22 @@ class GooglePlacesService {
             'radius': radius.toDouble(),
           },
         };
+      } else {
+        // If no location specified, use a default bias towards Montreal/Concordia area
+        body['locationBias'] = {
+          'circle': {
+            'center': {
+              'latitude': 45.4958,  // Concordia's latitude
+              'longitude': -73.5711, // Concordia's longitude
+            },
+            'radius': 15000.0,
+          },
+        };
       }
 
-      print('Fetching Google Places predictions for: $query');
+      print('[DEBUG] Fetching Google Places predictions for: $query');
+      print('[DEBUG] Location bias: $location');
+      print('[DEBUG] Request body: ${json.encode(body)}');
       
       final response = await http.post(
         uri,
@@ -196,48 +228,74 @@ class GooglePlacesService {
         body: json.encode(body),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        
-        print('Google Places API response received');
+      print('[DEBUG] API Response status: ${response.statusCode}');
 
-        if (data['suggestions'] != null) {
-          final suggestions = data['suggestions'] as List<dynamic>;
-          print('Found ${suggestions.length} Google Places predictions');
+      if (response.statusCode == 200) {
+        try {
+          final data = json.decode(response.body) as Map<String, dynamic>;
           
-          final predictions = <PlacePrediction>[];
-          for (final suggestion in suggestions) {
-            final suggestionData = suggestion as Map<String, dynamic>;
-            if (suggestionData['placePrediction'] != null) {
-              final placePrediction = suggestionData['placePrediction'] as Map<String, dynamic>;
-              final placeId = placePrediction['placeId'] as String? ?? 
-                             placePrediction['place'] as String? ?? '';
-              final text = placePrediction['text'] as Map<String, dynamic>?;
-              final structuredFormat = placePrediction['structuredFormat'] as Map<String, dynamic>?;
-              
-              final mainText = structuredFormat?['mainText'] as Map<String, dynamic>?;
-              final secondaryText = structuredFormat?['secondaryText'] as Map<String, dynamic>?;
-              
-              predictions.add(PlacePrediction(
-                placeId: placeId,
-                description: text?['text'] as String? ?? '',
-                mainText: mainText?['text'] as String? ?? text?['text'] as String? ?? '',
-                secondaryText: secondaryText?['text'] as String?,
-              ));
+          print('[DEBUG] Google Places API response received');
+          print('[DEBUG] Response keys: ${data.keys.toList()}');
+
+          if (data['suggestions'] != null) {
+            final suggestions = data['suggestions'] as List<dynamic>;
+            print('[DEBUG] Found ${suggestions.length} Google Places predictions');
+            
+            final predictions = <PlacePrediction>[];
+            for (int i = 0; i < suggestions.length; i++) {
+              try {
+                final suggestion = suggestions[i] as Map<String, dynamic>;
+                if (suggestion['placePrediction'] != null) {
+                  final placePrediction = suggestion['placePrediction'] as Map<String, dynamic>;
+                  print('[DEBUG] Suggestion $i placePrediction keys: ${placePrediction.keys.toList()}');
+                  print('[DEBUG] Suggestion $i full placePrediction: $placePrediction');
+                  
+                  // Try multiple ways to get the place ID/resource name
+                  String placeId = placePrediction['placeId'] as String? ?? 
+                                   placePrediction['place'] as String? ?? '';
+                  print('[DEBUG] Suggestion $i extracted placeId: $placeId');
+                  
+                  final text = placePrediction['text'] as Map<String, dynamic>?;
+                  final structuredFormat = placePrediction['structuredFormat'] as Map<String, dynamic>?;
+                  
+                  final mainText = structuredFormat?['mainText'] as Map<String, dynamic>?;
+                  final secondaryText = structuredFormat?['secondaryText'] as Map<String, dynamic>?;
+                  
+                  final prediction = PlacePrediction(
+                    placeId: placeId,
+                    description: text?['text'] as String? ?? '',
+                    mainText: mainText?['text'] as String? ?? text?['text'] as String? ?? '',
+                    secondaryText: secondaryText?['text'] as String?,
+                  );
+                  print('[DEBUG] Created prediction $i: ${prediction.mainText}');
+                  predictions.add(prediction);
+                } else {
+                  print('[DEBUG] Suggestion $i has no placePrediction field');
+                }
+              } catch (e) {
+                print('[ERROR] Error parsing suggestion $i: $e');
+              }
+            }
+            print('[DEBUG] Returning ${predictions.length} predictions');
+            return predictions;
+          } else {
+            print('[DEBUG] No suggestions in response. Available keys: ${data.keys.toList()}');
+            if (data['error'] != null) {
+              print('[ERROR] API returned error: ${data['error']}');
             }
           }
-          return predictions;
-        } else {
-          print('No suggestions in response');
+        } catch (e) {
+          print('[ERROR] Error parsing response JSON: $e');
+          print('[DEBUG] Raw response body: ${response.body}');
         }
       } else {
-        print('HTTP error: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        print('[ERROR] HTTP error: ${response.statusCode}');
+        print('[ERROR] Response body: ${response.body}');
       }
 
       return [];
     } catch (e) {
-      print('Error getting autocomplete predictions: $e');
+      print('[ERROR] Error getting autocomplete predictions: $e');
       return [];
     }
   }

@@ -35,7 +35,7 @@ BuildingName _annex(String code, List<String> searchTerms) {
 final List<BuildingName> concordiaBuildingNames = [
   // SGW Campus
   _building(code: "LB", name: "LB Building", searchTerms: ["lb"]),
-  _building(code: "MB", name: "MB Building", searchTerms: ["mb"]),
+  _building(code: "MB", name: "JSMB Building", searchTerms: ["mb, jsmb"]),
   _building(code: "HALL", name: "Hall Building", searchTerms: ["hall", "h"]),
   _building(
     code: "EV",

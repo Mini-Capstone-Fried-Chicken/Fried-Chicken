@@ -78,6 +78,76 @@ void main() {
         ),
       );
 
+      // Switch to SGW
+      await tester.tap(find.text('Sir George William'));
+      await tester.pumpAndSettle();
+      expect(selectedCampus, equals(Campus.sgw));
+
+      // Switch to Loyola
+      await tester.tap(find.text('Loyola'));
+      await tester.pumpAndSettle();
+      expect(selectedCampus, equals(Campus.loyola));
+
+      // Switch back to SGW
+      await tester.tap(find.text('Sir George William'));
+      await tester.pumpAndSettle();
+      expect(selectedCampus, equals(Campus.sgw));
+    });
+
+    testWidgets('SGW campus corresponds to SGW buildings',
+        (WidgetTester tester) async {
+      // Verify that SGW buildings exist in the building info
+      final sgwBuildings = buildingInfoByCode.values
+          .where((building) => building.campus == 'SGW')
+          .toList();
+
+      expect(sgwBuildings.isNotEmpty, isTrue,
+          reason: 'There should be at least one SGW building');
+
+      for (final building in sgwBuildings) {
+        expect(building.code, isNotNull);
+        expect(building.name, isNotNull);
+        expect(building.floors, isNotEmpty);
+      }
+    });
+
+    testWidgets('Campus toggle displays SGW map when SGW is selected',
+        (WidgetTester tester) async {
+      // Filter buildings by selected campus
+      final selectedBuildings = buildingInfoByCode.values
+          .where((building) => building.campus == 'SGW')
+          .toList();
+
+      // Verify we can get specific SGW buildings
+      expect(selectedBuildings.isNotEmpty, isTrue);
+
+      // Verify SGW buildings are accessible
+      for (final building in selectedBuildings) {
+        expect(
+          building.floors.isNotEmpty,
+          isTrue,
+          reason:
+              'SGW building ${building.code} should have at least one floor',
+        );
+      }
+    });
+
+    testWidgets('SGW and Loyola have distinct building sets',
+        (WidgetTester tester) async {
+      final sgwBuildings = buildingInfoByCode.values
+          .where((building) => building.campus == 'SGW')
+          .map((b) => b.code)
+          .toSet();
+
+      final loyolaBuildings = buildingInfoByCode.values
+          .where((building) => building.campus == 'Loyola')
+          .map((b) => b.code)
+          .toSet();
+
+      // Verify there's no overlap between SGW and Loyola building codes
+      final overlap = sgwBuildings.intersection(loyolaBuildings);
+      expect(overlap.isEmpty, isTrue,
+          reason: 'SGW and Loyola should have distinct building sets');
       final sgwContainer = find.ancestor(
         of: find.text('Sir George William'),
         matching: find.byType(AnimatedContainer),

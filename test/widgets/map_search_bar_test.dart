@@ -1,4 +1,5 @@
 import 'package:campus_app/data/building_names.dart';
+import 'package:campus_app/data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/map_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +18,7 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: suggestions,
+            suggestions: suggestions.map((b) => SearchSuggestion.fromConcordiaBuilding(b)).toList(),
           ),
         ),
       ),
@@ -41,8 +42,8 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: [suggestion],
-            onSuggestionSelected: (value) => selected.add(value),
+            suggestions: [suggestion].map((s) => SearchSuggestion.fromConcordiaBuilding(s)).toList(),
+            onSuggestionSelected: (value) => selected.add(value.buildingName!),
           ),
         ),
       ),
@@ -69,7 +70,7 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: [concordiaBuildingNames.first],
+            suggestions: [SearchSuggestion.fromConcordiaBuilding(concordiaBuildingNames.first)],
             onFocus: () => focusCalled = true,
           ),
         ),
@@ -91,7 +92,7 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: [suggestion],
+            suggestions: [SearchSuggestion.fromConcordiaBuilding(suggestion)],
           ),
         ),
       ),
