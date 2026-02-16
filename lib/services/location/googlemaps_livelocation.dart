@@ -16,7 +16,6 @@ import '../google_places_service.dart';
 import '../google_directions_service.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
-import '../../shared/widgets/learn_more_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 
@@ -1003,9 +1002,12 @@ Future<void> _openLink(String url) async {
     double? popupLeft;
     double? popupTop;
 
-    if (_anchorOffset != null && !_cameraMoving) {
-      final ax = _anchorOffset!.dx;
-      final ay = _anchorOffset!.dy;
+    // Use debug anchor offset if provided (for testing)
+    final anchorToUse = widget.debugAnchorOffset ?? _anchorOffset;
+
+    if (anchorToUse != null && !_cameraMoving) {
+      final ax = anchorToUse.dx;
+      final ay = anchorToUse.dy;
 
       final inView =
           ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
@@ -1087,44 +1089,31 @@ Future<void> _openLink(String url) async {
               ),
             ),
 
-          if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
+          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null && popupLeft != null && popupTop != null)
             Positioned(
               left: popupLeft,
               top: popupTop,
               child: PointerInterceptor(
                 child: BuildingInfoPopup(
                   title:
-                      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
+                      '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
                   description:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
+                      buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.description ??
                           'No description available.',
                   accessibility:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.accessibility ??
+                      buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.accessibility ??
                           false,
                   facilities:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.facilities ??
+                      buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.facilities ??
                           const [],
                   onMore: () {
                     final link = widget.debugLinkOverride ??
-                        (buildingInfoByCode[_selectedBuildingPoly!.code]?.link ?? '');
+                        (buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.link ?? '');
                     _openLink(link);
                   },
                   onClose: _closePopup,
-                  onLearnMore: _openLearnMore,
-                ),
-              ),
-            ),
-
-          if (_showLearnMore && _selectedBuildingPoly != null)
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: bottomPad + 180,
-              child: PointerInterceptor(
-                child: LearnMorePopup(
-                  onClose: _closeLearnMore,
-                  purposeText: 'No purpose available.',
-                  facilitiesText: 'No facilities available.',
+                  isLoggedIn: widget.isLoggedIn,
+                  onGetDirections: _getDirections,
                 ),
               ),
             ),
@@ -1189,12 +1178,12 @@ Future<void> _openLink(String url) async {
 
           if (!_showRoutePreview)
             Positioned(
-              bottom: 20,
+              bottom: 25,
               left: 0,
               right: 0,
               child: Center(
                 child: SizedBox(
-                  width: 800,
+                  width: 280,
                   child: CampusToggle(
                     currentCampus: _selectedCampus,
                     onCampusChanged: _switchCampus,

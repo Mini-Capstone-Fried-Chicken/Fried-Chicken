@@ -5,12 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('BuildingInfoPopup Widget Tests', () {
     late bool closePressed;
-    late bool learnMorePressed;
-    late bool getDirectionsPressed;
+    late bool morePressed;
 
     setUp(() {
       closePressed = false;
-      learnMorePressed = false;
+      morePressed = false;
     });
 
     Widget createPopupUnderTest({required bool isLoggedIn}) {
@@ -22,11 +21,11 @@ void main() {
             onClose: () {
               closePressed = true;
             },
-            onLearnMore: () {
-              learnMorePressed = true;
+            onMore: () {
+              morePressed = true;
             },
-            onGetDirections: () {
-            },
+            isLoggedIn: isLoggedIn,
+            onGetDirections: () {},
           ),
         ),
       );
@@ -51,11 +50,11 @@ void main() {
                           closePressed = true;
                           Navigator.of(context).pop();
                         },
-                        onLearnMore: () {
-                          learnMorePressed = true;
+                        onMore: () {
+                          morePressed = true;
                         },
-                        onGetDirections: () {
-                        },
+                        isLoggedIn: isLoggedIn,
+                        onGetDirections: () {},
                       ),
                     );
                   },
@@ -195,6 +194,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: true,
+              onGetDirections: () {},
               accessibility: true,
               facilities: const [
                 'Washrooms',
@@ -229,6 +229,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['COFFEE SHOP'],
             ),
           ),
@@ -249,6 +250,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['washroms near entrance'],
             ),
           ),
@@ -270,6 +272,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['Coffee shop'],
             ),
           ),
@@ -297,6 +300,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['Coffee shop'],
             ),
           ),
@@ -323,6 +327,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['Coffee shop', 'Washrooms'],
             ),
           ),

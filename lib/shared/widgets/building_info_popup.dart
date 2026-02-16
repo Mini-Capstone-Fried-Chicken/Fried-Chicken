@@ -22,6 +22,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.facilities = const [],
     this.onMore,
     required this.isLoggedIn,
+    required this.onGetDirections,
   });
 
   @override
@@ -52,7 +53,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     _hideIconLabel();
 
     final overlay = Overlay.of(context);
-    if (overlay == null) return;
 
     _labelEntry = OverlayEntry(
       builder: (_) {
@@ -165,9 +165,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       ),
     );
   }
-    required this.onLearnMore,
-    required this.onGetDirections,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +276,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 _buildIconButton(
                   icon: Icons.directions,
                   tooltip: 'Get directions',
-                  onPressed: () {},
+                  onPressed: widget.onGetDirections,
                 ),
                 const SizedBox(width: 10),
                 _buildIconButton(
@@ -302,21 +299,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 child: const Text('More'),
               ),
             ),
-
-            // buttons 
-            _pillButton('Get directions', burgundy, onGetDirections),
-            const SizedBox(height: 10),
-            _pillButton('Indoor map', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Save', burgundy, () {}),
-            const SizedBox(height: 10),
-            _pillButton('Learn more', burgundy, () {
-              // only logs in debug mode
-              if (kDebugMode) {
-                debugPrint('[BuildingInfoPopup] Learn more pressed for: $title');
-              }
-              onLearnMore();
-            }),
           ],
         ),
       ),

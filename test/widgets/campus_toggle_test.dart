@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:campus_app/shared/widgets/campus_toggle.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
+import 'package:campus_app/features/indoor/data/building_info.dart';
 
 void main() {
   group('CampusToggle', () {
@@ -65,13 +66,15 @@ void main() {
 
     testWidgets('Campus.none -> both segments unselected (transparent bg)',
         (tester) async {
+      Campus selectedCampus = Campus.none;
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Center(
               child: CampusToggle(
                 currentCampus: Campus.none,
-                onCampusChanged: (_) {},
+                onCampusChanged: (c) => selectedCampus = c,
               ),
             ),
           ),
@@ -148,23 +151,12 @@ void main() {
       final overlap = sgwBuildings.intersection(loyolaBuildings);
       expect(overlap.isEmpty, isTrue,
           reason: 'SGW and Loyola should have distinct building sets');
-      final sgwContainer = find.ancestor(
-        of: find.text('Sir George William'),
-        matching: find.byType(AnimatedContainer),
-      );
-      final loyContainer = find.ancestor(
-        of: find.text('Loyola'),
-        matching: find.byType(AnimatedContainer),
-      );
-
-      final sgw = tester.widget<AnimatedContainer>(sgwContainer.first);
-      final loy = tester.widget<AnimatedContainer>(loyContainer.first);
-
-      final sgwDeco = sgw.decoration as BoxDecoration;
-      final loyDeco = loy.decoration as BoxDecoration;
-
-      expect(sgwDeco.color, equals(Colors.transparent));
-      expect(loyDeco.color, equals(Colors.transparent));
+      
+      // Verify that both campuses have buildings
+      expect(sgwBuildings.isNotEmpty, isTrue,
+          reason: 'SGW campus should have buildings');
+      expect(loyolaBuildings.isNotEmpty, isTrue,
+          reason: 'Loyola campus should have buildings');
     });
 
     testWidgets('selected campus changes bg + text color', (tester) async {

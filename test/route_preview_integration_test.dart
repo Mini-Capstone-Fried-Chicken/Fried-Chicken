@@ -1,7 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:campus_app/data/building_polygons.dart';
-import 'package:campus_app/data/search_result.dart';
 import 'package:campus_app/data/search_suggestion.dart';
 import 'package:campus_app/data/building_names.dart';
 
@@ -47,14 +47,14 @@ void main() {
 
       test('Route text labels can be switched', () {
         var originText = 'Current location';
-        var destinationText = 'Hall Building - HALL';
+        var destinationText = 'Hall Building - H';
 
         // Switch
         final temp = originText;
         originText = destinationText;
         destinationText = temp;
 
-        expect(originText, 'Hall Building - HALL');
+        expect(originText, 'Hall Building - H');
         expect(destinationText, 'Current location');
       });
     });
@@ -207,12 +207,12 @@ void main() {
     group('Route Suggestion Selection', () {
       test('Select Concordia building as origin creates proper location', () {
         final suggestion = SearchSuggestion.fromConcordiaBuilding(
-          concordiaBuildingNames.firstWhere((b) => b.code == 'HALL'),
+          concordiaBuildingNames.firstWhere((b) => b.code == 'H'),
         );
 
         expect(suggestion.isConcordiaBuilding, true);
         expect(suggestion.buildingName, isNotNull);
-        expect(suggestion.buildingName?.code, 'HALL');
+        expect(suggestion.buildingName?.code, 'H');
       });
 
       test('Select Google Place as origin creates proper location', () {
@@ -228,7 +228,7 @@ void main() {
       });
 
       test('Origin suggestion selection updates route origin', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
         final newOrigin = building.center;
 
         expect(newOrigin, isNotNull);
@@ -248,10 +248,10 @@ void main() {
 
     group('Route Text Display', () {
       test('Concordia building displays as "Name - Code"', () {
-        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'HALL');
+        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'H');
         final displayText = '${building.name} - ${building.code}';
 
-        expect(displayText, 'Hall Building - HALL');
+        expect(displayText, 'Hall Building - H');
       });
 
       test('Google Place displays as name only', () {
@@ -271,11 +271,11 @@ void main() {
         var routeDestinationText = '';
 
         // Simulate selection
-        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'HALL');
+        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'H');
         routeDestinationText = '${building.name} - ${building.code}';
 
         expect(routeOriginText, 'Current location');
-        expect(routeDestinationText, 'Hall Building - HALL');
+        expect(routeDestinationText, 'Hall Building - H');
       });
     });
 
@@ -307,7 +307,7 @@ void main() {
       });
 
       test('Route preview hides building popup', () {
-        var selectedBuildingCenter = LatLng(45.497, -73.579);
+        LatLng? selectedBuildingCenter = LatLng(45.497, -73.579);
         var showLearnMore = true;
 
         // Enter route preview mode
@@ -418,52 +418,52 @@ void main() {
       });
 
       test('Initial route uses selected building as destination', () {
-        final selectedBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final selectedBuilding = buildingPolygons.firstWhere((b) => b.code == 'H');
         final routeDestination = selectedBuilding.center;
         final routeDestinationText = '${selectedBuilding.name} - ${selectedBuilding.code}';
 
         expect(routeDestination, selectedBuilding.center);
-        expect(routeDestinationText, 'Hall Building - HALL');
+        expect(routeDestinationText, 'Hall Building - H');
       });
     });
 
     group('Route Validation', () {
       test('Route requires both origin and destination', () {
-        LatLng? origin = LatLng(45.4973, -73.5789);
-        LatLng? destination = LatLng(45.4582, -73.6405);
+        final origin = LatLng(45.4973, -73.5789);
+        final destination = LatLng(45.4582, -73.6405);
 
-        final canCalculateRoute = origin != null && destination != null;
-        expect(canCalculateRoute, isTrue);
+        expect(origin, isNotNull);
+        expect(destination, isNotNull);
       });
 
       test('Route cannot be calculated with null origin', () {
         LatLng? origin;
-        LatLng? destination = LatLng(45.4582, -73.6405);
+        final destination = LatLng(45.4582, -73.6405);
 
-        final canCalculateRoute = origin != null && destination != null;
-        expect(canCalculateRoute, isFalse);
+        expect(origin, isNull);
+        expect(destination, isNotNull);
       });
 
       test('Route cannot be calculated with null destination', () {
-        LatLng? origin = LatLng(45.4973, -73.5789);
+        final origin = LatLng(45.4973, -73.5789);
         LatLng? destination;
 
-        final canCalculateRoute = origin != null && destination != null;
-        expect(canCalculateRoute, isFalse);
+        expect(origin, isNotNull);
+        expect(destination, isNull);
       });
 
       test('Route cannot be calculated with both null', () {
         LatLng? origin;
         LatLng? destination;
 
-        final canCalculateRoute = origin != null && destination != null;
-        expect(canCalculateRoute, isFalse);
+        expect(origin, isNull);
+        expect(destination, isNull);
       });
     });
 
     group('Route Mode Transitions', () {
       test('Transition from building popup to route preview', () {
-        var selectedBuildingPoly = buildingPolygons.first;
+        BuildingPolygon? selectedBuildingPoly = buildingPolygons.first;
         var showRoutePreview = false;
 
         // User clicks "Get Directions"
