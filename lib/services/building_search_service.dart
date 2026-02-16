@@ -171,11 +171,11 @@ class BuildingSearchService {
           .toList();
     }
 
-    print('Getting combined suggestions for: $query');
+    print('[DEBUG] Getting combined suggestions for: $query');
 
     // Get Concordia building suggestions
     final concordiaSuggestions = getSuggestions(query);
-    print('Found ${concordiaSuggestions.length} Concordia building suggestions');
+    print('[DEBUG] Found ${concordiaSuggestions.length} Concordia building suggestions');
     for (final building in concordiaSuggestions.take(2)) {
       suggestions.add(SearchSuggestion.fromConcordiaBuilding(building));
     }
@@ -188,9 +188,10 @@ class BuildingSearchService {
         radius: 5000,
       );
 
-      print('Received ${placePredictions.length} Google Places predictions');
+      print('[DEBUG] Received ${placePredictions.length} Google Places predictions');
       
-      for (final prediction in placePredictions.take(5)) {
+      for (final prediction in placePredictions) {
+        print('[DEBUG] Adding place: ${prediction.mainText} - ${prediction.secondaryText}');
         suggestions.add(SearchSuggestion.fromGooglePlace(
           name: prediction.mainText,
           subtitle: prediction.secondaryText,
@@ -198,10 +199,10 @@ class BuildingSearchService {
         ));
       }
     } catch (e) {
-      print('Error getting Google Places predictions: $e');
+      print('[ERROR] Error getting Google Places predictions: $e');
     }
 
-    print('Total suggestions: ${suggestions.length}');
+    print('[DEBUG] Total suggestions: ${suggestions.length}');
     return suggestions;
   }
 

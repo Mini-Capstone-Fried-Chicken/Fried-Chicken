@@ -189,8 +189,6 @@ void main() {
 
     testWidgets('SGW campus corresponds to SGW buildings',
         (WidgetTester tester) async {
-      Campus selectedCampus = Campus.sgw;
-
       // Verify that SGW buildings exist in the building info
       final sgwBuildings = buildingInfoByCode.values
           .where((building) => building.campus == 'SGW')
@@ -208,8 +206,6 @@ void main() {
 
     testWidgets('Campus toggle displays SGW map when SGW is selected',
         (WidgetTester tester) async {
-      Campus selectedCampus = Campus.sgw;
-
       // Filter buildings by selected campus
       final selectedBuildings = buildingInfoByCode.values
           .where((building) => building.campus == 'SGW')

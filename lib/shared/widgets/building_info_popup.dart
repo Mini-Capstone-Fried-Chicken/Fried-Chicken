@@ -6,6 +6,7 @@ class BuildingInfoPopup extends StatelessWidget {
   final String description;
   final VoidCallback onClose;
   final VoidCallback onLearnMore;
+  final VoidCallback onGetDirections;
 
   const BuildingInfoPopup({
     super.key,
@@ -13,6 +14,7 @@ class BuildingInfoPopup extends StatelessWidget {
     required this.description,
     required this.onClose,
     required this.onLearnMore,
+    required this.onGetDirections,
   });
 
   @override
@@ -78,7 +80,7 @@ class BuildingInfoPopup extends StatelessWidget {
             const SizedBox(height: 12),
 
             // buttons 
-            _pillButton('Get directions', burgundy, () {}),
+            _pillButton('Get directions', burgundy, onGetDirections),
             const SizedBox(height: 10),
             _pillButton('Indoor map', burgundy, () {}),
             const SizedBox(height: 10),

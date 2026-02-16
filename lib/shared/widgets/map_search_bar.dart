@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import '../../data/building_names.dart';
 import '../../data/search_suggestion.dart';
 
 const Color burgundy = Color(0xFF76263D);

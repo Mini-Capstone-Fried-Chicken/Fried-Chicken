@@ -11,9 +11,11 @@ import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
 import '../building_search_service.dart';
 import '../google_places_service.dart';
+import '../google_directions_service.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/learn_more_popup.dart';
+import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
@@ -71,6 +73,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
   SearchResult? _selectedSearchResult; // For non-Concordia places
+  
+  Set<Polyline> _routePolylines = {};
+  bool _isLoadingRoute = false;
+  
+  // Route preview mode
+  bool _showRoutePreview = false;
+  LatLng? _routeOrigin;
+  LatLng? _routeDestination;
+  String _routeOriginText = 'Current location';
+  String _routeDestinationText = '';
+  List<SearchSuggestion> _routeOriginSuggestions = [];
+  List<SearchSuggestion> _routeDestinationSuggestions = [];
+  Timer? _routeDebounceTimer;
 
   StreamSubscription<Position>? _posSub;
 
@@ -225,10 +240,277 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedSearchResult = null;
       _anchorOffset = null;
       _showLearnMore = false;
+      _routePolylines = {};
+      _showRoutePreview = false;
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
       if (clearSearch) {
         _searchController.clear();
       }
     });
+  }
+
+  Future<void> _getDirections() async {
+    print('[DEBUG] Get directions button clicked');
+    print('[DEBUG] Current location: $_currentLocation');
+    print('[DEBUG] Selected building: ${_selectedBuildingPoly?.name} (${_selectedBuildingPoly?.code})');
+    
+    final origin = _currentLocation;
+    final destination = _selectedBuildingPoly?.center;
+
+    if (origin == null) {
+      print('[ERROR] Cannot get directions: Current location is null');
+      print('[ERROR] Make sure location services are enabled and location is set in emulator');
+      return;
+    }
+    
+    if (destination == null) {
+      print('[ERROR] Cannot get directions: Destination is null');
+      return;
+    }
+
+    // Enter route preview mode
+    setState(() {
+      _selectedBuildingCenter = null; // Close building popup
+      _anchorOffset = null;
+      _showLearnMore = false;
+      _showRoutePreview = true;
+      _routeOrigin = origin;
+      _routeDestination = destination;
+      _routeOriginText = 'Current location';
+      _routeDestinationText = '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
+    });
+
+    // Fetch the initial route
+    await _fetchRoute();
+  }
+
+  Future<void> _fetchRoute() async {
+    final origin = _routeOrigin;
+    final destination = _routeDestination;
+
+    if (origin == null || destination == null) {
+      print('[ERROR] Cannot fetch route: origin or destination is null');
+      return;
+    }
+
+    setState(() {
+      _isLoadingRoute = true;
+    });
+
+    print('[DEBUG] Fetching route from $origin to $destination');
+
+    try {
+      final routePoints = await GoogleDirectionsService.getRoute(
+        origin: origin,
+        destination: destination,
+        mode: 'walking',
+      );
+
+      if (routePoints != null && routePoints.isNotEmpty) {
+        setState(() {
+          _routePolylines = {
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: routePoints,
+              color: const Color(0xFF76263D), // Concordia burgundy
+              width: 5,
+              patterns: [PatternItem.dot, PatternItem.gap(10)],
+            ),
+          };
+          _isLoadingRoute = false;
+        });
+
+        // Adjust camera to show the entire route
+        if (_mapController != null) {
+          final bounds = _calculateBounds([origin, destination]);
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 100),
+          );
+        }
+      } else {
+        setState(() {
+          _isLoadingRoute = false;
+        });
+        print('No route found');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingRoute = false;
+      });
+      print('Error getting directions: $e');
+    }
+  }
+
+  void _closeRoutePreview() {
+    setState(() {
+      _showRoutePreview = false;
+      _routePolylines = {};
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+    });
+  }
+
+  Future<void> _onRouteOriginChanged(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _routeOriginSuggestions = [];
+      });
+      return;
+    }
+
+    // Clear old suggestions immediately
+    setState(() {
+      _routeOriginSuggestions = [];
+    });
+
+    // Debounce the search
+    _routeDebounceTimer?.cancel();
+    _routeDebounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        print('[DEBUG] Searching for origin: $query');
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          query,
+          userLocation: _currentLocation,
+        );
+        print('[DEBUG] Found ${suggestions.length} origin suggestions');
+        if (mounted) {
+          setState(() {
+            _routeOriginSuggestions = suggestions;
+          });
+        }
+      } catch (e) {
+        print('[ERROR] Error getting origin suggestions: $e');
+      }
+    });
+  }
+
+  Future<void> _onRouteDestinationChanged(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _routeDestinationSuggestions = [];
+      });
+      return;
+    }
+
+    // Clear old suggestions immediately
+    setState(() {
+      _routeDestinationSuggestions = [];
+    });
+
+    // Debounce the search
+    _routeDebounceTimer?.cancel();
+    _routeDebounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        print('[DEBUG] Searching for destination: $query');
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          query,
+          userLocation: _currentLocation,
+        );
+        print('[DEBUG] Found ${suggestions.length} destination suggestions');
+        if (mounted) {
+          setState(() {
+            _routeDestinationSuggestions = suggestions;
+          });
+        }
+      } catch (e) {
+        print('[ERROR] Error getting destination suggestions: $e');
+      }
+    });
+  }
+
+  Future<void> _onRouteOriginSelected(SearchSuggestion suggestion) async {
+    print('[DEBUG] Origin selected: ${suggestion.name}, isConcordia: ${suggestion.isConcordiaBuilding}, placeId: ${suggestion.placeId}');
+    
+    LatLng? newOrigin;
+    String displayText = suggestion.name;
+    
+    if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
+      print('[DEBUG] Handling Concordia building');
+      final building = BuildingSearchService.searchBuilding(suggestion.buildingName!.code);
+      newOrigin = building?.center;
+      displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
+      print('[DEBUG] Concordia building origin: $newOrigin');
+    } else if (suggestion.placeId != null) {
+      // Fetch place details for non-Concordia locations
+      print('[DEBUG] Fetching place details for non-Concordia place: ${suggestion.placeId}');
+      try {
+        final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId!);
+        print('[DEBUG] Place details result: $placeDetails');
+        if (placeDetails != null) {
+          newOrigin = placeDetails.location;
+          print('[DEBUG] Non-Concordia origin location: $newOrigin');
+        } else {
+          print('[ERROR] Place details returned null for ${suggestion.placeId}');
+        }
+      } catch (e) {
+        print('[ERROR] Error fetching place details: $e');
+        return;
+      }
+    }
+
+    if (newOrigin != null) {
+      print('[DEBUG] Updating route origin state');
+      setState(() {
+        _routeOrigin = newOrigin;
+        _routeOriginText = displayText;
+        _routeOriginSuggestions = [];
+      });
+      print('[DEBUG] Calling _fetchRoute with new origin: $newOrigin');
+      await _fetchRoute();
+    } else {
+      print('[ERROR] Could not determine origin location');
+    }
+  }
+
+  Future<void> _onRouteDestinationSelected(SearchSuggestion suggestion) async {
+    LatLng? newDestination;
+    String displayText = suggestion.name;
+    
+    if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
+      final building = BuildingSearchService.searchBuilding(suggestion.buildingName!.code);
+      newDestination = building?.center;
+      displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
+    } else if (suggestion.placeId != null) {
+      // Fetch place details for non-Concordia locations
+      try {
+        final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId!);
+        if (placeDetails != null) {
+          newDestination = placeDetails.location;
+        }
+      } catch (e) {
+        print('Error fetching place details: $e');
+        return;
+      }
+    }
+
+    if (newDestination != null) {
+      setState(() {
+        _routeDestination = newDestination;
+        _routeDestinationText = displayText;
+        _routeDestinationSuggestions = [];
+      });
+      await _fetchRoute();
+    }
+  }
+
+  LatLngBounds _calculateBounds(List<LatLng> points) {
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final point in points) {
+      minLat = minLat < point.latitude ? minLat : point.latitude;
+      maxLat = maxLat > point.latitude ? maxLat : point.latitude;
+      minLng = minLng < point.longitude ? minLng : point.longitude;
+      maxLng = maxLng > point.longitude ? maxLng : point.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
   }
 
   void _hideBuildingPopup() {
@@ -454,20 +736,45 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _startLocationUpdates() async {
+    print('[DEBUG] Starting location updates...');
+    
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
+    print('[DEBUG] Location service enabled: $serviceEnabled');
+    
+    if (!serviceEnabled) {
+      print('[ERROR] Location services are disabled');
+      return;
     }
 
-    if (permission == LocationPermission.deniedForever) return;
+    LocationPermission permission = await Geolocator.checkPermission();
+    print('[DEBUG] Initial permission status: $permission');
+    
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      print('[DEBUG] Permission after request: $permission');
+      if (permission == LocationPermission.denied) {
+        print('[ERROR] Location permission denied by user');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print('[ERROR] Location permission denied forever');
+      return;
+    }
 
     try {
-      final position = await Geolocator.getCurrentPosition();
+      print('[DEBUG] Attempting to get current position...');
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
       final newLatLng = LatLng(position.latitude, position.longitude);
+      
+      print('[DEBUG] Location obtained: ${position.latitude}, ${position.longitude}');
+      print('[DEBUG] Location accuracy: ${position.accuracy} meters');
 
       if (!mounted) return;
       setState(() {
@@ -475,11 +782,17 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _currentCampus = detectCampus(newLatLng);
         _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
+      
+      print('[DEBUG] Current campus: $_currentCampus');
+      print('[DEBUG] Current building: ${_currentBuildingPoly?.name}');
 
       _mapController?.animateCamera(
         CameraUpdate.newLatLng(newLatLng),
       );
-    } catch (_) {}
+    } catch (e) {
+      print('[ERROR] Failed to get current position: $e');
+      print('[ERROR] On emulator: Use Extended Controls (... button) > Location to set GPS coordinates');
+    }
 
     _posSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -488,6 +801,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       ),
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
+      print('[DEBUG] Location update: ${position.latitude}, ${position.longitude}');
 
       if (!mounted) return;
       setState(() {
@@ -649,21 +963,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             markers: _createMarkers(),
             circles: _createCircles(),
             polygons: _createBuildingPolygons(),
+            polylines: _routePolylines,
           ),
 
-          Positioned(
-            top: 65,
-            left: 20,
-            right: 20,
-            child: MapSearchBar(
-              campusLabel: campusLabel,
-              controller: _searchController,
-              onSubmitted: _onSearchSubmitted,
-              suggestions: _searchSuggestions,
-              onSuggestionSelected: _onSuggestionSelected,
-              onFocus: _hideBuildingPopup,
+          if (!_showRoutePreview)
+            Positioned(
+              top: 65,
+              left: 20,
+              right: 20,
+              child: MapSearchBar(
+                campusLabel: campusLabel,
+                controller: _searchController,
+                onSubmitted: _onSearchSubmitted,
+                suggestions: _searchSuggestions,
+                onSuggestionSelected: _onSuggestionSelected,
+                onFocus: _hideBuildingPopup,
+              ),
             ),
-          ),
 
           if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
             Positioned(
@@ -680,6 +996,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                           'No description available.',
                   onClose: _closePopup,
                   onLearnMore: _openLearnMore,
+                  onGetDirections: _getDirections,
                 ),
               ),
             ),
@@ -736,20 +1053,40 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 ),
 
 
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: SizedBox(
-                width: 800,
-                child: CampusToggle(
-                  currentCampus: _selectedCampus,
-                  onCampusChanged: _switchCampus,
+          // Route Preview Panel
+          if (_showRoutePreview)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: RoutePreviewPanel(
+                originText: _routeOriginText,
+                destinationText: _routeDestinationText,
+                onClose: _closeRoutePreview,
+                onOriginChanged: _onRouteOriginChanged,
+                onDestinationChanged: _onRouteDestinationChanged,
+                onOriginSelected: _onRouteOriginSelected,
+                onDestinationSelected: _onRouteDestinationSelected,
+                originSuggestions: _routeOriginSuggestions,
+                destinationSuggestions: _routeDestinationSuggestions,
+              ),
+            ),
+
+          if (!_showRoutePreview)
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: SizedBox(
+                  width: 800,
+                  child: CampusToggle(
+                    currentCampus: _selectedCampus,
+                    onCampusChanged: _switchCampus,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -760,6 +1097,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _posSub?.cancel();
     _popupDebounce?.cancel();
     _debounceTimer?.cancel();
+    _routeDebounceTimer?.cancel();
     _mapController?.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
