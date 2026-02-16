@@ -1,9 +1,65 @@
 import '../data/building_names.dart';
 import '../data/building_polygons.dart';
+import '../data/search_result.dart';
+import '../data/search_suggestion.dart';
+import 'google_places_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// Service for searching Concordia buildings by name or code
+/// Service for searching buildings using Google Places API and Concordia building data
 class BuildingSearchService {
-  /// Search for a building by query string
+  /// Search for places using Google Places API with Concordia building check
+  /// Returns a list of SearchResult objects
+  static Future<List<SearchResult>> searchWithGooglePlaces(
+    String query, {
+    LatLng? userLocation,
+  }) async {
+    if (query.trim().isEmpty) {
+      return [];
+    }
+
+    // Search using Google Places API
+    final placesResults = await GooglePlacesService.searchPlaces(
+      query,
+      location: userLocation,
+      radius: 5000,
+    );
+
+    final results = <SearchResult>[];
+
+    for (final place in placesResults) {
+      // Check if this place is a Concordia building
+      final concordiaBuilding = _findBuildingByLocation(place.location);
+      final isConcordia = concordiaBuilding != null;
+
+      results.add(SearchResult.fromGooglePlace(
+        name: place.name,
+        address: place.formattedAddress,
+        location: place.location,
+        isConcordiaBuilding: isConcordia,
+        buildingPolygon: concordiaBuilding,
+        placeId: place.placeId,
+      ));
+    }
+
+    return results;
+  }
+
+  /// Find a Concordia building by checking if a location is within any building polygon
+  static BuildingPolygon? _findBuildingByLocation(LatLng location) {
+    for (final building in buildingPolygons) {
+      if (building.containsPoint(location)) {
+        return building;
+      }
+    }
+    return null;
+  }
+
+  /// Check if a location is within a Concordia building
+  static bool isLocationInConcordiaBuilding(LatLng location) {
+    return _findBuildingByLocation(location) != null;
+  }
+
+  /// Search for a building by query string (legacy method for backward compatibility)
   /// Returns the matching BuildingPolygon if found, null otherwise
   static BuildingPolygon? searchBuilding(String query) {
     if (query.trim().isEmpty) {
@@ -96,6 +152,56 @@ class BuildingSearchService {
       }
     }
 
+    return suggestions;
+  }
+
+  /// Get combined suggestions from Concordia buildings and Google Places
+  /// Returns a list of SearchSuggestion objects
+  static Future<List<SearchSuggestion>> getCombinedSuggestions(
+    String query, {
+    LatLng? userLocation,
+  }) async {
+    final suggestions = <SearchSuggestion>[];
+
+    if (query.trim().isEmpty) {
+      // Return only Concordia buildings when query is empty
+      return concordiaBuildingNames
+          .take(10)
+          .map((building) => SearchSuggestion.fromConcordiaBuilding(building))
+          .toList();
+    }
+
+    print('Getting combined suggestions for: $query');
+
+    // Get Concordia building suggestions
+    final concordiaSuggestions = getSuggestions(query);
+    print('Found ${concordiaSuggestions.length} Concordia building suggestions');
+    for (final building in concordiaSuggestions.take(5)) {
+      suggestions.add(SearchSuggestion.fromConcordiaBuilding(building));
+    }
+
+    // Get Google Places autocomplete predictions
+    try {
+      final placePredictions = await GooglePlacesService.getAutocompletePredictions(
+        query,
+        location: userLocation,
+        radius: 5000,
+      );
+
+      print('Received ${placePredictions.length} Google Places predictions');
+      
+      for (final prediction in placePredictions.take(5)) {
+        suggestions.add(SearchSuggestion.fromGooglePlace(
+          name: prediction.mainText,
+          subtitle: prediction.secondaryText,
+          placeId: prediction.placeId,
+        ));
+      }
+    } catch (e) {
+      print('Error getting Google Places predictions: $e');
+    }
+
+    print('Total suggestions: ${suggestions.length}');
     return suggestions;
   }
 

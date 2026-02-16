@@ -51,6 +51,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     _hideIconLabel();
 
     final overlay = Overlay.of(context);
+    if (overlay == null) return;
 
     _labelEntry = OverlayEntry(
       builder: (_) {

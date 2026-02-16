@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../lib/services/firebase/firebase_options.dart';
+import 'package:flutter/foundation.dart';
 
 void main() {
   group('DefaultFirebaseOptions', () {
