@@ -1,0 +1,612 @@
+00:00 +0: loading C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart
+00:00 +0: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +1: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +2: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +3: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +3 -1: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +3 -1: C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_test.dart: Building Search Service Tests All building polygons have corresponding building names [E]
+  Expected: <true>
+    Actual: <false>
+  Building code "H" missing from building_names.dart
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\building_search_test.dart 14:9                 main.<fn>.<fn>
+  
+00:00 +3 -2: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +3 -2: C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_test.dart: Building Search Service Tests Search by exact building code works [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\building_search_test.dart 24:7                 main.<fn>.<fn>
+  
+00:00 +4 -2: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +4 -3: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +4 -3: C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_test.dart: Building Search Service Tests Search by exact building name works [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\building_search_test.dart 30:7                 main.<fn>.<fn>
+  
+00:00 +5 -3: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +6 -3: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +6 -4: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +6 -4: C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_test.dart: Building Search Service Tests Search by partial name works [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\building_search_test.dart 36:7                 main.<fn>.<fn>
+  
+00:00 +7 -4: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +8 -4: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +9 -4: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +9 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +9 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_test.dart: Building Search Service Tests Case insensitive search works [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\building_search_test.dart 51:7                 main.<fn>.<fn>
+  
+00:00 +10 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +11 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +12 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +13 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +14 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +15 -5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +15 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +15 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_test.dart: Building Name Coverage Tests SGW Campus buildings are included [E]
+  Expected: not null
+    Actual: <null>
+  SGW building "HALL" not found
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\building_search_test.dart 95:9                 main.<fn>.<fn>
+  
+00:00 +16 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +17 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +18 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +19 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +20 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+00:00 +21 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 4 navigation items when logged in
+[DEBUG] Starting location updates...
+00:00 +22 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays 2 navigation items when logged out
+[DEBUG] Starting location updates...
+00:00 +23 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged in
+[DEBUG] Starting location updates...
+00:00 +24 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+00:00 +25 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+00:00 +26 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+00:00 +27 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+00:00 +28 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+00:00 +29 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+00:00 +30 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell displays ExploreScreen by default when logged out
+[DEBUG] Starting location updates...
+00:00 +31 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Tapping Calendar tab shows CalendarScreen when logged in
+[DEBUG] Starting location updates...
+00:00 +32 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Tapping Saved tab shows SavedScreen when logged in
+[DEBUG] Starting location updates...
+00:00 +33 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Tapping Settings tab shows SettingsScreen when logged in
+[DEBUG] Starting location updates...
+00:00 +34 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:00 +34 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Tapping Settings tab shows SettingsScreen when logged out
+[DEBUG] Starting location updates...
+00:00 +35 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +36 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +37 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +38 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +39 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +40 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +41 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +42 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +43 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +44 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +45 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +46 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +47 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +48 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +49 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +50 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +51 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +52 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +53 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +54 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +55 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +56 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +57 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +58 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +59 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +60 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +61 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +62 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +63 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +63 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Navigation between tabs works correctly when logged in
+[DEBUG] Starting location updates...
+[DEBUG] Starting location updates...
+00:01 +64 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +64 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Bottom navigation bar has correct styling
+[DEBUG] Starting location updates...
+00:01 +65 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +66 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +67 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +67 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Bottom navigation bar updates currentIndex on tap
+[DEBUG] Starting location updates...
+00:01 +68 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +69 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +70 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +70 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell has correct number of navigation items
+[DEBUG] Starting location updates...
+00:01 +71 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Welcome page displays logo
+00:01 +72 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to all screens when logged in
+00:01 +73 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to all screens when logged in
+00:01 +74 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to all screens when logged in
+00:01 +75 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to all screens when logged in
+00:01 +76 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to all screens when logged in
+00:01 +77 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to all screens when logged in
+[DEBUG] Starting location updates...
+00:01 +78 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +79 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +80 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +81 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +82 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +83 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +84 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +85 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +85 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests AppShell passes isLoggedIn to screens when logged out
+[DEBUG] Starting location updates...
+00:01 +86 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +86 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/app/app_shell_test.dart: AppShell Tests Navigation icons are displayed correctly
+[DEBUG] Starting location updates...
+00:01 +87 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Welcome Page Tests Get started button is functional
+00:01 +88 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +89 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +90 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +91 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +92 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +93 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +94 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +95 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +96 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +97 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +98 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +99 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +100 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +101 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +102 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +103 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +104 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +105 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +106 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +107 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +108 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +109 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:01 +110 -6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +110 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +110 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/route_preview_integration_test.dart: Route Preview Integration Tests Route Suggestion Selection Origin suggestion selection updates route origin [E]
+  Bad state: No element
+  dart:collection                                  ListBase.firstWhere
+  test\route_preview_integration_test.dart 231:43  main.<fn>.<fn>.<fn>
+  
+00:02 +111 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +112 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +113 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +114 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +115 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +116 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +117 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +118 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +119 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +120 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +121 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +122 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +123 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +124 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +125 -7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +125 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +125 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/route_preview_integration_test.dart: Route Preview Integration Tests Route Preview Initial State Initial route uses selected building as destination [E]
+  Bad state: No element
+  dart:collection                                  ListBase.firstWhere
+  test\route_preview_integration_test.dart 421:51  main.<fn>.<fn>.<fn>
+  
+00:02 +126 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +127 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +128 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +129 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +130 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +131 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +132 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +133 -8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +133 -9: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +133 -9: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Building Search - Basic Queries Search by exact building code returns correct building [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 12:9            main.<fn>.<fn>.<fn>
+  
+00:02 +134 -9: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +134 -10: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +134 -10: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Building Search - Basic Queries Search by exact building name returns correct building [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 19:9            main.<fn>.<fn>.<fn>
+  
+00:02 +135 -10: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +135 -11: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +135 -11: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Building Search - Basic Queries Search by partial building name returns correct building [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 31:9            main.<fn>.<fn>.<fn>
+  
+00:02 +136 -11: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +137 -11: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +138 -11: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +138 -12: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +138 -12: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Building Search - Case Insensitivity Search is case insensitive for codes [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 65:9            main.<fn>.<fn>.<fn>
+  
+00:02 +138 -13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +138 -13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Building Search - Case Insensitivity Search is case insensitive for names [E]
+  Expected: 'HALL'
+    Actual: <null>
+     Which: not an <Instance of 'String'>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 79:9            main.<fn>.<fn>.<fn>
+  
+00:02 +139 -13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +140 -13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +141 -13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +142 -13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +142 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +142 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Building Search - Edge Cases Search trims whitespace correctly [E]
+  Expected: 'HALL'
+    Actual: <null>
+     Which: not an <Instance of 'String'>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 114:9           main.<fn>.<fn>.<fn>
+  
+00:02 +143 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +144 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +145 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +146 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +147 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +148 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +149 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +150 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +151 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +152 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +153 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +154 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +155 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +156 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +157 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +158 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +159 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +160 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +161 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +162 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +163 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +164 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +165 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +166 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +167 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +168 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +169 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +170 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +171 -14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +171 -15: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +171 -15: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Search Functionality Consistency Tests All building codes can be searched [E]
+  Expected: not null
+    Actual: <null>
+  Building HALL should be searchable
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 326:11          main.<fn>.<fn>.<fn>
+  
+00:02 +171 -16: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +171 -16: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_functionality_test.dart: Search Functionality Tests Search Functionality Consistency Tests All building names can be searched [E]
+  Expected: not null
+    Actual: <null>
+  Building "Hall Building" should be searchable
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\search_functionality_test.dart 333:11          main.<fn>.<fn>.<fn>
+  
+00:02 +172 -16: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +173 -16: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +173 -17: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +173 -17: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Concordia Building Creation Create SearchResult from Concordia building [E]
+  Bad state: No element
+  dart:collection                     ListBase.firstWhere
+  test\search_result_test.dart 10:43  main.<fn>.<fn>.<fn>
+  
+00:02 +174 -17: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty email
+00:02 +175 -17: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +175 -18: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +175 -18: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Concordia Building Creation Create SearchResult from different Concordia buildings [E]
+  Bad state: No element
+  dart:collection                     ListBase.firstWhere
+  test\search_result_test.dart 22:47  main.<fn>.<fn>.<fn>
+  
+00:02 +176 -18: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +177 -18: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +178 -18: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +178 -19: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +178 -19: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Google Place Creation Create SearchResult from Google place that is a Concordia building [E]
+  Bad state: No element
+  dart:collection                     ListBase.firstWhere
+  test\search_result_test.dart 81:43  main.<fn>.<fn>.<fn>
+  
+00:02 +179 -19: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +179 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +179 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Location Data SearchResult location matches building center [E]
+  Bad state: No element
+  dart:collection                      ListBase.firstWhere
+  test\search_result_test.dart 113:43  main.<fn>.<fn>.<fn>
+  
+00:02 +180 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +181 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +182 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +183 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_test.dart: UserField renders label and accepts input
+00:02 +184 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +185 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +186 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +187 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +188 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +189 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +190 -20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +190 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +190 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Data Consistency SearchResult name matches building name [E]
+  Bad state: No element
+  dart:collection                      ListBase.firstWhere
+  test\search_result_test.dart 242:43  main.<fn>.<fn>.<fn>
+  
+00:02 +191 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up page has all required UI elements
+00:02 +192 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +193 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +194 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +195 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +196 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +197 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +198 -21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +198 -22: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +198 -22: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Building Polygon Reference Building polygon contains expected data [E]
+  Bad state: No element
+  dart:collection                      ListBase.firstWhere
+  test\search_result_test.dart 340:43  main.<fn>.<fn>.<fn>
+  
+00:02 +199 -22: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +200 -22: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +200 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +200 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/search_result_test.dart: SearchResult Tests SearchResult - Real-World Scenarios Search result for Hall Building [E]
+  Bad state: No element
+  dart:collection                      ListBase.firstWhere
+  test\search_result_test.dart 391:47  main.<fn>.<fn>.<fn>
+  
+00:02 +201 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +202 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for empty password
+00:02 +203 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up form has password fields with obscure text enabled
+00:02 +204 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up form has password fields with obscure text enabled
+00:02 +205 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Sign up form has password fields with obscure text enabled
+00:02 +206 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +207 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +208 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +209 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +210 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +211 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +212 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +213 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +214 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +215 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +216 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +217 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +218 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth shows error for invalid email format
+00:02 +219 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Continue as guest button is functional
+00:02 +220 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Sign Up Page Tests Continue as guest button is functional
+[DEBUG] Starting location updates...
+00:02 +221 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/login_page_handle_auth_test.dart: _handleAuth accepts valid email and password format
+00:02 +222 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays correctly
+00:02 +223 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Campus Detection Tests Detect SGW campus at center
+00:02 +224 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays email input field
+00:02 +225 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays email input field
+00:02 +226 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays email input field
+00:02 +227 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays email input field
+00:02 +228 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays email input field
+00:02 +229 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/Frontend_test.dart: Forgot Password Page Tests Forgot password page displays email input field
+00:02 +230 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Initial location loads correctly
+00:02 +231 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Initial location loads correctly
+00:02 +232 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Initial location loads correctly
+00:02 +233 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Initial location loads correctly
+00:02 +234 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Initial location loads correctly
+00:03 +235 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Initial location loads correctly
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.always
+[DEBUG] Attempting to get current position...
+[DEBUG] Location obtained: 45.4973, -73.5789
+[DEBUG] Location accuracy: 1.0 meters
+[DEBUG] Current campus: Campus.sgw
+[DEBUG] Current building: Hall Building
+00:03 +236 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/buildingInfo_test.dart: BuildingInfoPopup Widget Tests renders title and description
+00:03 +237 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/campus_toggle_test.dart: CampusToggle renders both options
+00:03 +238 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/campus_toggle_test.dart: CampusToggle renders both options
+00:03 +238 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Location stream updates continuously
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.always
+[DEBUG] Attempting to get current position...
+[DEBUG] Location obtained: 45.4973, -73.5789
+[DEBUG] Location accuracy: 1.0 meters
+[DEBUG] Current campus: Campus.sgw
+[DEBUG] Current building: Hall Building
+[DEBUG] Location update: 45.4582, -73.6405
+[DEBUG] Location update: 45.4583, -73.6406
+[DEBUG] Location update: 45.48, -73.6
+00:03 +239 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/campus_toggle_test.dart: CampusToggle renders both options
+00:03 +240 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/campus_toggle_test.dart: CampusToggle renders both options
+00:03 +241 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/campus_toggle_test.dart: CampusToggle renders both options
+00:03 +241 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Location updates trigger campus change detection
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.always
+[DEBUG] Attempting to get current position...
+[DEBUG] Location obtained: 45.4973, -73.5789
+[DEBUG] Location accuracy: 1.0 meters
+[DEBUG] Current campus: Campus.sgw
+[DEBUG] Current building: Hall Building
+[DEBUG] Location update: 45.4582, -73.6405
+[DEBUG] Location update: 40.0, -70.0
+[DEBUG] Location update: 45.4973, -73.5789
+00:03 +242 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/campus_toggle_test.dart: CampusToggle renders both options
+00:03 +243 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +243 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Live Location Tracking Tests Rapid location updates handled gracefully
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.always
+[DEBUG] Attempting to get current position...
+[DEBUG] Location obtained: 45.4973, -73.5789
+[DEBUG] Location accuracy: 1.0 meters
+[DEBUG] Current campus: Campus.sgw
+[DEBUG] Current building: Hall Building
+[DEBUG] Location update: 45.4582, -73.6405
+[DEBUG] Location update: 45.4583, -73.6404
+[DEBUG] Location update: 45.4584, -73.6403
+[DEBUG] Location update: 45.4585, -73.64020000000001
+[DEBUG] Location update: 45.4586, -73.6401
+[DEBUG] Location update: 45.4587, -73.64
+[DEBUG] Location update: 45.4588, -73.6399
+[DEBUG] Location update: 45.4589, -73.63980000000001
+[DEBUG] Location update: 45.458999999999996, -73.6397
+[DEBUG] Location update: 45.4591, -73.6396
+00:03 +244 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +245 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +246 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +247 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +248 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +249 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +250 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +251 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +252 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +253 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +254 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_page_test.dart: Interactive map loads successfully
+00:03 +255 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +256 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +257 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +257 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Location Permission Tests Handles denied location permission
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.denied
+[DEBUG] Permission after request: LocationPermission.denied
+[ERROR] Location permission denied by user
+00:03 +258 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +259 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +259 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Location Permission Tests Handles location service disabled
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: false
+[ERROR] Location services are disabled
+00:03 +260 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +261 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +261 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Location Permission Tests Handles permission granted after initial denial
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.denied
+[DEBUG] Permission after request: LocationPermission.denied
+[ERROR] Location permission denied by user
+00:03 +262 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +263 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +263 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Edge Cases and Error Handling Handles null or invalid position data
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.always
+[DEBUG] Attempting to get current position...
+[DEBUG] Location obtained: 45.4973, -73.5789
+[DEBUG] Location accuracy: 1.0 meters
+[DEBUG] Current campus: Campus.sgw
+[DEBUG] Current building: Hall Building
+[DEBUG] Location update: 0.0, 0.0
+00:03 +264 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +265 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +265 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/userLocation_test.dart: Edge Cases and Error Handling Handles location accuracy variations
+[DEBUG] Starting location updates...
+[DEBUG] Location service enabled: true
+[DEBUG] Initial permission status: LocationPermission.always
+[DEBUG] Attempting to get current position...
+[DEBUG] Location obtained: 45.4973, -73.5789
+[DEBUG] Location accuracy: 1.0 meters
+[DEBUG] Current campus: Campus.sgw
+[DEBUG] Current building: Hall Building
+[DEBUG] Location update: 45.4973, -73.5789
+00:03 +266 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +267 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +268 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +269 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +270 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +271 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +272 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/map_search_bar_test.dart: Shows suggestions when focused and suggestions exist
+00:03 +273 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: popup clamps to top-left (covers clamp branches)
+[DEBUG] Starting location updates...
+00:04 +274 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +275 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +275 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: popup clamps to bottom-right (covers max clamp)
+[DEBUG] Starting location updates...
+00:04 +276 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +277 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +277 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: popup does not show when anchor is out of view
+[DEBUG] Starting location updates...
+00:04 +278 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +279 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +280 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel displays with initial text
+00:04 +281 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: More button calls launcher when link is set
+00:04 +282 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: More button calls launcher when link is set
+[DEBUG] Starting location updates...
+00:04 +283 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Close button calls onClose callback
+00:04 +283 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: More button does nothing for empty link
+[DEBUG] Starting location updates...
+00:04 +284 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Close button calls onClose callback
+00:04 +285 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Close button calls onClose callback
+00:04 +286 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Close button calls onClose callback
+00:04 +287 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Close button calls onClose callback
+00:04 +288 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/outdoor_map_popup_search_test.dart: switching campus clears popup when going back to SGW
+00:04 +289 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Switch button calls onSwitch callback
+00:04 +290 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Switch button calls onSwitch callback
+00:04 +291 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Switch button calls onSwitch callback
+00:04 +292 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Switch button calls onSwitch callback
+00:04 +293 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Typing in origin field calls onOriginChanged
+00:04 +294 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Typing in destination field calls onDestinationChanged
+00:04 +295 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Origin suggestions appear when origin field is focused
+00:04 +296 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Destination suggestions appear when destination field is focused
+00:04 +297 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Selecting origin suggestion calls onOriginSelected
+00:04 +298 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Selecting destination suggestion calls onDestinationSelected
+00:04 +299 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Suggestions show correct icons for Concordia vs non-Concordia
+00:04 +300 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel updates text when props change
+00:04 +301 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests RoutePreviewPanel shows hint texts when fields are empty
+00:04 +302 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Suggestions list has constrained height
+00:04 +303 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Selecting suggestion hides suggestions list
+00:04 +304 -23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/widgets/route_preview_panel_test.dart: RoutePreviewPanel Widget Tests Suggestions display subtitles correctly
+00:04 +305 -23: Some tests failed.

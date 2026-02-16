@@ -8,16 +8,16 @@ void main() {
   group('Search Functionality Tests', () {
     group('Building Search - Basic Queries', () {
       test('Search by exact building code returns correct building', () {
-        final result = BuildingSearchService.searchBuilding('H');
+        final result = BuildingSearchService.searchBuilding('HALL');
         expect(result, isNotNull);
-        expect(result?.code, 'H');
+        expect(result?.code, 'HALL');
         expect(result?.name, 'Hall Building');
       });
 
       test('Search by exact building name returns correct building', () {
         final result = BuildingSearchService.searchBuilding('Hall Building');
         expect(result, isNotNull);
-        expect(result?.code, 'H');
+        expect(result?.code, 'HALL');
       });
 
       test('Search by partial building code returns correct building', () {
@@ -29,7 +29,7 @@ void main() {
       test('Search by partial building name returns correct building', () {
         final result = BuildingSearchService.searchBuilding('Hall');
         expect(result, isNotNull);
-        expect(result?.code, 'H');
+        expect(result?.code, 'HALL');
       });
 
       test('Search by search term returns correct building', () {
@@ -57,8 +57,8 @@ void main() {
 
     group('Building Search - Case Insensitivity', () {
       test('Search is case insensitive for codes', () {
-        final result1 = BuildingSearchService.searchBuilding('h');
-        final result2 = BuildingSearchService.searchBuilding('H');
+        final result1 = BuildingSearchService.searchBuilding('hall');
+        final result2 = BuildingSearchService.searchBuilding('HALL');
         final result3 = BuildingSearchService.searchBuilding('HaLl');
         final result4 = BuildingSearchService.searchBuilding('hAlL');
 
@@ -76,9 +76,9 @@ void main() {
         final result2 = BuildingSearchService.searchBuilding('HALL BUILDING');
         final result3 = BuildingSearchService.searchBuilding('Hall Building');
 
-        expect(result1?.code, 'H');
-        expect(result2?.code, 'H');
-        expect(result3?.code, 'H');
+        expect(result1?.code, 'HALL');
+        expect(result2?.code, 'HALL');
+        expect(result3?.code, 'HALL');
       });
 
       test('Search is case insensitive for search terms', () {
@@ -109,9 +109,9 @@ void main() {
       });
 
       test('Search trims whitespace correctly', () {
-        final result1 = BuildingSearchService.searchBuilding('  H  ');
-        final result2 = BuildingSearchService.searchBuilding('H');
-        expect(result1?.code, 'H');
+        final result1 = BuildingSearchService.searchBuilding('  HALL  ');
+        final result2 = BuildingSearchService.searchBuilding('HALL');
+        expect(result1?.code, 'HALL');
         expect(result1?.code, result2?.code);
       });
     });
@@ -147,7 +147,7 @@ void main() {
       test('Get suggestions returns results for partial query', () {
         final suggestions = BuildingSearchService.getSuggestions('H');
         expect(suggestions.isNotEmpty, true);
-        expect(suggestions.any((s) => s.code == 'H'), true);
+        expect(suggestions.any((s) => s.code == 'HALL'), true);
       });
 
       test('Get suggestions with exact match prioritizes exact matches', () {
@@ -225,7 +225,7 @@ void main() {
 
     group('Building Name by Code Tests', () {
       test('Get building name by code returns correct name', () {
-        final name = BuildingSearchService.getBuildingNameByCode('H');
+        final name = BuildingSearchService.getBuildingNameByCode('HALL');
         expect(name, 'Hall Building');
       });
 
@@ -279,7 +279,7 @@ void main() {
 
       test('Exact name match appears before partial matches', () {
         final suggestions = BuildingSearchService.getSuggestions('Hall Building');
-        expect(suggestions.first.code, 'H');
+        expect(suggestions.first.code, 'HALL');
       });
 
       test('Multiple character search returns relevant results', () {
@@ -335,8 +335,8 @@ void main() {
       });
 
       test('Search results are consistent', () {
-        final result1 = BuildingSearchService.searchBuilding('H');
-        final result2 = BuildingSearchService.searchBuilding('H');
+        final result1 = BuildingSearchService.searchBuilding('HALL');
+        final result2 = BuildingSearchService.searchBuilding('HALL');
         expect(result1?.code, result2?.code);
         expect(result1?.name, result2?.name);
       });

@@ -207,12 +207,12 @@ void main() {
     group('Route Suggestion Selection', () {
       test('Select Concordia building as origin creates proper location', () {
         final suggestion = SearchSuggestion.fromConcordiaBuilding(
-          concordiaBuildingNames.firstWhere((b) => b.code == 'H'),
+          concordiaBuildingNames.firstWhere((b) => b.code == 'HALL'),
         );
 
         expect(suggestion.isConcordiaBuilding, true);
         expect(suggestion.buildingName, isNotNull);
-        expect(suggestion.buildingName?.code, 'H');
+        expect(suggestion.buildingName?.code, 'HALL');
       });
 
       test('Select Google Place as origin creates proper location', () {
@@ -228,7 +228,7 @@ void main() {
       });
 
       test('Origin suggestion selection updates route origin', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final newOrigin = building.center;
 
         expect(newOrigin, isNotNull);
@@ -248,10 +248,10 @@ void main() {
 
     group('Route Text Display', () {
       test('Concordia building displays as "Name - Code"', () {
-        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'H');
+        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'HALL');
         final displayText = '${building.name} - ${building.code}';
 
-        expect(displayText, 'Hall Building - H');
+        expect(displayText, 'Hall Building - HALL');
       });
 
       test('Google Place displays as name only', () {
@@ -271,11 +271,11 @@ void main() {
         var routeDestinationText = '';
 
         // Simulate selection
-        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'H');
+        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'HALL');
         routeDestinationText = '${building.name} - ${building.code}';
 
         expect(routeOriginText, 'Current location');
-        expect(routeDestinationText, 'Hall Building - H');
+        expect(routeDestinationText, 'Hall Building - HALL');
       });
     });
 
@@ -418,12 +418,12 @@ void main() {
       });
 
       test('Initial route uses selected building as destination', () {
-        final selectedBuilding = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final selectedBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final routeDestination = selectedBuilding.center;
         final routeDestinationText = '${selectedBuilding.name} - ${selectedBuilding.code}';
 
         expect(routeDestination, selectedBuilding.center);
-        expect(routeDestinationText, 'Hall Building - H');
+        expect(routeDestinationText, 'Hall Building - HALL');
       });
     });
 

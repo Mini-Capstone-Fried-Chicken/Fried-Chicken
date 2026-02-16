@@ -7,7 +7,7 @@ void main() {
   group('SearchResult Tests', () {
     group('SearchResult - Concordia Building Creation', () {
       test('Create SearchResult from Concordia building', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final result = SearchResult.fromConcordiaBuilding(building);
 
         expect(result.name, building.name);
@@ -19,13 +19,13 @@ void main() {
       });
 
       test('Create SearchResult from different Concordia buildings', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final evBuilding = buildingPolygons.firstWhere((b) => b.code == 'EV');
 
         final hallResult = SearchResult.fromConcordiaBuilding(hallBuilding);
         final evResult = SearchResult.fromConcordiaBuilding(evBuilding);
 
-        expect(hallResult.buildingPolygon?.code, 'H');
+        expect(hallResult.buildingPolygon?.code, 'HALL');
         expect(evResult.buildingPolygon?.code, 'EV');
         expect(hallResult.isConcordiaBuilding, true);
         expect(evResult.isConcordiaBuilding, true);
@@ -78,7 +78,7 @@ void main() {
       });
 
       test('Create SearchResult from Google place that is a Concordia building', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final result = SearchResult.fromGooglePlace(
           name: 'Hall Building',
           address: '1455 De Maisonneuve Blvd. W',
@@ -110,7 +110,7 @@ void main() {
       });
 
       test('SearchResult location matches building center', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final result = SearchResult.fromConcordiaBuilding(building);
 
         expect(result.location, building.center);
@@ -239,7 +239,7 @@ void main() {
 
     group('SearchResult - Data Consistency', () {
       test('SearchResult name matches building name', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final result = SearchResult.fromConcordiaBuilding(building);
 
         expect(result.name, building.name);
@@ -337,10 +337,10 @@ void main() {
       });
 
       test('Building polygon contains expected data', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final result = SearchResult.fromConcordiaBuilding(building);
 
-        expect(result.buildingPolygon?.code, 'H');
+        expect(result.buildingPolygon?.code, 'HALL');
         expect(result.buildingPolygon?.name, isNotEmpty);
         expect(result.buildingPolygon?.center, isNotNull);
       });
@@ -388,12 +388,12 @@ void main() {
 
     group('SearchResult - Real-World Scenarios', () {
       test('Search result for Hall Building', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'H');
+        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final result = SearchResult.fromConcordiaBuilding(hallBuilding);
 
         expect(result.name, 'Hall Building');
         expect(result.isConcordiaBuilding, true);
-        expect(result.buildingPolygon?.code, 'H');
+        expect(result.buildingPolygon?.code, 'HALL');
       });
 
       test('Search result for nearby coffee shop', () {

@@ -20,21 +20,21 @@ void main() {
     });
 
     test('Search by exact building code works', () {
-      final result = BuildingSearchService.searchBuilding('H');
+      final result = BuildingSearchService.searchBuilding('HALL');
       expect(result, isNotNull);
-      expect(result?.code, 'H');
+      expect(result?.code, 'HALL');
     });
 
     test('Search by exact building name works', () {
       final result = BuildingSearchService.searchBuilding('Hall Building');
       expect(result, isNotNull);
-      expect(result?.code, 'H');
+      expect(result?.code, 'HALL');
     });
 
     test('Search by partial name works', () {
       final result = BuildingSearchService.searchBuilding('Hall');
       expect(result, isNotNull);
-      expect(result?.code, 'H');
+      expect(result?.code, 'HALL');
     });
 
     test('Search by search term works', () {
@@ -44,8 +44,8 @@ void main() {
     });
 
     test('Case insensitive search works', () {
-      final result1 = BuildingSearchService.searchBuilding('h');
-      final result2 = BuildingSearchService.searchBuilding('H');
+      final result1 = BuildingSearchService.searchBuilding('hall');
+      final result2 = BuildingSearchService.searchBuilding('HALL');
       final result3 = BuildingSearchService.searchBuilding('HaLl');
 
       expect(result1, isNotNull);
@@ -77,7 +77,7 @@ void main() {
     });
 
     test('Get building name by code works', () {
-      final name = BuildingSearchService.getBuildingNameByCode('H');
+      final name = BuildingSearchService.getBuildingNameByCode('HALL');
       expect(name, 'Hall Building');
     });
 
@@ -89,7 +89,7 @@ void main() {
 
   group('Building Name Coverage Tests', () {
     test('SGW Campus buildings are included', () {
-      final sgwBuildings = ['LB', 'MB', 'H', 'EV', 'GM', 'FG'];
+      final sgwBuildings = ['LB', 'MB', 'HALL', 'EV', 'GM', 'FG'];
       for (final code in sgwBuildings) {
         final result = BuildingSearchService.searchBuilding(code);
         expect(result, isNotNull, reason: 'SGW building "$code" not found');
