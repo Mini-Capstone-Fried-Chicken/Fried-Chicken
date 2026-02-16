@@ -6,6 +6,7 @@ void main() {
   group('BuildingInfoPopup Widget Tests', () {
     late bool closePressed;
     late bool learnMorePressed;
+    late bool getDirectionsPressed;
 
     setUp(() {
       closePressed = false;
@@ -21,8 +22,10 @@ void main() {
             onClose: () {
               closePressed = true;
             },
-            onMore: () {
-              morePressed = true;
+            onLearnMore: () {
+              learnMorePressed = true;
+            },
+            onGetDirections: () {
             },
           ),
         ),
@@ -48,8 +51,10 @@ void main() {
                           closePressed = true;
                           Navigator.of(context).pop();
                         },
-                        onMore: () {
-                          morePressed = true;
+                        onLearnMore: () {
+                          learnMorePressed = true;
+                        },
+                        onGetDirections: () {
                         },
                       ),
                     );

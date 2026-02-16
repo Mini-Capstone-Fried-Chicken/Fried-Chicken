@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
-import '../../data/building_names.dart';
 import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
 import '../building_search_service.dart';
@@ -102,7 +101,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   SearchResult? _selectedSearchResult; // For non-Concordia places
   
   Set<Polyline> _routePolylines = {};
-  bool _isLoadingRoute = false;
   
   // Route preview mode
   bool _showRoutePreview = false;
@@ -363,10 +361,6 @@ Future<void> _openLink(String url) async {
       return;
     }
 
-    setState(() {
-      _isLoadingRoute = true;
-    });
-
     print('[DEBUG] Fetching route from $origin to $destination');
 
     try {
@@ -387,7 +381,6 @@ Future<void> _openLink(String url) async {
               patterns: [PatternItem.dot, PatternItem.gap(10)],
             ),
           };
-          _isLoadingRoute = false;
         });
 
         // Adjust camera to show the entire route
@@ -398,15 +391,9 @@ Future<void> _openLink(String url) async {
           );
         }
       } else {
-        setState(() {
-          _isLoadingRoute = false;
-        });
         print('No route found');
       }
     } catch (e) {
-      setState(() {
-        _isLoadingRoute = false;
-      });
       print('Error getting directions: $e');
     }
   }
@@ -415,6 +402,25 @@ Future<void> _openLink(String url) async {
     setState(() {
       _showRoutePreview = false;
       _routePolylines = {};
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+    });
+  }
+
+  void _switchOriginDestination() {
+    setState(() {
+      // Swap origin and destination
+      final tempOrigin = _routeOriginText;
+      final tempOriginLatLng = _routeOrigin;
+      final tempDestination = _routeDestinationText;
+      final tempDestinationLatLng = _routeDestination;
+
+      _routeOriginText = tempDestination;
+      _routeOrigin = tempDestinationLatLng;
+      _routeDestinationText = tempOrigin;
+      _routeDestination = tempOriginLatLng;
+
+      // Clear suggestions
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
     });
@@ -911,13 +917,30 @@ Future<void> _openLink(String url) async {
       );
     }
 
+    // Add markers for route preview mode
+    if (_showRoutePreview) {
+      // Destination marker (red)
+      if (_routeDestination != null) {
+        markers.add(
+          Marker(
+            markerId: const MarkerId('route_destination'),
+            position: _routeDestination!,
+            infoWindow: InfoWindow(title: _routeDestinationText),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          ),
+        );
+      }
+    }
+
     return markers;
   }
 
   Set<Circle> _createCircles() {
+    final circles = <Circle>{};
+    
     if (_currentLocation == null) return {};
 
-    return {
+    circles.add(
       Circle(
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
@@ -926,7 +949,9 @@ Future<void> _openLink(String url) async {
         strokeColor: Colors.blue.withOpacity(0.3),
         strokeWidth: 1,
       ),
-    };
+    );
+
+    return circles;
   }
 
   void _switchCampus(Campus newCampus) {
@@ -1145,13 +1170,14 @@ Future<void> _openLink(String url) async {
           // Route Preview Panel
           if (_showRoutePreview)
             Positioned(
+              top: 80,
               left: 0,
               right: 0,
-              bottom: 0,
               child: RoutePreviewPanel(
                 originText: _routeOriginText,
                 destinationText: _routeDestinationText,
                 onClose: _closeRoutePreview,
+                onSwitch: _switchOriginDestination,
                 onOriginChanged: _onRouteOriginChanged,
                 onDestinationChanged: _onRouteDestinationChanged,
                 onOriginSelected: _onRouteOriginSelected,
