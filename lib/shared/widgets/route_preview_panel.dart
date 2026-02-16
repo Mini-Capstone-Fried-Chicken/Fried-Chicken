@@ -5,6 +5,7 @@ class RoutePreviewPanel extends StatefulWidget {
   final String originText;
   final String destinationText;
   final VoidCallback onClose;
+  final VoidCallback onSwitch;
   final Function(String) onOriginChanged;
   final Function(String) onDestinationChanged;
   final Function(SearchSuggestion) onOriginSelected;
@@ -17,6 +18,7 @@ class RoutePreviewPanel extends StatefulWidget {
     required this.originText,
     required this.destinationText,
     required this.onClose,
+    required this.onSwitch,
     required this.onOriginChanged,
     required this.onDestinationChanged,
     required this.onOriginSelected,
@@ -102,137 +104,152 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header with close button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
-            child: Row(
-              children: [
-                const Text(
-                  'Directions',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: burgundy,
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Opacity(
+              opacity: 0.95,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: burgundy,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: 340,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Origin field with close button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.my_location, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _originController,
+                                focusNode: _originFocus,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: 'Starting location',
+                                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: widget.onClose,
+                              icon: const Icon(Icons.close),
+                              color: Colors.white,
+                              iconSize: 20,
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Divider line
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          height: 1,
+                          color: Colors.white24,
+                        ),
+                      ),
+
+                      // Destination field with switch button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.place, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _destinationController,
+                                focusNode: _destinationFocus,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: 'Choose destination',
+                                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: widget.onSwitch,
+                              icon: const Icon(Icons.swap_vert),
+                              color: Colors.white,
+                              iconSize: 20,
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                IconButton(
-                  onPressed: widget.onClose,
-                  icon: const Icon(Icons.close),
-                  color: burgundy,
-                ),
-              ],
-            ),
-          ),
-
-          // Origin and Destination inputs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                // Origin field
-                Row(
-                  children: [
-                    const Icon(Icons.my_location, color: burgundy, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _originController,
-                        focusNode: _originFocus,
-                        decoration: const InputDecoration(
-                          hintText: 'Starting location',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Destination field
-                Row(
-                  children: [
-                    const Icon(Icons.place, color: burgundy, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _destinationController,
-                        focusNode: _destinationFocus,
-                        decoration: const InputDecoration(
-                          hintText: 'Choose destination',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Suggestions list - only show when actively searching
-          if (_showOriginSuggestions && widget.originSuggestions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildSuggestionsList(
-                widget.originSuggestions,
-                (suggestion) {
-                  // Immediately hide suggestions
-                  setState(() {
-                    _showOriginSuggestions = false;
-                  });
-                  // Update text and notify parent
-                  _originController.text = suggestion.name;
-                  widget.onOriginSelected(suggestion);
-                  _originFocus.unfocus();
-                },
               ),
             ),
 
-          if (_showDestinationSuggestions && widget.destinationSuggestions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildSuggestionsList(
-                widget.destinationSuggestions,
-                (suggestion) {
-                  // Immediately hide suggestions
-                  setState(() {
-                    _showDestinationSuggestions = false;
-                  });
-                  // Update text and notify parent
-                  _destinationController.text = suggestion.name;
-                  widget.onDestinationSelected(suggestion);
-                  _destinationFocus.unfocus();
-                },
+            // Suggestions list - only show when actively searching
+            if (_showOriginSuggestions && widget.originSuggestions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: _buildSuggestionsList(
+                  widget.originSuggestions,
+                  (suggestion) {
+                    // Immediately hide suggestions
+                    setState(() {
+                      _showOriginSuggestions = false;
+                    });
+                    // Update text and notify parent
+                    _originController.text = suggestion.name;
+                    widget.onOriginSelected(suggestion);
+                    _originFocus.unfocus();
+                  },
+                ),
               ),
-            ),
 
-          const SizedBox(height: 12),
-        ],
+            if (_showDestinationSuggestions && widget.destinationSuggestions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: _buildSuggestionsList(
+                  widget.destinationSuggestions,
+                  (suggestion) {
+                    // Immediately hide suggestions
+                    setState(() {
+                      _showDestinationSuggestions = false;
+                    });
+                    // Update text and notify parent
+                    _destinationController.text = suggestion.name;
+                    widget.onDestinationSelected(suggestion);
+                    _destinationFocus.unfocus();
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -243,8 +260,16 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   ) {
     return Container(
       decoration: BoxDecoration(
+        color: Colors.white,
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       constraints: const BoxConstraints(maxHeight: 250),
       child: ListView.builder(
@@ -257,7 +282,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
             leading: Icon(
               suggestion.isConcordiaBuilding ? Icons.school : Icons.place,
               color: const Color(0xFF76263D),
-              size: 20,
+              size: 18,
             ),
             title: Text(
               suggestion.name,

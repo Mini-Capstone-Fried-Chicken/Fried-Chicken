@@ -93,28 +93,31 @@ class _MapSearchBarState extends State<MapSearchBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(8),
-              color: burgundy,
-              child: TextField(
-                controller: widget.controller,
-                focusNode: _focusNode,
-                enabled: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: hint,
-                  hintStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          Opacity(
+            opacity: 0.95,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                color: burgundy,
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: _focusNode,
+                  enabled: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    hintStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onSubmitted: widget.onSubmitted,
+                  onChanged: (_) {
+                    _updateSuggestionsVisibility();
+                  },
                 ),
-                onSubmitted: widget.onSubmitted,
-                onChanged: (_) {
-                  _updateSuggestionsVisibility();
-                },
               ),
             ),
           ),
