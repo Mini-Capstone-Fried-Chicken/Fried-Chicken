@@ -322,7 +322,7 @@ void main() {
     group('Service Method Integration', () {
       test('getRoute method exists and is callable', () {
         // Verify the method signature and type
-        expect(GoogleDirectionsService.getRoute, isNotNull);
+        expect(GoogleDirectionsService.instance.getRoute, isNotNull);
       });
 
       test('getRoute accepts LatLng parameters', () async {
@@ -330,7 +330,7 @@ void main() {
         const destination = LatLng(45.4582, -73.6405);
 
         // Call the method - this will make a real HTTP request
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
         );
@@ -352,7 +352,7 @@ void main() {
         const destination = LatLng(45.4582, -73.6405);
 
         // Default mode is 'walking'
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
         );
@@ -364,7 +364,7 @@ void main() {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
 
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
           mode: 'walking',
@@ -377,7 +377,7 @@ void main() {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
 
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
           mode: 'driving',
@@ -390,7 +390,7 @@ void main() {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
 
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
           mode: 'bicycling',
@@ -403,7 +403,7 @@ void main() {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
 
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
           mode: 'transit',
@@ -415,7 +415,7 @@ void main() {
       test('getRoute with same origin and destination', () async {
         const location = LatLng(45.5, -73.5);
 
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: location,
           destination: location,
         );
@@ -428,7 +428,7 @@ void main() {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
 
-        final result = await GoogleDirectionsService.getRoute(
+        final result = await GoogleDirectionsService.instance.getRoute(
           origin: origin,
           destination: destination,
         );
