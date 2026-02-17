@@ -164,10 +164,7 @@ void main() {
       });
 
       test('Polyline contains correct points', () {
-        final routePoints = [
-          LatLng(45.497, -73.579),
-          LatLng(45.498, -73.580),
-        ];
+        final routePoints = [LatLng(45.497, -73.579), LatLng(45.498, -73.580)];
 
         final polyline = Polyline(
           polylineId: const PolylineId('test_route'),
@@ -248,7 +245,9 @@ void main() {
 
     group('Route Text Display', () {
       test('Concordia building displays as "Name - Code"', () {
-        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'HALL');
+        final building = concordiaBuildingNames.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final displayText = '${building.name} - ${building.code}';
 
         expect(displayText, 'Hall Building - HALL');
@@ -271,7 +270,9 @@ void main() {
         var routeDestinationText = '';
 
         // Simulate selection
-        final building = concordiaBuildingNames.firstWhere((b) => b.code == 'HALL');
+        final building = concordiaBuildingNames.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         routeDestinationText = '${building.name} - ${building.code}';
 
         expect(routeOriginText, 'Current location');
@@ -325,7 +326,9 @@ void main() {
         final marker = Marker(
           markerId: const MarkerId('route_origin'),
           position: originLocation,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
         );
 
         expect(marker.markerId.value, 'route_origin');
@@ -357,10 +360,7 @@ void main() {
         };
 
         expect(markers.length, 2);
-        expect(
-          markers.any((m) => m.markerId.value == 'route_origin'),
-          isTrue,
-        );
+        expect(markers.any((m) => m.markerId.value == 'route_origin'), isTrue);
         expect(
           markers.any((m) => m.markerId.value == 'route_destination'),
           isTrue,
@@ -418,9 +418,12 @@ void main() {
       });
 
       test('Initial route uses selected building as destination', () {
-        final selectedBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final selectedBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final routeDestination = selectedBuilding.center;
-        final routeDestinationText = '${selectedBuilding.name} - ${selectedBuilding.code}';
+        final routeDestinationText =
+            '${selectedBuilding.name} - ${selectedBuilding.code}';
 
         expect(routeDestination, selectedBuilding.center);
         expect(routeDestinationText, 'Hall Building - HALL');

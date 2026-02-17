@@ -13,7 +13,7 @@ void main() {
       test('BuildingSearchService is singleton or factory', () {
         final service1 = BuildingSearchService();
         final service2 = BuildingSearchService();
-        
+
         // Services should be created (both not null)
         expect(service1, isNotNull);
         expect(service2, isNotNull);
@@ -30,7 +30,7 @@ void main() {
 
       test('Building code with different lengths', () {
         final codes = ['AA', 'ABC', 'ABCD'];
-        
+
         for (final code in codes) {
           expect(code, isNotEmpty);
           expect(code.isNotEmpty, true);
@@ -40,13 +40,13 @@ void main() {
       test('Case insensitive building codes', () {
         const lowercase = 'mb';
         const uppercase = 'MB';
-        
+
         expect(lowercase.toUpperCase(), equals(uppercase));
       });
 
       test('Special characters in building codes', () {
         final codes = ['MB-1', 'SGW.1', 'LOY_A'];
-        
+
         for (final code in codes) {
           expect(code, isNotEmpty);
         }
@@ -72,7 +72,7 @@ void main() {
           'GREY\'NUN',
           'SQUARE, CHILDREN\'S',
         ];
-        
+
         for (final name in names) {
           expect(name, isNotEmpty);
         }
@@ -81,7 +81,7 @@ void main() {
       test('Building name search case insensitive', () {
         const fullName = 'JR MCCONNELL BUILDING';
         const searchTerm = 'jr mcconnell';
-        
+
         expect(fullName.toUpperCase().contains(searchTerm.toUpperCase()), true);
       });
     });
@@ -89,14 +89,14 @@ void main() {
     group('Building Location Data', () {
       test('Valid building coordinates', () {
         const location = LatLng(45.4973, -73.5789);
-        
+
         expect(location.latitude, inInclusiveRange(-90, 90));
         expect(location.longitude, inInclusiveRange(-180, 180));
       });
 
       test('Building center point', () {
         const center = LatLng(45.4958, -73.5710);
-        
+
         expect(center.latitude, isA<double>());
         expect(center.longitude, isA<double>());
       });
@@ -104,10 +104,10 @@ void main() {
       test('Distance between buildings', () {
         const building1 = LatLng(45.4973, -73.5789);
         const building2 = LatLng(45.4958, -73.5710);
-        
+
         final latDiff = (building2.latitude - building1.latitude).abs();
         final lonDiff = (building2.longitude - building1.longitude).abs();
-        
+
         expect(latDiff, greaterThan(0));
         expect(lonDiff, greaterThan(0));
       });
@@ -118,7 +118,7 @@ void main() {
           const LatLng(45.4958, -73.5710),
           const LatLng(45.4968, -73.5840),
         ];
-        
+
         for (final location in buildings) {
           expect(location.latitude, inInclusiveRange(45.48, 45.51));
           expect(location.longitude, inInclusiveRange(-73.60, -73.55));
@@ -127,10 +127,10 @@ void main() {
 
       test('Building location precision', () {
         const precision = LatLng(45.49732102, -73.57891234);
-        
+
         final latStr = precision.latitude.toString();
         final lonStr = precision.longitude.toString();
-        
+
         expect(latStr.contains('45.497'), true);
         expect(lonStr.contains('-73.578'), true);
       });
@@ -144,7 +144,7 @@ void main() {
           const LatLng(45.4970, -73.5780),
           const LatLng(45.4968, -73.5784),
         ];
-        
+
         expect(vertices.length, greaterThan(2));
       });
 
@@ -155,7 +155,7 @@ void main() {
           const LatLng(1, 1),
           const LatLng(1, 0),
         ];
-        
+
         expect(vertices.length, 4);
         expect(vertices.first.longitude, equals(vertices[0].longitude));
       });
@@ -167,7 +167,7 @@ void main() {
           const LatLng(45.498, -73.578),
           const LatLng(45.497, -73.578),
         ];
-        
+
         for (final point in polygon) {
           expect(point.latitude, inInclusiveRange(45.496, 45.499));
           expect(point.longitude, inInclusiveRange(-73.580, -73.577));
@@ -178,7 +178,7 @@ void main() {
     group('Building Search Results', () {
       test('Search returns empty list for no match', () {
         final results = <Map<String, dynamic>>[];
-        
+
         expect(results, isEmpty);
         expect(results.length, equals(0));
       });
@@ -188,7 +188,7 @@ void main() {
           <String, dynamic>{'code': 'MB', 'name': 'JR MCCONNELL'},
           <String, dynamic>{'code': 'GN', 'name': 'GREY NUN'},
         ];
-        
+
         expect(results, isNotEmpty);
         expect(results.length, equals(2));
       });
@@ -199,7 +199,7 @@ void main() {
           'name': 'JR MCCONNELL BUILDING',
           'location': const LatLng(45.4973, -73.5789),
         };
-        
+
         expect(result['code'], isNotNull);
         expect(result['name'], isNotNull);
         expect(result['location'], isNotNull);
@@ -211,10 +211,11 @@ void main() {
           <String, dynamic>{'name': 'APPLE'},
           <String, dynamic>{'name': 'BANANA'},
         ];
-        
-        final sorted = List.from(results)
-          ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
-        
+
+        final sorted = List.from(
+          results,
+        )..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+
         expect(sorted[0]['name'], 'APPLE');
         expect(sorted[1]['name'], 'BANANA');
         expect(sorted[2]['name'], 'ZEBRA');
@@ -226,11 +227,9 @@ void main() {
           <String, dynamic>{'name': 'GN', 'campus': 'SGW'},
           <String, dynamic>{'name': 'VA', 'campus': 'LOY'},
         ];
-        
-        final sgwOnly = allResults
-          .where((b) => b['campus'] == 'SGW')
-          .toList();
-        
+
+        final sgwOnly = allResults.where((b) => b['campus'] == 'SGW').toList();
+
         expect(sgwOnly.length, equals(2));
       });
     });
@@ -238,21 +237,21 @@ void main() {
     group('Building Search Performance', () {
       test('Large database search is fast', () {
         final stopwatch = Stopwatch()..start();
-        
+
         // Simulate searching through 100 buildings
         for (int i = 0; i < 100; i++) {
           final _ = 'Building $i'.contains('50');
         }
-        
+
         stopwatch.stop();
-        
+
         expect(stopwatch.elapsedMilliseconds, lessThan(1000));
       });
 
       test('Partial string matching', () {
         const buildingName = 'JR MCCONNELL BUILDING';
         const searchTerm = 'MCCONNELL';
-        
+
         final matches = buildingName.contains(searchTerm);
         expect(matches, true);
       });
@@ -260,13 +259,10 @@ void main() {
       test('Fuzzy matching simulation', () {
         const term = 'MB';
         const fullName = 'JR MCCONNELL';
-        
+
         // Check if initials match
-        final initials = fullName
-          .split(' ')
-          .map((word) => word[0])
-          .join('');
-        
+        final initials = fullName.split(' ').map((word) => word[0]).join('');
+
         expect(initials.contains('M'), true);
         expect(initials.contains('B'), false); // B is not in initials
       });
@@ -283,7 +279,7 @@ void main() {
           'saturday': '10:00 AM - 3:00 PM',
           'sunday': 'Closed',
         };
-        
+
         expect(hours.keys.length, equals(7));
         expect(hours['sunday'], 'Closed');
         expect(hours['monday'], isNotEmpty);
@@ -295,7 +291,7 @@ void main() {
           'email': 'building@concordia.ca',
           'website': 'https://concordia.ca',
         };
-        
+
         expect(contactInfo['phone'], isNotEmpty);
         final email = contactInfo['email'] as String;
         final website = contactInfo['website'] as String;
@@ -310,7 +306,7 @@ void main() {
           'parking': 'Limited',
           'accessible_washroom': true,
         };
-        
+
         expect(accessibility['wheelchair'], true);
         expect(accessibility['elevator'], true);
         expect(accessibility['accessible_washroom'], true);
@@ -321,15 +317,16 @@ void main() {
       test('Building resource URL format', () {
         const buildingCode = 'MB';
         final url = 'https://concordia.ca/buildings/$buildingCode';
-        
+
         expect(url, contains(buildingCode));
         expect(url.startsWith('https://'), true);
       });
 
       test('Deep link to building location', () {
         const location = LatLng(45.4973, -73.5789);
-        final mapUrl = 'https://maps.google.com/maps?q=${location.latitude},${location.longitude}';
-        
+        final mapUrl =
+            'https://maps.google.com/maps?q=${location.latitude},${location.longitude}';
+
         expect(mapUrl, contains('45.4973'));
         expect(mapUrl, contains('-73.5789'));
       });
@@ -338,7 +335,7 @@ void main() {
         const protocol = 'https://';
         const domain = 'concordia.ca';
         const path = '/buildings/MB';
-        
+
         final url = protocol + domain + path;
         expect(url, equals('https://concordia.ca/buildings/MB'));
       });
@@ -357,7 +354,7 @@ void main() {
 
       test('Invalid coordinate handling', () {
         const location = LatLng(45.0, -73.0); // Valid coordinates
-        
+
         // LatLng clamps extreme values to valid range
         expect(location.latitude, inInclusiveRange(-90, 90));
         expect(location.longitude, inInclusiveRange(-180, 180));
@@ -365,7 +362,7 @@ void main() {
 
       test('Duplicate building codes', () {
         final buildings = ['MB', 'GN', 'MB'];
-        
+
         expect(buildings.length, equals(3));
         expect(buildings.toSet().length, equals(2)); // Only 2 unique
       });

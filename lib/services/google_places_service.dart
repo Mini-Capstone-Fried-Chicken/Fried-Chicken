@@ -17,12 +17,15 @@ class PlacePrediction {
   });
 
   factory PlacePrediction.fromJson(Map<String, dynamic> json) {
-    final structuredFormatting = json['structured_formatting'] as Map<String, dynamic>?;
-    
+    final structuredFormatting =
+        json['structured_formatting'] as Map<String, dynamic>?;
+
     return PlacePrediction(
       placeId: json['place_id'] as String,
       description: json['description'] as String,
-      mainText: structuredFormatting?['main_text'] as String? ?? json['description'] as String,
+      mainText:
+          structuredFormatting?['main_text'] as String? ??
+          json['description'] as String,
       secondaryText: structuredFormatting?['secondary_text'] as String?,
     );
   }
@@ -51,9 +54,18 @@ class GooglePlacesService {
   );
   static const String _baseUrl = 'https://places.googleapis.com/v1';
 
+  /// HTTP client for making requests (injectable for testing)
+  final http.Client _client;
+
+  /// Default singleton instance
+  static final GooglePlacesService instance = GooglePlacesService();
+
+  /// Constructor with optional HTTP client injection
+  GooglePlacesService({http.Client? client}) : _client = client ?? http.Client();
+
   /// Search for places using Google Places API Text Search
   /// Returns a list of PlaceResult
-  static Future<List<PlaceResult>> searchPlaces(
+  Future<List<PlaceResult>> searchPlaces(
     String query, {
     LatLng? location,
     int radius = 5000,
@@ -64,11 +76,9 @@ class GooglePlacesService {
 
     try {
       final uri = Uri.parse('$_baseUrl/places:searchText');
-      
-      final body = <String, dynamic>{
-        'textQuery': query,
-      };
-      
+
+      final body = <String, dynamic>{'textQuery': query};
+
       if (location != null) {
         body['locationBias'] = {
           'circle': {
@@ -81,12 +91,13 @@ class GooglePlacesService {
         };
       }
 
-      final response = await http.post(
+      final response = await _client.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': _apiKey,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
+          'X-Goog-FieldMask':
+              'places.id,places.displayName,places.formattedAddress,places.location',
         },
         body: json.encode(body),
       );
@@ -99,8 +110,9 @@ class GooglePlacesService {
           return places.map((place) {
             final placeData = place as Map<String, dynamic>;
             final location = placeData['location'] as Map<String, dynamic>?;
-            final displayName = placeData['displayName'] as Map<String, dynamic>?;
-            
+            final displayName =
+                placeData['displayName'] as Map<String, dynamic>?;
+
             return PlaceResult(
               placeId: placeData['id'] as String? ?? '',
               name: displayName?['text'] as String? ?? 'Unknown',
@@ -122,21 +134,21 @@ class GooglePlacesService {
   }
 
   /// Get place details by place ID
-  static Future<PlaceResult?> getPlaceDetails(String placeId) async {
+  Future<PlaceResult?> getPlaceDetails(String placeId) async {
     try {
       print('[DEBUG] Fetching place details for placeId: $placeId');
-      
+
       // Ensure we have the full resource name format (places/ChIJ...)
       String resourceName = placeId;
       if (!placeId.startsWith('places/')) {
         resourceName = 'places/$placeId';
         print('[DEBUG] Added places/ prefix: $resourceName');
       }
-      
+
       final uri = Uri.parse('$_baseUrl/$resourceName');
       print('[DEBUG] Request URI: $uri');
 
-      final response = await http.get(
+      final response = await _client.get(
         uri,
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +165,7 @@ class GooglePlacesService {
         print('[DEBUG] Parsed place details: $data');
         final location = data['location'] as Map<String, dynamic>?;
         final displayName = data['displayName'] as Map<String, dynamic>?;
-        
+
         final result = PlaceResult(
           placeId: data['id'] as String? ?? placeId,
           name: displayName?['text'] as String? ?? 'Unknown',
@@ -163,7 +175,9 @@ class GooglePlacesService {
             location?['longitude'] as double? ?? 0.0,
           ),
         );
-        print('[DEBUG] Created PlaceResult: ${result.name} at ${result.location}');
+        print(
+          '[DEBUG] Created PlaceResult: ${result.name} at ${result.location}',
+        );
         return result;
       } else {
         print('[ERROR] HTTP error ${response.statusCode}: ${response.body}');
@@ -178,7 +192,7 @@ class GooglePlacesService {
 
   /// Get autocomplete predictions for a query
   /// Returns a list of PlacePrediction
-  static Future<List<PlacePrediction>> getAutocompletePredictions(
+  Future<List<PlacePrediction>> getAutocompletePredictions(
     String query, {
     LatLng? location,
     int radius = 5000,
@@ -189,12 +203,9 @@ class GooglePlacesService {
 
     try {
       final uri = Uri.parse('$_baseUrl/places:autocomplete');
-      
-      final body = <String, dynamic>{
-        'input': query,
-        'languageCode': 'en',
-      };
-      
+
+      final body = <String, dynamic>{'input': query, 'languageCode': 'en'};
+
       if (location != null) {
         body['locationBias'] = {
           'circle': {
@@ -210,7 +221,7 @@ class GooglePlacesService {
         body['locationBias'] = {
           'circle': {
             'center': {
-              'latitude': 45.4958,  // Concordia's latitude
+              'latitude': 45.4958, // Concordia's latitude
               'longitude': -73.5711, // Concordia's longitude
             },
             'radius': 15000.0,
@@ -221,8 +232,8 @@ class GooglePlacesService {
       print('[DEBUG] Fetching Google Places predictions for: $query');
       print('[DEBUG] Location bias: $location');
       print('[DEBUG] Request body: ${json.encode(body)}');
-      
-      final response = await http.post(
+
+      final response = await _client.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
@@ -236,41 +247,60 @@ class GooglePlacesService {
       if (response.statusCode == 200) {
         try {
           final data = json.decode(response.body) as Map<String, dynamic>;
-          
+
           print('[DEBUG] Google Places API response received');
           print('[DEBUG] Response keys: ${data.keys.toList()}');
 
           if (data['suggestions'] != null) {
             final suggestions = data['suggestions'] as List<dynamic>;
-            print('[DEBUG] Found ${suggestions.length} Google Places predictions');
-            
+            print(
+              '[DEBUG] Found ${suggestions.length} Google Places predictions',
+            );
+
             final predictions = <PlacePrediction>[];
             for (int i = 0; i < suggestions.length; i++) {
               try {
                 final suggestion = suggestions[i] as Map<String, dynamic>;
                 if (suggestion['placePrediction'] != null) {
-                  final placePrediction = suggestion['placePrediction'] as Map<String, dynamic>;
-                  print('[DEBUG] Suggestion $i placePrediction keys: ${placePrediction.keys.toList()}');
-                  print('[DEBUG] Suggestion $i full placePrediction: $placePrediction');
-                  
+                  final placePrediction =
+                      suggestion['placePrediction'] as Map<String, dynamic>;
+                  print(
+                    '[DEBUG] Suggestion $i placePrediction keys: ${placePrediction.keys.toList()}',
+                  );
+                  print(
+                    '[DEBUG] Suggestion $i full placePrediction: $placePrediction',
+                  );
+
                   // Try multiple ways to get the place ID/resource name
-                  String placeId = placePrediction['placeId'] as String? ?? 
-                                   placePrediction['place'] as String? ?? '';
+                  String placeId =
+                      placePrediction['placeId'] as String? ??
+                      placePrediction['place'] as String? ??
+                      '';
                   print('[DEBUG] Suggestion $i extracted placeId: $placeId');
-                  
+
                   final text = placePrediction['text'] as Map<String, dynamic>?;
-                  final structuredFormat = placePrediction['structuredFormat'] as Map<String, dynamic>?;
-                  
-                  final mainText = structuredFormat?['mainText'] as Map<String, dynamic>?;
-                  final secondaryText = structuredFormat?['secondaryText'] as Map<String, dynamic>?;
-                  
+                  final structuredFormat =
+                      placePrediction['structuredFormat']
+                          as Map<String, dynamic>?;
+
+                  final mainText =
+                      structuredFormat?['mainText'] as Map<String, dynamic>?;
+                  final secondaryText =
+                      structuredFormat?['secondaryText']
+                          as Map<String, dynamic>?;
+
                   final prediction = PlacePrediction(
                     placeId: placeId,
                     description: text?['text'] as String? ?? '',
-                    mainText: mainText?['text'] as String? ?? text?['text'] as String? ?? '',
+                    mainText:
+                        mainText?['text'] as String? ??
+                        text?['text'] as String? ??
+                        '',
                     secondaryText: secondaryText?['text'] as String?,
                   );
-                  print('[DEBUG] Created prediction $i: ${prediction.mainText}');
+                  print(
+                    '[DEBUG] Created prediction $i: ${prediction.mainText}',
+                  );
                   predictions.add(prediction);
                 } else {
                   print('[DEBUG] Suggestion $i has no placePrediction field');
@@ -282,7 +312,9 @@ class GooglePlacesService {
             print('[DEBUG] Returning ${predictions.length} predictions');
             return predictions;
           } else {
-            print('[DEBUG] No suggestions in response. Available keys: ${data.keys.toList()}');
+            print(
+              '[DEBUG] No suggestions in response. Available keys: ${data.keys.toList()}',
+            );
             if (data['error'] != null) {
               print('[ERROR] API returned error: ${data['error']}');
             }

@@ -35,7 +35,7 @@ void main() {
         expect(result, Campus.sgw);
       });
 
-            test('Works correctly with negative latitude', () {
+      test('Works correctly with negative latitude', () {
         // Test far south point
         final southPoint = LatLng(44.0, -73.6);
         final result = detectCampus(southPoint);

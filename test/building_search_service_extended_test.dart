@@ -8,53 +8,69 @@ void main() {
     group('Location in Concordia Building', () {
       test('Location at SGW center is in a building', () {
         const sgwCenter = LatLng(45.4973, -73.5789);
-        final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(sgwCenter);
-        
+        final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(
+          sgwCenter,
+        );
+
         // SGW center should be near buildings
         expect(inBuilding, isA<bool>());
       });
 
       test('Location at Loyola center is in a building', () {
         const loyolaCenter = LatLng(45.4582, -73.6405);
-        final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(loyolaCenter);
-        
+        final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(
+          loyolaCenter,
+        );
+
         expect(inBuilding, isA<bool>());
       });
 
       test('Random location far away is not in building', () {
         const farLocation = LatLng(0, 0); // Equator
-        final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(farLocation);
-        
+        final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(
+          farLocation,
+        );
+
         expect(inBuilding, false);
       });
 
-      test('Location in building polygon returns true or false consistently', () {
-        const location1 = LatLng(45.4973, -73.5789);
-        
-        final result1a = BuildingSearchService.isLocationInConcordiaBuilding(location1);
-        final result1b = BuildingSearchService.isLocationInConcordiaBuilding(location1);
-        
-        // Same location should return same result
-        expect(result1a, result1b);
-      });
+      test(
+        'Location in building polygon returns true or false consistently',
+        () {
+          const location1 = LatLng(45.4973, -73.5789);
+
+          final result1a = BuildingSearchService.isLocationInConcordiaBuilding(
+            location1,
+          );
+          final result1b = BuildingSearchService.isLocationInConcordiaBuilding(
+            location1,
+          );
+
+          // Same location should return same result
+          expect(result1a, result1b);
+        },
+      );
 
       test('Points within building bounds are detected', () {
         // Use first building's bounds
         if (buildingPolygons.isNotEmpty) {
           final building = buildingPolygons.first;
-          
+
           // Get center of building
           final center = building.center;
           expect(center, isNotNull);
-          
-          final inBuilding = BuildingSearchService.isLocationInConcordiaBuilding(center);
+
+          final inBuilding =
+              BuildingSearchService.isLocationInConcordiaBuilding(center);
           expect(inBuilding, isA<bool>());
         }
       });
 
       test('Multiple locations can be checked independently', () {
         for (final building in buildingPolygons.take(3)) {
-          final result = BuildingSearchService.isLocationInConcordiaBuilding(building.center);
+          final result = BuildingSearchService.isLocationInConcordiaBuilding(
+            building.center,
+          );
           expect(result, isA<bool>());
         }
       });
@@ -63,9 +79,13 @@ void main() {
     group('Find Building by Location', () {
       test('Valid building location returns building', () {
         // Use a known building location
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
-        final found = BuildingSearchService.isLocationInConcordiaBuilding(hallBuilding.center);
-        
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
+        final found = BuildingSearchService.isLocationInConcordiaBuilding(
+          hallBuilding.center,
+        );
+
         expect(found, isA<bool>());
       });
 
@@ -81,7 +101,9 @@ void main() {
 
       test('All buildings can be found by their center', () {
         for (final building in buildingPolygons.take(10)) {
-          final result = BuildingSearchService.isLocationInConcordiaBuilding(building.center);
+          final result = BuildingSearchService.isLocationInConcordiaBuilding(
+            building.center,
+          );
           expect(result, isA<bool>());
         }
       });
@@ -94,14 +116,18 @@ void main() {
       });
 
       test('Whitespace only query returns empty list', () async {
-        final results = await BuildingSearchService.searchWithGooglePlaces('   ');
+        final results = await BuildingSearchService.searchWithGooglePlaces(
+          '   ',
+        );
         expect(results, isEmpty);
       });
 
       test('Search returns list of SearchResult', () async {
         // This will return empty since we don't mock the HTTP client
         // But we can verify the structure
-        final results = await BuildingSearchService.searchWithGooglePlaces('café');
+        final results = await BuildingSearchService.searchWithGooglePlaces(
+          'café',
+        );
         expect(results, isA<List>());
       });
 
@@ -111,7 +137,7 @@ void main() {
           'library',
           userLocation: location,
         );
-        
+
         expect(results, isA<List>());
       });
 
@@ -120,26 +146,32 @@ void main() {
           'restaurant',
           userLocation: null,
         );
-        
+
         expect(results, isA<List>());
       });
     });
 
     group('Combined Suggestions', () {
       test('Empty query returns no suggestions when query is empty', () async {
-        final suggestions = await BuildingSearchService.getCombinedSuggestions('');
-        
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          '',
+        );
+
         // Empty query should return only Concordia buildings (first 10)
         expect(suggestions, isA<List>());
       });
 
       test('Single character query returns suggestions', () async {
-        final suggestions = await BuildingSearchService.getCombinedSuggestions('H');
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          'H',
+        );
         expect(suggestions, isA<List>());
       });
 
       test('Multiple character query returns suggestions', () async {
-        final suggestions = await BuildingSearchService.getCombinedSuggestions('Hall');
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          'Hall',
+        );
         expect(suggestions, isA<List>());
       });
 
@@ -149,12 +181,14 @@ void main() {
           'building',
           userLocation: location,
         );
-        
+
         expect(suggestions, isA<List>());
       });
 
       test('Search term matching works', () async {
-        final suggestions = await BuildingSearchService.getCombinedSuggestions('engineering');
+        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+          'engineering',
+        );
         expect(suggestions, isA<List>());
       });
     });
@@ -162,7 +196,7 @@ void main() {
     group('Building Code Lookup', () {
       test('Valid building codes have names', () {
         final codes = ['HALL', 'EV', 'MB', 'LB'];
-        
+
         for (final code in codes) {
           final name = BuildingSearchService.getBuildingNameByCode(code);
           expect(name, isNotNull);
@@ -183,7 +217,7 @@ void main() {
       test('Case sensitivity in building codes', () {
         final hallUpper = BuildingSearchService.getBuildingNameByCode('HALL');
         final hallLower = BuildingSearchService.getBuildingNameByCode('hall');
-        
+
         expect(hallUpper, isNotNull);
         // Note: codes are case-sensitive, so 'hall' might not match 'HALL'
         if (hallLower != null) {
@@ -193,7 +227,9 @@ void main() {
 
       test('All building polygons have names', () {
         for (final building in buildingPolygons.take(10)) {
-          final name = BuildingSearchService.getBuildingNameByCode(building.code);
+          final name = BuildingSearchService.getBuildingNameByCode(
+            building.code,
+          );
           expect(name, isNotNull);
         }
       });
@@ -203,14 +239,14 @@ void main() {
       test('Search by code is consistent', () {
         final result1 = BuildingSearchService.searchBuilding('HALL');
         final result2 = BuildingSearchService.searchBuilding('HALL');
-        
+
         expect(result1?.code, result2?.code);
       });
 
       test('Search by name is consistent', () {
         final result1 = BuildingSearchService.searchBuilding('Hall Building');
         final result2 = BuildingSearchService.searchBuilding('Hall Building');
-        
+
         expect(result1?.code, result2?.code);
       });
 
@@ -218,7 +254,7 @@ void main() {
         const code = 'HALL';
         final foundBuilding = BuildingSearchService.searchBuilding(code);
         final buildingName = BuildingSearchService.getBuildingNameByCode(code);
-        
+
         if (foundBuilding != null && buildingName != null) {
           expect(foundBuilding.code, code);
           expect(buildingName, isNotEmpty);
@@ -252,7 +288,7 @@ void main() {
       test('Suggestions prioritize exact matches', () {
         final suggestions = BuildingSearchService.getSuggestions('HALL');
         expect(suggestions, isA<List>());
-        
+
         if (suggestions.isNotEmpty) {
           // First result should be exact match if available
           expect(suggestions.first.code, isNotEmpty);
@@ -264,7 +300,7 @@ void main() {
       test('Building centers are within Montreal bounds', () {
         for (final building in buildingPolygons) {
           final center = building.center;
-          
+
           expect(center.latitude, greaterThan(45.0));
           expect(center.latitude, lessThan(46.0));
           expect(center.longitude, greaterThan(-74.0));
@@ -285,7 +321,7 @@ void main() {
 
       test('SGW campus buildings exist', () {
         final sgwCodes = ['HALL', 'EV', 'MB', 'LB', 'GM', 'FG'];
-        
+
         for (final code in sgwCodes) {
           final building = BuildingSearchService.searchBuilding(code);
           expect(building, isNotNull, reason: 'SGW building $code not found');
@@ -294,7 +330,7 @@ void main() {
 
       test('Loyola campus buildings exist', () {
         final loyolaCodes = ['AD', 'CC', 'VL', 'SP'];
-        
+
         for (final code in loyolaCodes) {
           final building = BuildingSearchService.searchBuilding(code);
           if (building != null) {
@@ -308,7 +344,7 @@ void main() {
       test('Query whitespace is trimmed', () {
         final result1 = BuildingSearchService.searchBuilding('  HALL  ');
         final result2 = BuildingSearchService.searchBuilding('HALL');
-        
+
         expect(result1?.code, result2?.code);
       });
 
@@ -316,7 +352,7 @@ void main() {
         final result1 = BuildingSearchService.searchBuilding('hall');
         final result2 = BuildingSearchService.searchBuilding('HALL');
         final result3 = BuildingSearchService.searchBuilding('HaLl');
-        
+
         expect(result1?.code, isNotNull);
         expect(result2?.code, isNotNull);
         expect(result3?.code, isNotNull);
@@ -357,7 +393,7 @@ void main() {
       test('No duplicate building codes', () {
         final codes = buildingPolygons.map((b) => b.code).toList();
         final uniqueCodes = codes.toSet();
-        
+
         expect(codes.length, uniqueCodes.length);
       });
     });

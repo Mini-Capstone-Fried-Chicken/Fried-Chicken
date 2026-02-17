@@ -19,7 +19,9 @@ void main() {
       });
 
       test('Create SearchResult from different Concordia buildings', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final evBuilding = buildingPolygons.firstWhere((b) => b.code == 'EV');
 
         final hallResult = SearchResult.fromConcordiaBuilding(hallBuilding);
@@ -77,23 +79,26 @@ void main() {
         expect(result.buildingPolygon, isNull);
       });
 
-      test('Create SearchResult from Google place that is a Concordia building', () {
-        final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
-        final result = SearchResult.fromGooglePlace(
-          name: 'Hall Building',
-          address: '1455 De Maisonneuve Blvd. W',
-          location: building.center,
-          isConcordiaBuilding: true,
-          buildingPolygon: building,
-          placeId: 'google_hall_building_id',
-        );
+      test(
+        'Create SearchResult from Google place that is a Concordia building',
+        () {
+          final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+          final result = SearchResult.fromGooglePlace(
+            name: 'Hall Building',
+            address: '1455 De Maisonneuve Blvd. W',
+            location: building.center,
+            isConcordiaBuilding: true,
+            buildingPolygon: building,
+            placeId: 'google_hall_building_id',
+          );
 
-        expect(result.name, 'Hall Building');
-        expect(result.isConcordiaBuilding, true);
-        expect(result.buildingPolygon, building);
-        expect(result.placeId, 'google_hall_building_id');
-        expect(result.address, '1455 De Maisonneuve Blvd. W');
-      });
+          expect(result.name, 'Hall Building');
+          expect(result.isConcordiaBuilding, true);
+          expect(result.buildingPolygon, building);
+          expect(result.placeId, 'google_hall_building_id');
+          expect(result.address, '1455 De Maisonneuve Blvd. W');
+        },
+      );
     });
 
     group('SearchResult - Location Data', () {
@@ -193,15 +198,18 @@ void main() {
         expect(result.placeId, isNull);
       });
 
-      test('SearchResult buildingPolygon can be null for non-Concordia places', () {
-        final result = SearchResult.fromGooglePlace(
-          name: 'Non-Concordia Place',
-          location: LatLng(45.5, -73.6),
-          isConcordiaBuilding: false,
-        );
+      test(
+        'SearchResult buildingPolygon can be null for non-Concordia places',
+        () {
+          final result = SearchResult.fromGooglePlace(
+            name: 'Non-Concordia Place',
+            location: LatLng(45.5, -73.6),
+            isConcordiaBuilding: false,
+          );
 
-        expect(result.buildingPolygon, isNull);
-      });
+          expect(result.buildingPolygon, isNull);
+        },
+      );
 
       test('Concordia building SearchResult has null address by default', () {
         final building = buildingPolygons.first;
@@ -378,8 +386,12 @@ void main() {
           ),
         ];
 
-        final concordiaResults = allResults.where((r) => r.isConcordiaBuilding).toList();
-        final nonConcordiaResults = allResults.where((r) => !r.isConcordiaBuilding).toList();
+        final concordiaResults = allResults
+            .where((r) => r.isConcordiaBuilding)
+            .toList();
+        final nonConcordiaResults = allResults
+            .where((r) => !r.isConcordiaBuilding)
+            .toList();
 
         expect(concordiaResults.length, 2);
         expect(nonConcordiaResults.length, 2);
@@ -388,7 +400,9 @@ void main() {
 
     group('SearchResult - Real-World Scenarios', () {
       test('Search result for Hall Building', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final result = SearchResult.fromConcordiaBuilding(hallBuilding);
 
         expect(result.name, 'Hall Building');

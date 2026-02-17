@@ -41,9 +41,7 @@ void main() {
         final json = {
           'place_id': 'test_place_3',
           'description': 'Store',
-          'structured_formatting': {
-            'main_text': 'Store',
-          },
+          'structured_formatting': {'main_text': 'Store'},
         };
 
         final prediction = PlacePrediction.fromJson(json);
@@ -158,7 +156,7 @@ void main() {
     group('Search Query Validation', () {
       test('Empty query returns empty list', () {
         final emptyQueries = ['', '   ', '\t', '\n'];
-        
+
         for (final query in emptyQueries) {
           expect(query.trim().isEmpty, true);
         }
@@ -166,7 +164,7 @@ void main() {
 
       test('Query with special characters is valid', () {
         final queries = ['café', 'St. Mary\'s', '(Library)'];
-        
+
         for (final query in queries) {
           expect(query.trim().isNotEmpty, true);
         }
@@ -174,7 +172,7 @@ void main() {
 
       test('Query with numbers is valid', () {
         final queries = ['Room 123', '456 Mountain Street'];
-        
+
         for (final query in queries) {
           expect(query.trim().isNotEmpty, true);
         }
@@ -191,7 +189,7 @@ void main() {
       test('Location bias with Montreal area', () {
         const location = LatLng(45.5017, -73.5673);
         const radius = 5000; // 5km radius
-        
+
         expect(location.latitude, closeTo(45.5, 0.1));
         expect(location.longitude, closeTo(-73.5, 0.1));
         expect(radius, greaterThan(0));
@@ -200,7 +198,7 @@ void main() {
       test('Location bias with SGW campus', () {
         const sgw = LatLng(45.4973, -73.5789);
         const radius = 500;
-        
+
         expect(sgw.latitude, inInclusiveRange(45.0, 46.0));
         expect(sgw.longitude, inInclusiveRange(-74.0, -73.0));
       });
@@ -208,7 +206,7 @@ void main() {
       test('Location bias with Loyola campus', () {
         const loyola = LatLng(45.4582, -73.6405);
         const radius = 500;
-        
+
         expect(loyola.latitude, inInclusiveRange(45.0, 46.0));
         expect(loyola.longitude, inInclusiveRange(-74.0, -73.0));
       });
@@ -217,7 +215,7 @@ void main() {
         const defaultLat = 45.4958;
         const defaultLng = -73.5711;
         const defaultRadius = 15000.0;
-        
+
         expect(defaultLat, inInclusiveRange(45.0, 46.0));
         expect(defaultLng, inInclusiveRange(-74.0, -73.0));
         expect(defaultRadius, greaterThan(0));
@@ -225,7 +223,7 @@ void main() {
 
       test('Radius parameter is positive', () {
         final radiusValues = [1000, 5000, 10000, 50000];
-        
+
         for (final radius in radiusValues) {
           expect(radius, greaterThan(0));
         }
@@ -258,9 +256,9 @@ void main() {
           'ChIJvRHvxVVwtEwRBUF7FZm8zzE',
           'places/ChIJvRHvxVVwtEwRBUF7FZm8zzE',
           'simple_id',
-          '12345'
+          '12345',
         ];
-        
+
         for (final id in ids) {
           expect(id, isA<String>());
         }
@@ -281,7 +279,7 @@ void main() {
           name: 'Test',
           location: location,
         );
-        
+
         expect(result.location, isA<LatLng>());
         expect(result.location.latitude, 45.4973);
         expect(result.location.longitude, -73.5789);
@@ -299,7 +297,7 @@ void main() {
           mainText: 'Main',
           secondaryText: 'Secondary',
         );
-        
+
         expect(prediction, isA<PlacePrediction>());
         expect(prediction.placeId, isNotEmpty);
       });
@@ -309,9 +307,7 @@ void main() {
       test('PlacePrediction handles missing place_id gracefully', () {
         final json = {
           'description': 'No ID provided',
-          'structured_formatting': {
-            'main_text': 'Text',
-          },
+          'structured_formatting': {'main_text': 'Text'},
         };
 
         try {
@@ -386,10 +382,10 @@ void main() {
       test('Distance between SGW and Loyola', () {
         const sgw = LatLng(45.4973, -73.5789);
         const loyola = LatLng(45.4582, -73.6405);
-        
+
         final latDiff = (sgw.latitude - loyola.latitude).abs();
         final lngDiff = (sgw.longitude - loyola.longitude).abs();
-        
+
         expect(latDiff, greaterThan(0));
         expect(lngDiff, greaterThan(0));
       });
@@ -403,7 +399,7 @@ void main() {
 
       test('HTTP 400+ are error statuses', () {
         final errorStatuses = [400, 401, 403, 404, 429, 500, 503];
-        
+
         for (final status in errorStatuses) {
           expect(status, greaterThanOrEqualTo(400));
         }
@@ -418,7 +414,7 @@ void main() {
     group('Text Search Parameters', () {
       test('Search query is required', () {
         final queries = ['café', 'library', 'restaurant'];
-        
+
         for (final query in queries) {
           expect(query.trim().isNotEmpty, true);
         }
@@ -427,7 +423,7 @@ void main() {
       test('Location bias is optional', () {
         LatLng? location = null;
         expect(location, isNull);
-        
+
         location = const LatLng(45.5, -73.5);
         expect(location, isNotNull);
       });

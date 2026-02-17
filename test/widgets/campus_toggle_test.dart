@@ -23,7 +23,9 @@ void main() {
       expect(find.text('Loyola'), findsOneWidget);
     });
 
-    testWidgets('tap SGW calls onCampusChanged with Campus.sgw', (tester) async {
+    testWidgets('tap SGW calls onCampusChanged with Campus.sgw', (
+      tester,
+    ) async {
       Campus picked = Campus.none;
 
       await tester.pumpWidget(
@@ -43,8 +45,9 @@ void main() {
       expect(picked, Campus.sgw);
     });
 
-    testWidgets('tap Loyola calls onCampusChanged with Campus.loyola',
-        (tester) async {
+    testWidgets('tap Loyola calls onCampusChanged with Campus.loyola', (
+      tester,
+    ) async {
       Campus picked = Campus.none;
 
       await tester.pumpWidget(
@@ -64,8 +67,9 @@ void main() {
       expect(picked, Campus.loyola);
     });
 
-    testWidgets('Campus.none -> both segments unselected (transparent bg)',
-        (tester) async {
+    testWidgets('Campus.none -> both segments unselected (transparent bg)', (
+      tester,
+    ) async {
       Campus selectedCampus = Campus.none;
 
       await tester.pumpWidget(
@@ -97,15 +101,19 @@ void main() {
       expect(selectedCampus, equals(Campus.sgw));
     });
 
-    testWidgets('SGW campus corresponds to SGW buildings',
-        (WidgetTester tester) async {
+    testWidgets('SGW campus corresponds to SGW buildings', (
+      WidgetTester tester,
+    ) async {
       // Verify that SGW buildings exist in the building info
       final sgwBuildings = buildingInfoByCode.values
           .where((building) => building.campus == 'SGW')
           .toList();
 
-      expect(sgwBuildings.isNotEmpty, isTrue,
-          reason: 'There should be at least one SGW building');
+      expect(
+        sgwBuildings.isNotEmpty,
+        isTrue,
+        reason: 'There should be at least one SGW building',
+      );
 
       for (final building in sgwBuildings) {
         expect(building.code, isNotNull);
@@ -114,8 +122,9 @@ void main() {
       }
     });
 
-    testWidgets('Campus toggle displays SGW map when SGW is selected',
-        (WidgetTester tester) async {
+    testWidgets('Campus toggle displays SGW map when SGW is selected', (
+      WidgetTester tester,
+    ) async {
       // Filter buildings by selected campus
       final selectedBuildings = buildingInfoByCode.values
           .where((building) => building.campus == 'SGW')
@@ -135,8 +144,9 @@ void main() {
       }
     });
 
-    testWidgets('SGW and Loyola have distinct building sets',
-        (WidgetTester tester) async {
+    testWidgets('SGW and Loyola have distinct building sets', (
+      WidgetTester tester,
+    ) async {
       final sgwBuildings = buildingInfoByCode.values
           .where((building) => building.campus == 'SGW')
           .map((b) => b.code)
@@ -149,14 +159,23 @@ void main() {
 
       // Verify there's no overlap between SGW and Loyola building codes
       final overlap = sgwBuildings.intersection(loyolaBuildings);
-      expect(overlap.isEmpty, isTrue,
-          reason: 'SGW and Loyola should have distinct building sets');
-      
+      expect(
+        overlap.isEmpty,
+        isTrue,
+        reason: 'SGW and Loyola should have distinct building sets',
+      );
+
       // Verify that both campuses have buildings
-      expect(sgwBuildings.isNotEmpty, isTrue,
-          reason: 'SGW campus should have buildings');
-      expect(loyolaBuildings.isNotEmpty, isTrue,
-          reason: 'Loyola campus should have buildings');
+      expect(
+        sgwBuildings.isNotEmpty,
+        isTrue,
+        reason: 'SGW campus should have buildings',
+      );
+      expect(
+        loyolaBuildings.isNotEmpty,
+        isTrue,
+        reason: 'Loyola campus should have buildings',
+      );
     });
 
     testWidgets('selected campus changes bg + text color', (tester) async {
@@ -200,7 +219,9 @@ void main() {
       expect(loyText.style?.color, equals(maroon));
     });
 
-    testWidgets('animation runs when switching selected campus', (tester) async {
+    testWidgets('animation runs when switching selected campus', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

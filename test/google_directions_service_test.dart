@@ -34,7 +34,7 @@ void main() {
       test('Route between same origin and destination is minimal', () {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4973, -73.5789);
-        
+
         // This tests that the service can handle same origin/destination
         expect(origin, destination);
       });
@@ -42,7 +42,7 @@ void main() {
       test('Route with valid coordinates returns LatLng objects', () {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4580, -73.6410);
-        
+
         expect(origin.latitude, greaterThan(0));
         expect(destination.latitude, greaterThan(0));
         expect(origin.longitude, lessThan(0));
@@ -51,7 +51,7 @@ void main() {
 
       test('Route origin is within Montreal bounds', () {
         const origin = LatLng(45.4973, -73.5789);
-        
+
         // Montreal approximate bounds
         expect(origin.latitude, greaterThan(45.0));
         expect(origin.latitude, lessThan(46.0));
@@ -61,7 +61,7 @@ void main() {
 
       test('Route destination is within Montreal bounds', () {
         const destination = LatLng(45.4580, -73.6410);
-        
+
         // Montreal approximate bounds
         expect(destination.latitude, greaterThan(45.0));
         expect(destination.latitude, lessThan(46.0));
@@ -109,12 +109,12 @@ void main() {
       test('Distance calculation between campuses', () {
         const sgw = LatLng(45.4973, -73.5789);
         const loyola = LatLng(45.4582, -73.6405);
-        
+
         // Calculate approximate distance (simple Pythagorean estimate)
         final latDiff = (sgw.latitude - loyola.latitude).abs();
         final lngDiff = (sgw.longitude - loyola.longitude).abs();
         final distance = (latDiff * latDiff + lngDiff * lngDiff).toDouble();
-        
+
         // Distance should be greater than 0 and reasonable
         expect(distance, greaterThan(0));
         expect(distance, lessThan(1.0)); // Should be less than 1 degree away
@@ -123,7 +123,7 @@ void main() {
       test('Route can start from SGW and end at Loyola', () {
         const sgw = LatLng(45.4973, -73.5789);
         const loyola = LatLng(45.4582, -73.6405);
-        
+
         // Verify both points are valid
         expect(sgw.latitude, inInclusiveRange(45.0, 46.0));
         expect(loyola.latitude, inInclusiveRange(45.0, 46.0));
@@ -134,7 +134,7 @@ void main() {
       test('Route with Montreal landmarks is valid', () {
         const mp = LatLng(45.5017, -73.5673); // Mount Royal Park
         const downtown = LatLng(45.5017, -73.5701); // Downtown Montreal
-        
+
         expect(mp.latitude, inInclusiveRange(45.0, 46.0));
         expect(downtown.latitude, inInclusiveRange(45.0, 46.0));
         expect(mp.longitude, inInclusiveRange(-74.0, -73.0));
@@ -146,9 +146,15 @@ void main() {
       test('Polyline points maintain high precision', () {
         // LatLng coordinates should maintain precision to 5+ decimal places
         const point = LatLng(45.49732102, -73.57891234);
-        
-        expect(point.latitude.toString().split('.')[1].length, greaterThanOrEqualTo(5));
-        expect(point.longitude.toString().split('.')[1].length, greaterThanOrEqualTo(5));
+
+        expect(
+          point.latitude.toString().split('.')[1].length,
+          greaterThanOrEqualTo(5),
+        );
+        expect(
+          point.longitude.toString().split('.')[1].length,
+          greaterThanOrEqualTo(5),
+        );
       });
 
       test('LatLng precision in route points', () {
@@ -157,7 +163,7 @@ void main() {
           const LatLng(45.49745, -73.57905),
           const LatLng(45.49758, -73.57918),
         ];
-        
+
         expect(route.length, 3);
         // Verify precision
         for (final point in route) {
@@ -172,7 +178,7 @@ void main() {
           const LatLng(45.45, -73.45),
           const LatLng(45.5, -73.5),
         ];
-        
+
         for (int i = 0; i < route.length - 1; i++) {
           expect(route[i], isNotNull);
           expect(route[i + 1], isNotNull);
@@ -191,7 +197,7 @@ void main() {
           const LatLng(45.4973, -73.5789),
           const LatLng(45.4582, -73.6405),
         ];
-        
+
         expect(route, isA<List<LatLng>>());
         expect(route.length, 2);
         for (final point in route) {
@@ -206,7 +212,7 @@ void main() {
           const LatLng(45.4830, -73.5820),
           const LatLng(45.4582, -73.6405),
         ];
-        
+
         for (int i = 1; i < route.length; i++) {
           // Each point should be different from previous
           expect(route[i], isNotNull);

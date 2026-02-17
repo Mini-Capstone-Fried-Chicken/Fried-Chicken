@@ -10,16 +10,18 @@ void main() {
     group('Building Polygon Detection', () {
       test('Detects building when point is inside polygon', () {
         // Use a point within a known building
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final insidePoint = hallBuilding.center;
-        
+
         // Point inside should be detected
         expect(hallBuilding.points.length, greaterThan(0));
       });
 
       test('Returns null when point is outside all buildings', () {
         final outsidePoint = LatLng(45.6, -73.3);
-        
+
         BuildingPolygon? building;
         try {
           building = buildingPolygons.firstWhere(
@@ -28,12 +30,14 @@ void main() {
         } catch (e) {
           building = null;
         }
-        
+
         expect(building, isNull);
       });
 
       test('Correctly identifies current building for known location', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         expect(hallBuilding.code, 'HALL');
         expect(hallBuilding.name, 'Hall Building');
       });
@@ -52,7 +56,7 @@ void main() {
       test('Building detection works for multiple buildings', () {
         final detectableBuildings = buildingPolygons.take(10).toList();
         expect(detectableBuildings.length, 10);
-        
+
         for (final building in detectableBuildings) {
           expect(building.code.isNotEmpty, true);
           expect(building.name.isNotEmpty, true);
@@ -63,23 +67,29 @@ void main() {
 
     group('Point in Polygon Tests', () {
       test('Center of polygon is inside polygon', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final center = hallBuilding.center;
-        
+
         expect(center, isNotNull);
         expect(center.latitude, isA<double>());
         expect(center.longitude, isA<double>());
       });
 
       test('Corners of polygon are on polygon boundaries', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         expect(hallBuilding.points.first, isA<LatLng>());
       });
 
       test('Multiple points can be tested against same polygon', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final points = hallBuilding.points.take(3).toList();
-        
+
         expect(points.length, 3);
         for (final point in points) {
           expect(point, isA<LatLng>());
@@ -90,7 +100,7 @@ void main() {
         final building = buildingPolygons.firstWhere((b) => b.code == 'HALL');
         final center1 = building.center;
         final center2 = building.center;
-        
+
         expect(center1.latitude, center2.latitude);
         expect(center1.longitude, center2.longitude);
       });
@@ -110,7 +120,7 @@ void main() {
       test('Case insensitive search works', () {
         final search1 = BuildingSearchService.searchBuilding('hall');
         final search2 = BuildingSearchService.searchBuilding('HALL');
-        
+
         expect(search1?.code, 'HALL');
         expect(search2?.code, 'HALL');
       });
@@ -125,7 +135,7 @@ void main() {
       test('All buildings have unique codes', () {
         final codes = buildingPolygons.map((b) => b.code).toList();
         final uniqueCodes = codes.toSet();
-        
+
         expect(codes.length, uniqueCodes.length);
       });
 
@@ -139,7 +149,9 @@ void main() {
 
       test('Building can be retrieved by code', () {
         for (final building in buildingPolygons.take(5)) {
-          final retrieved = buildingPolygons.firstWhere((b) => b.code == building.code);
+          final retrieved = buildingPolygons.firstWhere(
+            (b) => b.code == building.code,
+          );
           expect(retrieved.code, building.code);
           expect(retrieved.name, building.name);
         }
@@ -181,31 +193,40 @@ void main() {
       });
 
       test('Distance between building points is reasonable', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final points = hallBuilding.points;
-        
+
         // Buildings should be small (less than 1km)
         for (int i = 0; i < points.length - 1; i++) {
           final p1 = points[i];
           final p2 = points[i + 1];
-          
+
           // Rough distance check (latitude difference ~111km per degree)
           final latDiff = (p1.latitude - p2.latitude).abs() * 111;
-          final lngDiff = (p1.longitude - p2.longitude).abs() * 85; // Approximate at Montreal
+          final lngDiff =
+              (p1.longitude - p2.longitude).abs() *
+              85; // Approximate at Montreal
           final distanceSquared = (latDiff * latDiff) + (lngDiff * lngDiff);
-          
-          expect(distanceSquared, lessThan(1000000)); // Less than 1km segment squared
+
+          expect(
+            distanceSquared,
+            lessThan(1000000),
+          ); // Less than 1km segment squared
         }
       });
 
       test('Building center is close to all points', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final center = hallBuilding.center;
-        
+
         for (final point in hallBuilding.points) {
           final latDiff = (center.latitude - point.latitude).abs();
           final lngDiff = (center.longitude - point.longitude).abs();
-          
+
           expect(latDiff, lessThan(0.01)); // Less than ~1km
           expect(lngDiff, lessThan(0.01));
         }
@@ -226,7 +247,7 @@ void main() {
         } catch (e) {
           minPointBuilding = null;
         }
-        
+
         if (minPointBuilding != null) {
           expect(minPointBuilding.points.length, 3);
           expect(minPointBuilding.center, isNotNull);
@@ -237,7 +258,7 @@ void main() {
         final maxPointsBuilding = buildingPolygons.reduce(
           (a, b) => a.points.length > b.points.length ? a : b,
         );
-        
+
         expect(maxPointsBuilding.points.length, greaterThan(3));
       });
 
@@ -282,14 +303,14 @@ void main() {
       test('Case insensitive search works', () {
         final results1 = BuildingSearchService.getSuggestions('hall');
         final results2 = BuildingSearchService.getSuggestions('HALL');
-        
+
         expect(results1.length, greaterThan(0));
         expect(results2.length, greaterThan(0));
       });
 
       test('Search preserves building information', () {
         final results = BuildingSearchService.getSuggestions('EV');
-        
+
         for (final result in results) {
           expect(result.code.isNotEmpty, true);
           expect(result.name.isNotEmpty, true);
@@ -323,9 +344,11 @@ void main() {
       });
 
       test('Multiple search terms work for single building', () {
-        final hallBuilding = buildingPolygons.firstWhere((b) => b.code == 'HALL');
+        final hallBuilding = buildingPolygons.firstWhere(
+          (b) => b.code == 'HALL',
+        );
         final results = BuildingSearchService.getSuggestions('H');
-        
+
         expect(results.isNotEmpty, true);
       });
     });
@@ -334,7 +357,7 @@ void main() {
       test('Search suggestions can be cleared', () {
         var suggestions = BuildingSearchService.getSuggestions('H');
         expect(suggestions.isNotEmpty, true);
-        
+
         suggestions = [];
         expect(suggestions.isEmpty, true);
       });
@@ -343,7 +366,7 @@ void main() {
         final search1 = BuildingSearchService.getSuggestions('H');
         final search2 = BuildingSearchService.getSuggestions('EV');
         final search3 = BuildingSearchService.getSuggestions('FG');
-        
+
         expect(search1.isNotEmpty, true);
         expect(search2.isNotEmpty, true);
         expect(search3.isNotEmpty, true);
@@ -352,7 +375,7 @@ void main() {
       test('Search results are deterministic', () {
         final results1 = BuildingSearchService.getSuggestions('Hall');
         final results2 = BuildingSearchService.getSuggestions('Hall');
-        
+
         expect(results1.length, results2.length);
       });
     });

@@ -46,10 +46,7 @@ void main() {
         const testPoint = LatLng(45.5, -73.5);
         final campus = detectCampus(testPoint);
 
-        expect(
-          [Campus.sgw, Campus.loyola, Campus.none],
-          contains(campus),
-        );
+        expect([Campus.sgw, Campus.loyola, Campus.none], contains(campus));
       });
 
       test('detectCampus with multiple test points', () {
@@ -102,22 +99,21 @@ void main() {
     });
 
     group('OutdoorMapPage Widget Initialization', () {
-      testWidgets('OutdoorMapPage initializes with SGW campus',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage initializes with SGW campus', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
-            home: OutdoorMapPage(
-              initialCampus: Campus.sgw,
-              isLoggedIn: true,
-            ),
+            home: OutdoorMapPage(initialCampus: Campus.sgw, isLoggedIn: true),
           ),
         );
 
         expect(find.byType(OutdoorMapPage), findsOneWidget);
       });
 
-      testWidgets('OutdoorMapPage initializes with Loyola campus',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage initializes with Loyola campus', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: OutdoorMapPage(
@@ -130,22 +126,21 @@ void main() {
         expect(find.byType(OutdoorMapPage), findsOneWidget);
       });
 
-      testWidgets('OutdoorMapPage initializes with no campus',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage initializes with no campus', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
-            home: OutdoorMapPage(
-              initialCampus: Campus.none,
-              isLoggedIn: false,
-            ),
+            home: OutdoorMapPage(initialCampus: Campus.none, isLoggedIn: false),
           ),
         );
 
         expect(find.byType(OutdoorMapPage), findsOneWidget);
       });
 
-      testWidgets('OutdoorMapPage accepts debug parameters',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage accepts debug parameters', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: OutdoorMapPage(
@@ -163,10 +158,7 @@ void main() {
       testWidgets('OutdoorMapPage creates state', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
-            home: OutdoorMapPage(
-              initialCampus: Campus.sgw,
-              isLoggedIn: true,
-            ),
+            home: OutdoorMapPage(initialCampus: Campus.sgw, isLoggedIn: true),
           ),
         );
 
@@ -177,19 +169,13 @@ void main() {
     group('Coordinate Range Validation', () {
       test('All building centers are within valid latitude range', () {
         for (final building in buildingPolygons) {
-          expect(
-            building.center.latitude,
-            inInclusiveRange(-90, 90),
-          );
+          expect(building.center.latitude, inInclusiveRange(-90, 90));
         }
       });
 
       test('All building centers are within valid longitude range', () {
         for (final building in buildingPolygons) {
-          expect(
-            building.center.longitude,
-            inInclusiveRange(-180, 180),
-          );
+          expect(building.center.longitude, inInclusiveRange(-180, 180));
         }
       });
 
@@ -273,25 +259,17 @@ void main() {
         const boundaryPoint = LatLng(45.498, -73.579);
         final campus = detectCampus(boundaryPoint);
 
-        expect(
-          [Campus.sgw, Campus.loyola, Campus.none],
-          contains(campus),
-        );
+        expect([Campus.sgw, Campus.loyola, Campus.none], contains(campus));
       });
 
       test('Point equidistant from both campuses', () {
-        final midLat =
-            (concordiaSGW.latitude + concordiaLoyola.latitude) / 2;
-        final midLng =
-            (concordiaSGW.longitude + concordiaLoyola.longitude) / 2;
+        final midLat = (concordiaSGW.latitude + concordiaLoyola.latitude) / 2;
+        final midLng = (concordiaSGW.longitude + concordiaLoyola.longitude) / 2;
 
         final midpoint = LatLng(midLat, midLng);
         final campus = detectCampus(midpoint);
 
-        expect(
-          [Campus.sgw, Campus.loyola, Campus.none],
-          contains(campus),
-        );
+        expect([Campus.sgw, Campus.loyola, Campus.none], contains(campus));
       });
 
       test('Point at maximum latitude', () {
@@ -371,8 +349,10 @@ void main() {
 
     group('Distance and Location Calculations', () {
       test('Distance between SGW and Loyola is non-zero', () {
-        final latDiff = (concordiaSGW.latitude - concordiaLoyola.latitude).abs();
-        final lngDiff = (concordiaSGW.longitude - concordiaLoyola.longitude).abs();
+        final latDiff = (concordiaSGW.latitude - concordiaLoyola.latitude)
+            .abs();
+        final lngDiff = (concordiaSGW.longitude - concordiaLoyola.longitude)
+            .abs();
 
         expect(latDiff, greaterThan(0));
         expect(lngDiff, greaterThan(0));
@@ -425,14 +405,12 @@ void main() {
     });
 
     group('Widget Lifecycle and State', () {
-      testWidgets('OutdoorMapPage widget builds successfully',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage widget builds successfully', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
-            home: OutdoorMapPage(
-              initialCampus: Campus.sgw,
-              isLoggedIn: true,
-            ),
+            home: OutdoorMapPage(initialCampus: Campus.sgw, isLoggedIn: true),
           ),
         );
 
@@ -440,8 +418,9 @@ void main() {
         expect(find.byType(OutdoorMapPage), findsOneWidget);
       });
 
-      testWidgets('Multiple widget instances can be created',
-          (WidgetTester tester) async {
+      testWidgets('Multiple widget instances can be created', (
+        WidgetTester tester,
+      ) async {
         const page1 = OutdoorMapPage(
           initialCampus: Campus.sgw,
           isLoggedIn: true,
@@ -456,8 +435,9 @@ void main() {
         expect(page2.initialCampus, Campus.loyola);
       });
 
-      testWidgets('Widget handles property changes',
-          (WidgetTester tester) async {
+      testWidgets('Widget handles property changes', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: OutdoorMapPage(
@@ -472,8 +452,9 @@ void main() {
         expect(find.byType(OutdoorMapPage), findsOneWidget);
       });
 
-      testWidgets('Widget with all debug flags enabled',
-          (WidgetTester tester) async {
+      testWidgets('Widget with all debug flags enabled', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: OutdoorMapPage(
@@ -489,8 +470,9 @@ void main() {
         expect(find.byType(OutdoorMapPage), findsOneWidget);
       });
 
-      testWidgets('Widget clears correct debug parameters',
-          (WidgetTester tester) async {
+      testWidgets('Widget clears correct debug parameters', (
+        WidgetTester tester,
+      ) async {
         const page = OutdoorMapPage(
           initialCampus: Campus.loyola,
           isLoggedIn: true,
@@ -501,8 +483,9 @@ void main() {
         expect(page.debugLinkOverride, isNull);
       });
 
-      testWidgets('Widget state is preserved through pump',
-          (WidgetTester tester) async {
+      testWidgets('Widget state is preserved through pump', (
+        WidgetTester tester,
+      ) async {
         const page = OutdoorMapPage(
           initialCampus: Campus.sgw,
           isLoggedIn: true,
@@ -610,8 +593,9 @@ void main() {
     });
 
     group('Widget Integration Tests', () {
-      testWidgets('OutdoorMapPage renders with SGW campus',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage renders with SGW campus', (
+        WidgetTester tester,
+      ) async {
         final testWidget = OutdoorMapPage(
           initialCampus: Campus.sgw,
           isLoggedIn: true,
@@ -622,8 +606,9 @@ void main() {
         expect(find.byWidget(testWidget), findsOneWidget);
       });
 
-      testWidgets('OutdoorMapPage renders with Loyola campus',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage renders with Loyola campus', (
+        WidgetTester tester,
+      ) async {
         final testWidget = OutdoorMapPage(
           initialCampus: Campus.loyola,
           isLoggedIn: false,
@@ -634,8 +619,9 @@ void main() {
         expect(find.byWidget(testWidget), findsOneWidget);
       });
 
-      testWidgets('OutdoorMapPage renders with Campus.none',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage renders with Campus.none', (
+        WidgetTester tester,
+      ) async {
         final testWidget = OutdoorMapPage(
           initialCampus: Campus.none,
           isLoggedIn: false,
@@ -646,8 +632,9 @@ void main() {
         expect(find.byWidget(testWidget), findsOneWidget);
       });
 
-      testWidgets('OutdoorMapPage handles logged in state',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage handles logged in state', (
+        WidgetTester tester,
+      ) async {
         const loggedInPage = OutdoorMapPage(
           initialCampus: Campus.sgw,
           isLoggedIn: true,
@@ -657,8 +644,9 @@ void main() {
         expect(loggedInPage.isLoggedIn, true);
       });
 
-      testWidgets('OutdoorMapPage handles logged out state',
-          (WidgetTester tester) async {
+      testWidgets('OutdoorMapPage handles logged out state', (
+        WidgetTester tester,
+      ) async {
         const loggedOutPage = OutdoorMapPage(
           initialCampus: Campus.loyola,
           isLoggedIn: false,

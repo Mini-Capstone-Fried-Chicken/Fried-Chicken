@@ -69,9 +69,7 @@ Future<void> _moveCameraCenter(WidgetTester tester, LatLng target) async {
   expect(map.onCameraMove, isNotNull);
   expect(map.onCameraIdle, isNotNull);
 
-  map.onCameraMove!(
-    CameraPosition(target: target, zoom: 15),
-  );
+  map.onCameraMove!(CameraPosition(target: target, zoom: 15));
   await tester.pump();
 
   map.onCameraIdle!();
@@ -87,9 +85,9 @@ void main() {
   setUpAll(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(urlLauncherChannel, (call) async {
-      launchedCalls.add(call);
-      return true;
-    });
+          launchedCalls.add(call);
+          return true;
+        });
   });
 
   tearDownAll(() async {
@@ -101,7 +99,9 @@ void main() {
     launchedCalls.clear();
   });
 
-  testWidgets('popup clamps to top-left (covers clamp branches)', (tester) async {
+  testWidgets('popup clamps to top-left (covers clamp branches)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MediaQuery(
         data: const MediaQueryData(
@@ -117,11 +117,7 @@ void main() {
             debugSelectedBuilding: BuildingPolygon(
               code: 'X',
               name: 'Test',
-              points: const [
-                LatLng(0, 0),
-                LatLng(0, 1),
-                LatLng(1, 0),
-              ],
+              points: const [LatLng(0, 0), LatLng(0, 1), LatLng(1, 0)],
             ),
             debugAnchorOffset: const Offset(0, 0),
           ),
@@ -138,7 +134,9 @@ void main() {
     expect(pos.top, 8);
   });
 
-  testWidgets('popup clamps to bottom-right (covers max clamp)', (tester) async {
+  testWidgets('popup clamps to bottom-right (covers max clamp)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MediaQuery(
         data: const MediaQueryData(
@@ -154,11 +152,7 @@ void main() {
             debugSelectedBuilding: BuildingPolygon(
               code: 'Y',
               name: 'Test',
-              points: const [
-                LatLng(0, 0),
-                LatLng(1, 1),
-                LatLng(2, 2),
-              ],
+              points: const [LatLng(0, 0), LatLng(1, 1), LatLng(2, 2)],
             ),
             debugAnchorOffset: const Offset(399, 799),
           ),
@@ -189,11 +183,7 @@ void main() {
             debugSelectedBuilding: BuildingPolygon(
               code: 'Z',
               name: 'Test',
-              points: const [
-                LatLng(0, 0),
-                LatLng(0, 1),
-                LatLng(1, 1),
-              ],
+              points: const [LatLng(0, 0), LatLng(0, 1), LatLng(1, 1)],
             ),
             debugAnchorOffset: const Offset(401, 100),
           ),
@@ -205,7 +195,9 @@ void main() {
     expect(find.byType(BuildingInfoPopup), findsNothing);
   });
 
-  testWidgets('opening popup fills search bar, closing clears it', (tester) async {
+  testWidgets('opening popup fills search bar, closing clears it', (
+    tester,
+  ) async {
     //Test simplified: requires full map controller setup for popup coordination
     expect(true, isTrue);
   });
@@ -249,11 +241,7 @@ void main() {
           debugSelectedBuilding: BuildingPolygon(
             code: 'B',
             name: 'Test',
-            points: const [
-              LatLng(0, 0),
-              LatLng(0, 1),
-              LatLng(1, 1),
-            ],
+            points: const [LatLng(0, 0), LatLng(0, 1), LatLng(1, 1)],
           ),
           debugAnchorOffset: const Offset(200, 180),
           debugLinkOverride: '',
@@ -272,7 +260,9 @@ void main() {
     expect(launchedCalls.isEmpty, isTrue);
   });
 
-  testWidgets('search hint updates when campus toggle is tapped', (tester) async {
+  testWidgets('search hint updates when campus toggle is tapped', (
+    tester,
+  ) async {
     //Test simplified: requires full map controller and UI update coordination
     expect(true, isTrue);
   });
@@ -287,25 +277,34 @@ void main() {
     expect(true, isTrue);
   });
 
-  testWidgets('switching campus clears popup when going back to SGW', (tester) async {
+  testWidgets('switching campus clears popup when going back to SGW', (
+    tester,
+  ) async {
     //Test simplified: requires full map controller setup
     expect(true, isTrue);
   });
 
   group('auto-switch campus from camera center', () {
-    testWidgets('camera center in Loyola -> hint switches to Loyola', (tester) async {
+    testWidgets('camera center in Loyola -> hint switches to Loyola', (
+      tester,
+    ) async {
       //Test simplified: requires full map controller and location updates
       expect(true, isTrue);
     });
 
-    testWidgets('camera center in SGW -> hint switches back to SGW', (tester) async {
+    testWidgets('camera center in SGW -> hint switches back to SGW', (
+      tester,
+    ) async {
       //Test simplified: requires full map controller and location updates
       expect(true, isTrue);
     });
 
-    testWidgets('camera center far away -> hint switches to Search (Campus.none)', (tester) async {
-      //Test simplified: requires full map controller and location updates
-      expect(true, isTrue);
-    });
+    testWidgets(
+      'camera center far away -> hint switches to Search (Campus.none)',
+      (tester) async {
+        //Test simplified: requires full map controller and location updates
+        expect(true, isTrue);
+      },
+    );
   });
 }

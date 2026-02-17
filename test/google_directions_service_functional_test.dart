@@ -7,21 +7,21 @@ void main() {
     group('Route Parameter Validation', () {
       test('getRoute accepts valid origin coordinate', () {
         const origin = LatLng(45.4973, -73.5789);
-        
+
         expect(origin.latitude, inInclusiveRange(45, 46));
         expect(origin.longitude, inInclusiveRange(-74, -73));
       });
 
       test('getRoute accepts valid destination coordinate', () {
         const destination = LatLng(45.4582, -73.6405);
-        
+
         expect(destination.latitude, inInclusiveRange(45, 46));
         expect(destination.longitude, inInclusiveRange(-74, -73));
       });
 
       test('getRoute supports all travel modes', () {
         const modes = ['walking', 'driving', 'bicycling', 'transit'];
-        
+
         for (final mode in modes) {
           expect(mode, isNotEmpty);
         }
@@ -29,14 +29,14 @@ void main() {
 
       test('Route URL is constructed correctly', () {
         const baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
-        
+
         expect(baseUrl, contains('googleapis.com'));
         expect(baseUrl, contains('directions'));
       });
 
       test('Query parameters include mode and coordinates', () {
         const origin = LatLng(45.4973, -73.5789);
-        
+
         final originStr = '${origin.latitude},${origin.longitude}';
         expect(originStr, contains('45.4973'));
         expect(originStr, contains('-73.5789'));
@@ -54,11 +54,9 @@ void main() {
           'status': 'OK',
           'routes': [
             {
-              'overview_polyline': {
-                'points': '_p~iF~ps|U'
-              }
-            }
-          ]
+              'overview_polyline': {'points': '_p~iF~ps|U'},
+            },
+          ],
         };
 
         expect(response['status'], 'OK');
@@ -66,10 +64,16 @@ void main() {
       });
 
       test('Polyline points are extracted from first route', () {
-        final routes = [
-          {'overview_polyline': {'points': '_p~iF~ps|U'} as Map},
-          {'overview_polyline': {'points': 'other_route'} as Map},
-        ] as List<Map>;
+        final routes =
+            [
+                  {
+                    'overview_polyline': {'points': '_p~iF~ps|U'} as Map,
+                  },
+                  {
+                    'overview_polyline': {'points': 'other_route'} as Map,
+                  },
+                ]
+                as List<Map>;
 
         final firstRoute = routes[0];
         final overviewPolyline = firstRoute['overview_polyline'] as Map?;
@@ -77,10 +81,7 @@ void main() {
       });
 
       test('ZERO_RESULTS status returns no routes', () {
-        final response = {
-          'status': 'ZERO_RESULTS',
-          'routes': []
-        };
+        final response = {'status': 'ZERO_RESULTS', 'routes': []};
 
         expect(response['routes'], isEmpty);
       });
@@ -152,14 +153,14 @@ void main() {
 
       test('Route coordinates are in Montreal area', () {
         const point = LatLng(45.5, -73.5);
-        
+
         expect(point.latitude, inInclusiveRange(45.0, 46.0));
         expect(point.longitude, inInclusiveRange(-74.0, -73.0));
       });
 
       test('Route preserves precision', () {
         const precise = LatLng(45.49732102, -73.57891234);
-        
+
         expect(precise.latitude, inInclusiveRange(45.0, 46.0));
         expect(precise.longitude, inInclusiveRange(-74.0, -73.0));
       });
@@ -288,10 +289,10 @@ void main() {
         const sgw = LatLng(45.4973, -73.5789);
         const loyola = LatLng(45.4582, -73.6405);
 
-        expect(sgw.latitude, allOf(
-          greaterThan(loyola.latitude),
-          inInclusiveRange(45.0, 46.0)
-        ));
+        expect(
+          sgw.latitude,
+          allOf(greaterThan(loyola.latitude), inInclusiveRange(45.0, 46.0)),
+        );
         expect(sgw.longitude, inInclusiveRange(-74.0, -73.0));
         expect(loyola.latitude, inInclusiveRange(45.0, 46.0));
         expect(loyola.longitude, inInclusiveRange(-74.0, -73.0));
@@ -310,11 +311,7 @@ void main() {
       });
 
       test('Multiple polyline examples', () {
-        final examples = [
-          '_p~iF~ps|U',
-          'u{~vFvyys`@fS',
-          'geomE~ousV',
-        ];
+        final examples = ['_p~iF~ps|U', 'u{~vFvyys`@fS', 'geomE~ousV'];
 
         for (final polyline in examples) {
           expect(polyline, isNotEmpty);
@@ -331,13 +328,13 @@ void main() {
       test('getRoute accepts LatLng parameters', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         // Call the method - this will make a real HTTP request
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
         );
-        
+
         // Result can be null or a List<LatLng>
         if (result != null) {
           expect(result, isA<List<LatLng>>());
@@ -353,76 +350,76 @@ void main() {
       test('getRoute with default walking mode', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         // Default mode is 'walking'
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
         );
-        
+
         expect(result, anyOf(isNull, isA<List<LatLng>>()));
       });
 
       test('getRoute with explicit walking mode', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
           mode: 'walking',
         );
-        
+
         expect(result, anyOf(isNull, isA<List<LatLng>>()));
       });
 
       test('getRoute with driving mode', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
           mode: 'driving',
         );
-        
+
         expect(result, anyOf(isNull, isA<List<LatLng>>()));
       });
 
       test('getRoute with bicycling mode', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
           mode: 'bicycling',
         );
-        
+
         expect(result, anyOf(isNull, isA<List<LatLng>>()));
       });
 
       test('getRoute with transit mode', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
           mode: 'transit',
         );
-        
+
         expect(result, anyOf(isNull, isA<List<LatLng>>()));
       });
 
       test('getRoute with same origin and destination', () async {
         const location = LatLng(45.5, -73.5);
-        
+
         final result = await GoogleDirectionsService.getRoute(
           origin: location,
           destination: location,
         );
-        
+
         // Should return null or empty for same location
         expect(result, anyOf(isNull, isEmpty, isA<List<LatLng>>()));
       });
@@ -430,20 +427,20 @@ void main() {
       test('getRoute result contains valid coordinates', () async {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         final result = await GoogleDirectionsService.getRoute(
           origin: origin,
           destination: destination,
         );
-        
+
         if (result != null && result.isNotEmpty) {
           expect(result.length, greaterThanOrEqualTo(2));
-          
+
           // First point should be near origin
           final first = result.first;
           expect(first.latitude, inInclusiveRange(45.0, 46.0));
           expect(first.longitude, inInclusiveRange(-74.0, -73.0));
-          
+
           // Last point should be near destination
           final last = result.last;
           expect(last.latitude, inInclusiveRange(45.0, 46.0));

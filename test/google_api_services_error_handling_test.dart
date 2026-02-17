@@ -29,30 +29,26 @@ void main() {
         final response = {
           'status': 'OK',
           'routes': [
-            {'overview_polyline': {'points': '_p~iF~ps|U'}}
-          ]
+            {
+              'overview_polyline': {'points': '_p~iF~ps|U'},
+            },
+          ],
         };
-        
+
         expect(response['status'], 'OK');
         expect(response['routes'], isNotEmpty);
       });
 
       test('Parse error status response', () {
-        final response = {
-          'status': 'REQUEST_DENIED',
-          'routes': []
-        };
-        
+        final response = {'status': 'REQUEST_DENIED', 'routes': []};
+
         expect(response['status'], isNotEmpty);
         expect(response['routes'], isEmpty);
       });
 
       test('Parse ZERO_RESULTS response', () {
-        final response = {
-          'status': 'ZERO_RESULTS',
-          'routes': []
-        };
-        
+        final response = {'status': 'ZERO_RESULTS', 'routes': []};
+
         expect(response['status'], 'ZERO_RESULTS');
         expect((response['routes'] as List).isEmpty, true);
       });
@@ -66,20 +62,17 @@ void main() {
           'INVALID_REQUEST',
           'OVER_QUERY_LIMIT',
           'REQUEST_DENIED',
-          'UNKNOWN_ERROR'
+          'UNKNOWN_ERROR',
         ];
-        
+
         for (final status in statusCodes) {
           expect(status, isNotEmpty);
         }
       });
 
       test('Empty routes in OK response', () {
-        final response = {
-          'status': 'OK',
-          'routes': []
-        };
-        
+        final response = {'status': 'OK', 'routes': []};
+
         expect(response['status'], 'OK');
         expect((response['routes'] as List).isEmpty, true);
       });
@@ -88,12 +81,18 @@ void main() {
         final response = {
           'status': 'OK',
           'routes': [
-            {'overview_polyline': {'points': 'route1'}},
-            {'overview_polyline': {'points': 'route2'}},
-            {'overview_polyline': {'points': 'route3'}},
-          ]
+            {
+              'overview_polyline': {'points': 'route1'},
+            },
+            {
+              'overview_polyline': {'points': 'route2'},
+            },
+            {
+              'overview_polyline': {'points': 'route3'},
+            },
+          ],
         };
-        
+
         expect((response['routes'] as List).length, 3);
       });
     });
@@ -116,7 +115,7 @@ void main() {
       test('Valid direction coordinates', () {
         const origin = LatLng(45.4973, -73.5789);
         const destination = LatLng(45.4582, -73.6405);
-        
+
         expect(origin.latitude, inInclusiveRange(-90, 90));
         expect(origin.longitude, inInclusiveRange(-180, 180));
         expect(destination.latitude, inInclusiveRange(-90, 90));
@@ -126,14 +125,14 @@ void main() {
       test('Extreme coordinate values', () {
         const origin = LatLng(89.9999, 179.9999);
         const destination = LatLng(-89.9999, -179.9999);
-        
+
         expect(origin.latitude, inInclusiveRange(-90, 90));
         expect(destination.latitude, inInclusiveRange(-90, 90));
       });
 
       test('Coordinate precision preservation', () {
         const coord = LatLng(45.49732102, -73.57891234);
-        
+
         final coordStr = '${coord.latitude},${coord.longitude}';
         expect(coordStr, contains('45.497'));
         expect(coordStr, contains('-73.578'));
@@ -144,21 +143,21 @@ void main() {
       test('Origin parameter format', () {
         const origin = LatLng(45.4973, -73.5789);
         final originParam = '${origin.latitude},${origin.longitude}';
-        
+
         expect(originParam, '45.4973,-73.5789');
       });
 
       test('Destination parameter format', () {
         const destination = LatLng(45.4582, -73.6405);
         final destParam = '${destination.latitude},${destination.longitude}';
-        
+
         expect(destParam, '45.4582,-73.6405');
       });
 
       test('Mode parameter is included', () {
         const mode = 'walking';
         final queryParam = 'mode=$mode';
-        
+
         expect(queryParam, contains('mode='));
         expect(queryParam, contains('walking'));
       });
@@ -178,14 +177,8 @@ void main() {
       });
 
       test('Valid query strings', () {
-        final queries = [
-          'restaurant',
-          'library',
-          'gym',
-          'café',
-          'hospital',
-        ];
-        
+        final queries = ['restaurant', 'library', 'gym', 'café', 'hospital'];
+
         for (final q in queries) {
           expect(q.isNotEmpty, true);
         }
@@ -221,8 +214,10 @@ void main() {
 
       test('Prefix addition logic', () {
         const placeId = 'ChIJ_without_prefix';
-        final resourceName = placeId.startsWith('places/') ? placeId : 'places/$placeId';
-        
+        final resourceName = placeId.startsWith('places/')
+            ? placeId
+            : 'places/$placeId';
+
         expect(resourceName, 'places/ChIJ_without_prefix');
         expect(resourceName.startsWith('places/'), true);
       });
@@ -243,9 +238,9 @@ void main() {
               'longitude': location.longitude,
             },
             'radius': 5000.0,
-          }
+          },
         };
-        
+
         expect(locationBias['circle'], isNotNull);
         final circle = locationBias['circle'] as Map<String, dynamic>;
         expect(circle['radius'], 5000.0);
@@ -259,9 +254,9 @@ void main() {
               'longitude': -73.5711,
             },
             'radius': 15000.0,
-          }
+          },
         };
-        
+
         final circle = defaultBias['circle'] as Map<String, dynamic>;
         final center = circle['center'] as Map<String, double>;
         expect(center['latitude'], closeTo(45.4958, 0.001));
@@ -269,7 +264,7 @@ void main() {
 
       test('Custom radius handling', () {
         final radii = [1000, 3000, 5000, 10000, 15000];
-        
+
         for (final radius in radii) {
           expect(radius, greaterThan(0));
           expect(radius.toDouble(), isA<double>());
@@ -285,10 +280,11 @@ void main() {
           'structured_formatting': <String, dynamic>{
             'main_text': 'Main',
             'secondary_text': 'Secondary',
-          }
+          },
         };
-        
-        final formatting = json['structured_formatting'] as Map<String, dynamic>;
+
+        final formatting =
+            json['structured_formatting'] as Map<String, dynamic>;
         expect(formatting['main_text'], 'Main');
         expect(formatting['secondary_text'], 'Secondary');
       });
@@ -298,7 +294,7 @@ void main() {
           'place_id': 'test_id',
           'description': 'Test Place',
         };
-        
+
         expect(json['structured_formatting'], isNull);
       });
 
@@ -309,10 +305,11 @@ void main() {
           'structured_formatting': <String, dynamic>{
             'main_text': 'Main',
             'secondary_text': null,
-          }
+          },
         };
-        
-        final formatting = json['structured_formatting'] as Map<String, dynamic>;
+
+        final formatting =
+            json['structured_formatting'] as Map<String, dynamic>;
         expect(formatting['secondary_text'], isNull);
       });
 
@@ -320,10 +317,11 @@ void main() {
         final json = <String, dynamic>{
           'place_id': 'test_id',
           'description': 'Test Place',
-          'structured_formatting': <String, dynamic>{}
+          'structured_formatting': <String, dynamic>{},
         };
-        
-        final formatting = json['structured_formatting'] as Map<String, dynamic>;
+
+        final formatting =
+            json['structured_formatting'] as Map<String, dynamic>;
         expect(formatting.isEmpty, true);
       });
     });
@@ -336,7 +334,7 @@ void main() {
           formattedAddress: '123 Main St',
           location: const LatLng(45.5, -73.5),
         );
-        
+
         expect(result.placeId, 'id123');
         expect(result.name, 'Test Place');
         expect(result.formattedAddress, '123 Main St');
@@ -348,7 +346,7 @@ void main() {
           name: 'Test Place',
           location: const LatLng(45.5, -73.5),
         );
-        
+
         expect(result.formattedAddress, isNull);
       });
 
@@ -358,7 +356,7 @@ void main() {
           name: 'Test Place',
           location: const LatLng(0.0, 0.0),
         );
-        
+
         expect(result.location.latitude, 0.0);
         expect(result.location.longitude, 0.0);
       });
@@ -376,7 +374,7 @@ void main() {
             location: const LatLng(45.6, -73.6),
           ),
         ];
-        
+
         expect(results.length, 2);
         expect(results.every((r) => r.placeId.isNotEmpty), true);
       });
@@ -384,28 +382,20 @@ void main() {
 
     group('API Response Variations', () {
       test('Response with no places field', () {
-        final response = {
-          'status': 'OK',
-        };
-        
+        final response = {'status': 'OK'};
+
         expect(response['places'], isNull);
       });
 
       test('Response with null places', () {
-        final response = {
-          'status': 'OK',
-          'places': null,
-        };
-        
+        final response = {'status': 'OK', 'places': null};
+
         expect(response['places'], isNull);
       });
 
       test('Response with empty places array', () {
-        final response = {
-          'status': 'OK',
-          'places': [],
-        };
-        
+        final response = {'status': 'OK', 'places': []};
+
         expect((response['places'] as List).isEmpty, true);
       });
 
@@ -416,10 +406,10 @@ void main() {
               'id': null,
               'displayName': null,
               'location': null,
-            }
+            },
           ],
         };
-        
+
         final places = response['places'] as List<Map<String, dynamic>>;
         final place = places[0];
         expect(place['id'], isNull);
@@ -428,15 +418,20 @@ void main() {
       test('Response with multiple suggestions', () {
         final response = {
           'suggestions': [
-            {'placePrediction': {'placeId': 'id1'}},
-            {'placePrediction': {'placeId': 'id2'}},
-            {'placePrediction': {'placeId': 'id3'}},
-          ]
+            {
+              'placePrediction': {'placeId': 'id1'},
+            },
+            {
+              'placePrediction': {'placeId': 'id2'},
+            },
+            {
+              'placePrediction': {'placeId': 'id3'},
+            },
+          ],
         };
-        
+
         expect((response['suggestions'] as List).length, 3);
       });
     });
   });
 }
-

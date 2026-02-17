@@ -13,7 +13,7 @@ void main() {
           const LatLng(0, 2),
           const LatLng(2, 0),
         ];
-        
+
         // The center should be somewhere in the middle of the triangle
         double sumLat = 0.0;
         double sumLng = 0.0;
@@ -23,7 +23,7 @@ void main() {
         }
         final centerLat = sumLat / points.length;
         final centerLng = sumLng / points.length;
-        
+
         expect(centerLat, greaterThan(0));
         expect(centerLng, greaterThan(0));
         expect(centerLat, lessThan(2));
@@ -37,7 +37,7 @@ void main() {
           const LatLng(4, 4),
           const LatLng(4, 0),
         ];
-        
+
         double sumLat = 0.0;
         double sumLng = 0.0;
         for (var p in points) {
@@ -46,7 +46,7 @@ void main() {
         }
         final centerLat = sumLat / points.length;
         final centerLng = sumLng / points.length;
-        
+
         expect(centerLat, closeTo(2.0, 0.01));
         expect(centerLng, closeTo(2.0, 0.01));
       });
@@ -78,19 +78,19 @@ void main() {
       test('Polygon center is within building polygon bounds', () {
         for (final building in buildingPolygons.take(5)) {
           final center = building.center;
-          
+
           double minLat = building.points.first.latitude;
           double maxLat = building.points.first.latitude;
           double minLng = building.points.first.longitude;
           double maxLng = building.points.first.longitude;
-          
+
           for (final point in building.points) {
             minLat = minLat < point.latitude ? minLat : point.latitude;
             maxLat = maxLat > point.latitude ? maxLat : point.latitude;
             minLng = minLng < point.longitude ? minLng : point.longitude;
             maxLng = maxLng > point.longitude ? maxLng : point.longitude;
           }
-          
+
           // Center should be within bounds (with tolerance)
           expect(center.latitude, greaterThanOrEqualTo(minLat - 0.01));
           expect(center.latitude, lessThanOrEqualTo(maxLat + 0.01));
@@ -131,14 +131,14 @@ void main() {
         // Create a point just inside the radius
         const center = concordiaSGW;
         const radiusKm = 500; // meters
-        
+
         // Point at exact center should be SGW
         expect(detectCampus(center), Campus.sgw);
       });
 
       test('Campus radius boundary Loyola', () {
         const center = concordiaLoyola;
-        
+
         // Point at exact center should be Loyola
         expect(detectCampus(center), Campus.loyola);
       });
@@ -149,7 +149,7 @@ void main() {
           (concordiaSGW.latitude + concordiaLoyola.latitude) / 2,
           (concordiaSGW.longitude + concordiaLoyola.longitude) / 2,
         );
-        
+
         final detected = detectCampus(between);
         expect([Campus.sgw, Campus.loyola, Campus.none], contains(detected));
       });
@@ -158,12 +158,12 @@ void main() {
     group('Bounds Calculation', () {
       test('Single point bounds', () {
         final points = [const LatLng(45.5, -73.5)];
-        
+
         double minLat = points.first.latitude;
         double maxLat = points.first.latitude;
         double minLng = points.first.longitude;
         double maxLng = points.first.longitude;
-        
+
         expect(minLat, 45.5);
         expect(maxLat, 45.5);
         expect(minLng, -73.5);
@@ -176,19 +176,19 @@ void main() {
           const LatLng(45.5, -73.5),
           const LatLng(45.3, -73.6),
         ];
-        
+
         double minLat = points[0].latitude;
         double maxLat = points[0].latitude;
         double minLng = points[0].longitude;
         double maxLng = points[0].longitude;
-        
+
         for (final p in points) {
           minLat = minLat < p.latitude ? minLat : p.latitude;
           maxLat = maxLat > p.latitude ? maxLat : p.latitude;
           minLng = minLng < p.longitude ? minLng : p.longitude;
           maxLng = maxLng > p.longitude ? maxLng : p.longitude;
         }
-        
+
         expect(minLat, 45.3);
         expect(maxLat, 45.5);
         expect(minLng, -73.6);
@@ -196,19 +196,16 @@ void main() {
       });
 
       test('Bounds with negative and positive coordinates', () {
-        final points = [
-          const LatLng(-10, -50),
-          const LatLng(10, 50),
-        ];
-        
+        final points = [const LatLng(-10, -50), const LatLng(10, 50)];
+
         double minLat = points[0].latitude;
         double maxLat = points[0].latitude;
-        
+
         for (final p in points) {
           minLat = minLat < p.latitude ? minLat : p.latitude;
           maxLat = maxLat > p.latitude ? maxLat : p.latitude;
         }
-        
+
         expect(minLat, -10);
         expect(maxLat, 10);
       });
@@ -218,12 +215,12 @@ void main() {
           final points = building.points;
           double minLat = points.first.latitude;
           double maxLat = points.first.latitude;
-          
+
           for (final p in points) {
             minLat = minLat < p.latitude ? minLat : p.latitude;
             maxLat = maxLat > p.latitude ? maxLat : p.latitude;
           }
-          
+
           expect(minLat, lessThanOrEqualTo(maxLat));
         }
       });
@@ -271,7 +268,7 @@ void main() {
           concordiaLoyola.latitude,
           concordiaLoyola.longitude,
         );
-        
+
         // Distance should be greater than 0 and reasonable (a few km)
         expect(distance, greaterThan(0));
         expect(distance, lessThan(100000)); // Less than 100km
@@ -285,28 +282,28 @@ void main() {
           point.latitude,
           point.longitude,
         );
-        
+
         expect(distance, closeTo(0, 0.1));
       });
 
       test('Distance is symmetric', () {
         const point1 = LatLng(45.4973, -73.5789);
         const point2 = LatLng(45.4582, -73.6405);
-        
+
         final dist1to2 = Geolocator.distanceBetween(
           point1.latitude,
           point1.longitude,
           point2.latitude,
           point2.longitude,
         );
-        
+
         final dist2to1 = Geolocator.distanceBetween(
           point2.latitude,
           point2.longitude,
           point1.latitude,
           point1.longitude,
         );
-        
+
         expect(dist1to2, closeTo(dist2to1, 0.1));
       });
 
@@ -334,9 +331,13 @@ void main() {
         final sgwResult = detectCampus(concordiaSGW);
         final loyolaResult = detectCampus(concordiaLoyola);
         final noneResult = detectCampus(const LatLng(0, 0));
-        
+
         expect([Campus.sgw, Campus.loyola, Campus.none], contains(sgwResult));
-        expect([Campus.sgw, Campus.loyola, Campus.none], contains(loyolaResult));
+        expect([
+          Campus.sgw,
+          Campus.loyola,
+          Campus.none,
+        ], contains(loyolaResult));
         expect([Campus.sgw, Campus.loyola, Campus.none], contains(noneResult));
       });
     });
@@ -345,19 +346,19 @@ void main() {
       test('Building centers are within bounds', () {
         for (final building in buildingPolygons.take(10)) {
           final center = building.center;
-          
+
           double minLat = building.points.first.latitude;
           double maxLat = minLat;
           double minLng = building.points.first.longitude;
           double maxLng = minLng;
-          
+
           for (final point in building.points) {
             minLat = minLat < point.latitude ? minLat : point.latitude;
             maxLat = maxLat > point.latitude ? maxLat : point.latitude;
             minLng = minLng < point.longitude ? minLng : point.longitude;
             maxLng = maxLng > point.longitude ? maxLng : point.longitude;
           }
-          
+
           expect(center.latitude, greaterThanOrEqualTo(minLat - 0.001));
           expect(center.latitude, lessThanOrEqualTo(maxLat + 0.001));
         }
@@ -368,7 +369,7 @@ void main() {
         for (final building in buildingPolygons.take(5)) {
           centers.add(building.center);
         }
-        
+
         // Not all centers should be identical
         final uniqueCenters = centers.toSet();
         expect(uniqueCenters.length, greaterThan(1));
@@ -418,7 +419,7 @@ void main() {
       test('Campus detection at poles', () {
         const north = LatLng(90, 0);
         const south = LatLng(-90, 0);
-        
+
         expect(detectCampus(north), Campus.none);
         expect(detectCampus(south), Campus.none);
       });
@@ -426,7 +427,7 @@ void main() {
       test('Campus detection at date line', () {
         const east = LatLng(45, 180);
         const west = LatLng(45, -180);
-        
+
         expect(detectCampus(east), Campus.none);
         expect(detectCampus(west), Campus.none);
       });
@@ -437,7 +438,7 @@ void main() {
           const LatLng(0.001, 0.002),
           const LatLng(0.002, 0.001),
         ];
-        
+
         for (final p in points) {
           expect(p.latitude, greaterThan(-90));
           expect(p.latitude, lessThan(90));
@@ -447,7 +448,7 @@ void main() {
       test('Very large coordinate differences', () {
         const p1 = LatLng(89, 179);
         const p2 = LatLng(-89, -179);
-        
+
         expect(p1.latitude, inInclusiveRange(-90, 90));
         expect(p2.latitude, inInclusiveRange(-90, 90));
       });

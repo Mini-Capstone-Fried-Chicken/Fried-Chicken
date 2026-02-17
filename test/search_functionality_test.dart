@@ -236,7 +236,9 @@ void main() {
 
       test('Get building name by code works for all buildings', () {
         for (final building in concordiaBuildingNames) {
-          final name = BuildingSearchService.getBuildingNameByCode(building.code);
+          final name = BuildingSearchService.getBuildingNameByCode(
+            building.code,
+          );
           expect(name, building.name);
         }
       });
@@ -258,15 +260,17 @@ void main() {
       test('Check if location in Concordia building returns correct result', () {
         // Test with Hall Building coordinates (approximate center)
         final hallCenter = LatLng(45.4973, -73.5789);
-        final isInBuilding = BuildingSearchService.isLocationInConcordiaBuilding(hallCenter);
-        
+        final isInBuilding =
+            BuildingSearchService.isLocationInConcordiaBuilding(hallCenter);
+
         // The result depends on the actual polygon data, but we can test the method works
         expect(isInBuilding, isA<bool>());
       });
 
       test('Check if random location returns boolean', () {
         final randomLocation = LatLng(45.5, -73.5);
-        final isInBuilding = BuildingSearchService.isLocationInConcordiaBuilding(randomLocation);
+        final isInBuilding =
+            BuildingSearchService.isLocationInConcordiaBuilding(randomLocation);
         expect(isInBuilding, isA<bool>());
       });
     });
@@ -278,7 +282,9 @@ void main() {
       });
 
       test('Exact name match appears before partial matches', () {
-        final suggestions = BuildingSearchService.getSuggestions('Hall Building');
+        final suggestions = BuildingSearchService.getSuggestions(
+          'Hall Building',
+        );
         expect(suggestions.first.code, 'HALL');
       });
 
@@ -323,14 +329,22 @@ void main() {
       test('All building codes can be searched', () {
         for (final building in concordiaBuildingNames) {
           final result = BuildingSearchService.searchBuilding(building.code);
-          expect(result, isNotNull, reason: 'Building ${building.code} should be searchable');
+          expect(
+            result,
+            isNotNull,
+            reason: 'Building ${building.code} should be searchable',
+          );
         }
       });
 
       test('All building names can be searched', () {
         for (final building in concordiaBuildingNames) {
           final result = BuildingSearchService.searchBuilding(building.name);
-          expect(result, isNotNull, reason: 'Building "${building.name}" should be searchable');
+          expect(
+            result,
+            isNotNull,
+            reason: 'Building "${building.name}" should be searchable',
+          );
         }
       });
 

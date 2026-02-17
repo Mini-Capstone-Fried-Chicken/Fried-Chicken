@@ -18,7 +18,7 @@ class BuildingSearchService {
     }
 
     // Search using Google Places API
-    final placesResults = await GooglePlacesService.searchPlaces(
+    final placesResults = await GooglePlacesService.instance.searchPlaces(
       query,
       location: userLocation,
       radius: 5000,
@@ -31,14 +31,16 @@ class BuildingSearchService {
       final concordiaBuilding = _findBuildingByLocation(place.location);
       final isConcordia = concordiaBuilding != null;
 
-      results.add(SearchResult.fromGooglePlace(
-        name: place.name,
-        address: place.formattedAddress,
-        location: place.location,
-        isConcordiaBuilding: isConcordia,
-        buildingPolygon: concordiaBuilding,
-        placeId: place.placeId,
-      ));
+      results.add(
+        SearchResult.fromGooglePlace(
+          name: place.name,
+          address: place.formattedAddress,
+          location: place.location,
+          isConcordiaBuilding: isConcordia,
+          buildingPolygon: concordiaBuilding,
+          placeId: place.placeId,
+        ),
+      );
     }
 
     return results;
@@ -181,28 +183,37 @@ class BuildingSearchService {
 
     // Get Concordia building suggestions
     final concordiaSuggestions = getSuggestions(query);
-    print('[DEBUG] Found ${concordiaSuggestions.length} Concordia building suggestions');
+    print(
+      '[DEBUG] Found ${concordiaSuggestions.length} Concordia building suggestions',
+    );
     for (final building in concordiaSuggestions.take(2)) {
       suggestions.add(SearchSuggestion.fromConcordiaBuilding(building));
     }
 
     // Get Google Places autocomplete predictions
     try {
-      final placePredictions = await GooglePlacesService.getAutocompletePredictions(
-        query,
-        location: userLocation,
-        radius: 5000,
+      final placePredictions =
+          await GooglePlacesService.instance.getAutocompletePredictions(
+            query,
+            location: userLocation,
+            radius: 5000,
+          );
+
+      print(
+        '[DEBUG] Received ${placePredictions.length} Google Places predictions',
       );
 
-      print('[DEBUG] Received ${placePredictions.length} Google Places predictions');
-      
       for (final prediction in placePredictions) {
-        print('[DEBUG] Adding place: ${prediction.mainText} - ${prediction.secondaryText}');
-        suggestions.add(SearchSuggestion.fromGooglePlace(
-          name: prediction.mainText,
-          subtitle: prediction.secondaryText,
-          placeId: prediction.placeId,
-        ));
+        print(
+          '[DEBUG] Adding place: ${prediction.mainText} - ${prediction.secondaryText}',
+        );
+        suggestions.add(
+          SearchSuggestion.fromGooglePlace(
+            name: prediction.mainText,
+            subtitle: prediction.secondaryText,
+            placeId: prediction.placeId,
+          ),
+        );
       }
     } catch (e) {
       print('[ERROR] Error getting Google Places predictions: $e');
@@ -215,9 +226,7 @@ class BuildingSearchService {
   /// Find building polygon by code
   static BuildingPolygon? _findBuildingByCode(String code) {
     try {
-      return buildingPolygons.firstWhere(
-        (building) => building.code == code,
-      );
+      return buildingPolygons.firstWhere((building) => building.code == code);
     } catch (e) {
       return null;
     }

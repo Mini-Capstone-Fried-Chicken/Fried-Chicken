@@ -50,7 +50,6 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
-
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
   final bool isLoggedIn;
@@ -98,9 +97,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
   SearchResult? _selectedSearchResult; // For non-Concordia places
-  
+
   Set<Polyline> _routePolylines = {};
-  
+
   // Route preview mode
   bool _showRoutePreview = false;
   LatLng? _routeOrigin;
@@ -159,7 +158,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       try {
         final bounds = await controller.getVisibleRegion();
         final lat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-        final lng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+        final lng =
+            (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
         center = LatLng(lat, lng);
       } catch (_) {
         return;
@@ -191,26 +191,24 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       }
     }
 
-    controller.animateCamera(
-      CameraUpdate.newLatLngZoom(loc, 17),
-    );
+    controller.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
   }
 
-Future<void> _openLink(String url) async {
-  if (url.trim().isEmpty) return;
+  Future<void> _openLink(String url) async {
+    if (url.trim().isEmpty) return;
 
-  final uri = Uri.tryParse(url);
-  if (uri == null) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
 
-  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!ok) {
-    // optional: show a snackbar
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Could not open link")),
-    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) {
+      // optional: show a snackbar
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Could not open link")));
+    }
   }
-}
 
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
@@ -245,7 +243,10 @@ Future<void> _openLink(String url) async {
 
   void _schedulePopupUpdate() {
     _popupDebounce?.cancel();
-    _popupDebounce = Timer(const Duration(milliseconds: 16), _updatePopupOffset);
+    _popupDebounce = Timer(
+      const Duration(milliseconds: 16),
+      _updatePopupOffset,
+    );
   }
 
   Future<void> _updatePopupOffset() async {
@@ -287,7 +288,9 @@ Future<void> _openLink(String url) async {
 
     if (controller == null) return;
 
-    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((_) async {
+    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((
+      _,
+    ) async {
       if (!mounted) return;
       await _updatePopupOffset();
       if (!mounted) return;
@@ -320,17 +323,21 @@ Future<void> _openLink(String url) async {
   Future<void> _getDirections() async {
     print('[DEBUG] Get directions button clicked');
     print('[DEBUG] Current location: $_currentLocation');
-    print('[DEBUG] Selected building: ${_selectedBuildingPoly?.name} (${_selectedBuildingPoly?.code})');
-    
+    print(
+      '[DEBUG] Selected building: ${_selectedBuildingPoly?.name} (${_selectedBuildingPoly?.code})',
+    );
+
     final origin = _currentLocation;
     final destination = _selectedBuildingPoly?.center;
 
     if (origin == null) {
       print('[ERROR] Cannot get directions: Current location is null');
-      print('[ERROR] Make sure location services are enabled and location is set in emulator');
+      print(
+        '[ERROR] Make sure location services are enabled and location is set in emulator',
+      );
       return;
     }
-    
+
     if (destination == null) {
       print('[ERROR] Cannot get directions: Destination is null');
       return;
@@ -344,7 +351,8 @@ Future<void> _openLink(String url) async {
       _routeOrigin = origin;
       _routeDestination = destination;
       _routeOriginText = 'Current location';
-      _routeDestinationText = '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
+      _routeDestinationText =
+          '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
     });
 
     // Fetch the initial route
@@ -363,7 +371,7 @@ Future<void> _openLink(String url) async {
     print('[DEBUG] Fetching route from $origin to $destination');
 
     try {
-      final routePoints = await GoogleDirectionsService.getRoute(
+      final routePoints = await GoogleDirectionsService.instance.getRoute(
         origin: origin,
         destination: destination,
         mode: 'walking',
@@ -494,28 +502,38 @@ Future<void> _openLink(String url) async {
   }
 
   Future<void> _onRouteOriginSelected(SearchSuggestion suggestion) async {
-    print('[DEBUG] Origin selected: ${suggestion.name}, isConcordia: ${suggestion.isConcordiaBuilding}, placeId: ${suggestion.placeId}');
-    
+    print(
+      '[DEBUG] Origin selected: ${suggestion.name}, isConcordia: ${suggestion.isConcordiaBuilding}, placeId: ${suggestion.placeId}',
+    );
+
     LatLng? newOrigin;
     String displayText = suggestion.name;
-    
+
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       print('[DEBUG] Handling Concordia building');
-      final building = BuildingSearchService.searchBuilding(suggestion.buildingName!.code);
+      final building = BuildingSearchService.searchBuilding(
+        suggestion.buildingName!.code,
+      );
       newOrigin = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
       print('[DEBUG] Concordia building origin: $newOrigin');
     } else if (suggestion.placeId != null) {
       // Fetch place details for non-Concordia locations
-      print('[DEBUG] Fetching place details for non-Concordia place: ${suggestion.placeId}');
+      print(
+        '[DEBUG] Fetching place details for non-Concordia place: ${suggestion.placeId}',
+      );
       try {
-        final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId!);
+        final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
+          suggestion.placeId!,
+        );
         print('[DEBUG] Place details result: $placeDetails');
         if (placeDetails != null) {
           newOrigin = placeDetails.location;
           print('[DEBUG] Non-Concordia origin location: $newOrigin');
         } else {
-          print('[ERROR] Place details returned null for ${suggestion.placeId}');
+          print(
+            '[ERROR] Place details returned null for ${suggestion.placeId}',
+          );
         }
       } catch (e) {
         print('[ERROR] Error fetching place details: $e');
@@ -540,15 +558,19 @@ Future<void> _openLink(String url) async {
   Future<void> _onRouteDestinationSelected(SearchSuggestion suggestion) async {
     LatLng? newDestination;
     String displayText = suggestion.name;
-    
+
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
-      final building = BuildingSearchService.searchBuilding(suggestion.buildingName!.code);
+      final building = BuildingSearchService.searchBuilding(
+        suggestion.buildingName!.code,
+      );
       newDestination = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
     } else if (suggestion.placeId != null) {
       // Fetch place details for non-Concordia locations
       try {
-        final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId!);
+        final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
+          suggestion.placeId!,
+        );
         if (placeDetails != null) {
           newDestination = placeDetails.location;
         }
@@ -614,7 +636,7 @@ Future<void> _openLink(String url) async {
     if (results.isNotEmpty) {
       // Find the first non-Concordia result, or use the first result if all are Concordia
       SearchResult? selectedResult;
-      
+
       // Priority: non-Concordia buildings first
       for (final result in results) {
         if (!result.isConcordiaBuilding) {
@@ -622,14 +644,15 @@ Future<void> _openLink(String url) async {
           break;
         }
       }
-      
+
       // If all results are Concordia buildings, use the first one
       if (selectedResult == null && results.isNotEmpty) {
         selectedResult = results.first;
       }
-      
+
       if (selectedResult != null) {
-        if (selectedResult.isConcordiaBuilding && selectedResult.buildingPolygon != null) {
+        if (selectedResult.isConcordiaBuilding &&
+            selectedResult.buildingPolygon != null) {
           // It's a Concordia building found via Google Places
           _onBuildingTapped(selectedResult.buildingPolygon!);
         } else {
@@ -671,9 +694,7 @@ Future<void> _openLink(String url) async {
 
     if (result.isConcordiaBuilding) {
       // For Concordia buildings: just animate camera
-      controller.animateCamera(
-        CameraUpdate.newLatLngZoom(result.location, 18),
-      );
+      controller.animateCamera(CameraUpdate.newLatLngZoom(result.location, 18));
 
       // Show info about the Concordia building
       if (!mounted) return;
@@ -709,7 +730,9 @@ Future<void> _openLink(String url) async {
   Future<void> _enterRoutePreviewForPlace(SearchResult place) async {
     if (_currentLocation == null) return;
 
-    print('[DEBUG] Entering route preview for non-Concordia place: ${place.name}');
+    print(
+      '[DEBUG] Entering route preview for non-Concordia place: ${place.name}',
+    );
 
     // Enter route preview mode with current location as origin and selected place as destination
     setState(() {
@@ -724,7 +747,9 @@ Future<void> _openLink(String url) async {
       _selectedSearchResult = place;
     });
 
-    print('[DEBUG] Route preview initialized - origin: $_routeOrigin, destination: $_routeDestination');
+    print(
+      '[DEBUG] Route preview initialized - origin: $_routeOrigin, destination: $_routeDestination',
+    );
 
     // Fetch the route
     await _fetchRoute();
@@ -733,16 +758,22 @@ Future<void> _openLink(String url) async {
   Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       // Concordia building selected
-      final buildingPolygon = BuildingSearchService.searchBuilding(suggestion.buildingName!.code);
+      final buildingPolygon = BuildingSearchService.searchBuilding(
+        suggestion.buildingName!.code,
+      );
       if (buildingPolygon == null) return;
       _onBuildingTapped(buildingPolygon);
     } else if (suggestion.placeId != null) {
       // Google Place selected - fetch details first
-      final placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.placeId!);
+      final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
+        suggestion.placeId!,
+      );
       if (placeDetails != null) {
         // Check if it's a Concordia building
-        final concordiaBuilding = BuildingSearchService.searchBuilding(suggestion.name);
-        
+        final concordiaBuilding = BuildingSearchService.searchBuilding(
+          suggestion.name,
+        );
+
         if (concordiaBuilding != null) {
           // Found it in Concordia buildings
           _onBuildingTapped(concordiaBuilding);
@@ -774,17 +805,25 @@ Future<void> _openLink(String url) async {
       final strokeColor = isSelected
           ? selectedBlue.withOpacity(0.95)
           : isCurrent
-              ? Colors.blue.withOpacity(0.8)
-              : burgundy.withOpacity(0.55);
+          ? Colors.blue.withOpacity(0.8)
+          : burgundy.withOpacity(0.55);
 
       final fillColor = isSelected
           ? selectedBlue.withOpacity(0.25)
           : isCurrent
-              ? Colors.blue.withOpacity(0.25)
-              : burgundy.withOpacity(0.22);
+          ? Colors.blue.withOpacity(0.25)
+          : burgundy.withOpacity(0.22);
 
-      final strokeWidth = isSelected ? 3 : isCurrent ? 3 : 2;
-      final zIndex = isSelected ? 3 : isCurrent ? 2 : 1;
+      final strokeWidth = isSelected
+          ? 3
+          : isCurrent
+          ? 3
+          : 2;
+      final zIndex = isSelected
+          ? 3
+          : isCurrent
+          ? 2
+          : 1;
 
       polys.add(
         Polygon(
@@ -809,8 +848,9 @@ Future<void> _openLink(String url) async {
 
     _selectedCampus = widget.initialCampus;
 
-    _lastCameraTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    _lastCameraTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
     _createBlueDotIcon();
     _startLocationUpdates();
@@ -822,7 +862,7 @@ Future<void> _openLink(String url) async {
   void _onSearchChanged() {
     // Cancel previous timer
     _debounceTimer?.cancel();
-    
+
     // Set a new timer to delay the API call
     _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       final query = _searchController.text;
@@ -841,9 +881,9 @@ Future<void> _openLink(String url) async {
         // On error, just show Concordia buildings
         if (mounted) {
           setState(() {
-            _searchSuggestions = BuildingSearchService.getSuggestions(query)
-                .map((b) => SearchSuggestion.fromConcordiaBuilding(b))
-                .toList();
+            _searchSuggestions = BuildingSearchService.getSuggestions(
+              query,
+            ).map((b) => SearchSuggestion.fromConcordiaBuilding(b)).toList();
           });
         }
       }
@@ -851,23 +891,27 @@ Future<void> _openLink(String url) async {
   }
 
   Future<void> _createBlueDotIcon() async {
-    _blueDotIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/blue_dot.png',
-    ).catchError((_) {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
-    });
+    _blueDotIcon =
+        await BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(48, 48)),
+          'assets/blue_dot.png',
+        ).catchError((_) {
+          return BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueBlue,
+          );
+        });
 
-    _blueDotIcon ??=
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueAzure,
+    );
   }
 
   Future<void> _startLocationUpdates() async {
     print('[DEBUG] Starting location updates...');
-    
+
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     print('[DEBUG] Location service enabled: $serviceEnabled');
-    
+
     if (!serviceEnabled) {
       print('[ERROR] Location services are disabled');
       return;
@@ -875,7 +919,7 @@ Future<void> _openLink(String url) async {
 
     LocationPermission permission = await Geolocator.checkPermission();
     print('[DEBUG] Initial permission status: $permission');
-    
+
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       print('[DEBUG] Permission after request: $permission');
@@ -899,8 +943,10 @@ Future<void> _openLink(String url) async {
         ),
       );
       final newLatLng = LatLng(position.latitude, position.longitude);
-      
-      print('[DEBUG] Location obtained: ${position.latitude}, ${position.longitude}');
+
+      print(
+        '[DEBUG] Location obtained: ${position.latitude}, ${position.longitude}',
+      );
       print('[DEBUG] Location accuracy: ${position.accuracy} meters');
 
       if (!mounted) return;
@@ -909,34 +955,37 @@ Future<void> _openLink(String url) async {
         _currentCampus = detectCampus(newLatLng);
         _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
-      
+
       print('[DEBUG] Current campus: $_currentCampus');
       print('[DEBUG] Current building: ${_currentBuildingPoly?.name}');
 
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLng(newLatLng),
-      );
+      _mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
     } catch (e) {
       print('[ERROR] Failed to get current position: $e');
-      print('[ERROR] On emulator: Use Extended Controls (... button) > Location to set GPS coordinates');
+      print(
+        '[ERROR] On emulator: Use Extended Controls (... button) > Location to set GPS coordinates',
+      );
     }
 
-    _posSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
-      ),
-    ).listen((position) {
-      final newLatLng = LatLng(position.latitude, position.longitude);
-      print('[DEBUG] Location update: ${position.latitude}, ${position.longitude}');
+    _posSub =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            distanceFilter: 5,
+          ),
+        ).listen((position) {
+          final newLatLng = LatLng(position.latitude, position.longitude);
+          print(
+            '[DEBUG] Location update: ${position.latitude}, ${position.longitude}',
+          );
 
-      if (!mounted) return;
-      setState(() {
-        _currentLocation = newLatLng;
-        _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = detectBuildingPoly(newLatLng);
-      });
-    });
+          if (!mounted) return;
+          setState(() {
+            _currentLocation = newLatLng;
+            _currentCampus = detectCampus(newLatLng);
+            _currentBuildingPoly = detectBuildingPoly(newLatLng);
+          });
+        });
   }
 
   Set<Marker> _createMarkers() {
@@ -967,7 +1016,9 @@ Future<void> _openLink(String url) async {
             markerId: const MarkerId('route_destination'),
             position: _routeDestination!,
             infoWindow: InfoWindow(title: _routeDestinationText),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            ),
           ),
         );
       }
@@ -978,7 +1029,7 @@ Future<void> _openLink(String url) async {
 
   Set<Circle> _createCircles() {
     final circles = <Circle>{};
-    
+
     if (_currentLocation == null) return {};
 
     circles.add(
@@ -1027,16 +1078,17 @@ Future<void> _openLink(String url) async {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    final LatLng initialTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
     final Campus labelCampus = _selectedCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
         ? 'SGW'
         : labelCampus == Campus.loyola
-            ? 'Loyola'
-            : '';
+        ? 'Loyola'
+        : '';
 
     final screen = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
@@ -1114,7 +1166,7 @@ Future<void> _openLink(String url) async {
               markers: _createMarkers(),
               circles: _createCircles(),
               polygons: _createBuildingPolygons(),
-            polylines: _routePolylines,
+              polylines: _routePolylines,
             ),
           if (!_showRoutePreview)
             Positioned(
@@ -1131,7 +1183,9 @@ Future<void> _openLink(String url) async {
               ),
             ),
 
-          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null && popupLeft != null && popupTop != null)
+          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
+              popupLeft != null &&
+              popupTop != null)
             Positioned(
               left: popupLeft,
               top: popupTop,
@@ -1140,17 +1194,31 @@ Future<void> _openLink(String url) async {
                   title:
                       '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
                   description:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.description ??
-                          'No description available.',
+                      buildingInfoByCode[(widget.debugSelectedBuilding ??
+                                  _selectedBuildingPoly)!
+                              .code]
+                          ?.description ??
+                      'No description available.',
                   accessibility:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.accessibility ??
-                          false,
+                      buildingInfoByCode[(widget.debugSelectedBuilding ??
+                                  _selectedBuildingPoly)!
+                              .code]
+                          ?.accessibility ??
+                      false,
                   facilities:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.facilities ??
-                          const [],
+                      buildingInfoByCode[(widget.debugSelectedBuilding ??
+                                  _selectedBuildingPoly)!
+                              .code]
+                          ?.facilities ??
+                      const [],
                   onMore: () {
-                    final link = widget.debugLinkOverride ??
-                        (buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.link ?? '');
+                    final link =
+                        widget.debugLinkOverride ??
+                        (buildingInfoByCode[(widget.debugSelectedBuilding ??
+                                        _selectedBuildingPoly)!
+                                    .code]
+                                ?.link ??
+                            '');
                     _openLink(link);
                   },
                   onClose: _closePopup,
@@ -1160,43 +1228,42 @@ Future<void> _openLink(String url) async {
               ),
             ),
 
-         Positioned(
-  bottom: 70,
-  left: 20,
-  child: PointerInterceptor(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton(
-          heroTag: 'location_button',
-          mini: true,
-          onPressed: () {
-            final loc = _currentLocation;
-            if (loc == null) return;
-            _mapController?.animateCamera(
-              CameraUpdate.newLatLngZoom(loc, 17),
-            );
-          },
-          child: const Icon(Icons.my_location),
-        ),
-        const SizedBox(height: 10),
-        FloatingActionButton.extended(
-          heroTag: 'campus_button',
-          onPressed: _goToMyLocation,
-          icon: const Icon(Icons.school),
-          label: Text(
-            _currentCampus == Campus.sgw
-                ? 'SGW Campus'
-                : _currentCampus == Campus.loyola
-                    ? 'Loyola Campus'
-                    : 'Off Campus',
+          Positioned(
+            bottom: 70,
+            left: 20,
+            child: PointerInterceptor(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'location_button',
+                    mini: true,
+                    onPressed: () {
+                      final loc = _currentLocation;
+                      if (loc == null) return;
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(loc, 17),
+                      );
+                    },
+                    child: const Icon(Icons.my_location),
+                  ),
+                  const SizedBox(height: 10),
+                  FloatingActionButton.extended(
+                    heroTag: 'campus_button',
+                    onPressed: _goToMyLocation,
+                    icon: const Icon(Icons.school),
+                    label: Text(
+                      _currentCampus == Campus.sgw
+                          ? 'SGW Campus'
+                          : _currentCampus == Campus.loyola
+                          ? 'Loyola Campus'
+                          : 'Off Campus',
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
-    ),
-  ),
-),
-
 
           // Route Preview Panel
           if (_showRoutePreview)

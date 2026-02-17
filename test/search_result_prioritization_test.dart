@@ -9,10 +9,10 @@ void main() {
       // Should match
       expect(BuildingSearchService.searchBuilding('MB'), isNotNull);
       expect(BuildingSearchService.searchBuilding('mb'), isNotNull);
-      
+
       // Should match - "hall" is an exact search term for "Hall Building"
       expect(BuildingSearchService.searchBuilding('hall'), isNotNull);
-      
+
       // Should NOT match (single letter codes without search terms)
       expect(BuildingSearchService.searchBuilding('X'), isNull);
     });
@@ -33,7 +33,7 @@ void main() {
     test('searchBuilding should match exact search terms only', () {
       // "gm" is a search term for "GM Building"
       expect(BuildingSearchService.searchBuilding('gm'), isNotNull);
-      
+
       // "g" is not an exact term
       expect(BuildingSearchService.searchBuilding('g'), isNull);
     });
@@ -41,7 +41,7 @@ void main() {
     test('searchBuilding fallback partial match should require 3+ chars', () {
       // These are >= 3 chars and start with building name
       expect(BuildingSearchService.searchBuilding('JSM'), isNotNull);
-      
+
       // These are < 3 chars, should not match
       expect(BuildingSearchService.searchBuilding('JS'), isNull);
     });
@@ -68,7 +68,7 @@ void main() {
 
       // With the new prioritization logic, non-Concordia should be selected first
       SearchResult? selectedResult;
-      
+
       // Implement the prioritization logic from _onSearchSubmitted
       for (final result in results) {
         if (!result.isConcordiaBuilding) {
@@ -76,7 +76,7 @@ void main() {
           break;
         }
       }
-      
+
       // Verify non-Concordia was selected
       expect(selectedResult?.name, "McDonald's");
       expect(selectedResult?.isConcordiaBuilding, false);
@@ -109,11 +109,11 @@ void main() {
           break;
         }
       }
-      
+
       if (selectedResult == null && results.isNotEmpty) {
         selectedResult = results.first;
       }
-      
+
       // Should select first Concordia building
       expect(selectedResult?.name, 'MB Building');
       expect(selectedResult?.isConcordiaBuilding, true);

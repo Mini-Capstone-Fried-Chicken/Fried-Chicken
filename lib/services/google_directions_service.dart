@@ -10,9 +10,18 @@ class GoogleDirectionsService {
   );
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api';
 
+  /// HTTP client for making requests (injectable for testing)
+  final http.Client _client;
+
+  /// Default singleton instance
+  static final GoogleDirectionsService instance = GoogleDirectionsService();
+
+  /// Constructor with optional HTTP client injection
+  GoogleDirectionsService({http.Client? client}) : _client = client ?? http.Client();
+
   /// Get route polyline points from origin to destination
   /// Returns null if route cannot be found
-  static Future<List<LatLng>?> getRoute({
+  Future<List<LatLng>?> getRoute({
     required LatLng origin,
     required LatLng destination,
     String mode = 'walking', // walking, driving, bicycling, transit
@@ -27,25 +36,30 @@ class GoogleDirectionsService {
         },
       );
 
-      print('Fetching directions from ${origin.latitude},${origin.longitude} to ${destination.latitude},${destination.longitude}');
+      print(
+        'Fetching directions from ${origin.latitude},${origin.longitude} to ${destination.latitude},${destination.longitude}',
+      );
 
-      final response = await http.get(uri);
+      final response = await _client.get(uri);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        
+
         if (data['status'] == 'OK') {
           final routes = data['routes'] as List<dynamic>;
-          
+
           if (routes.isNotEmpty) {
             final route = routes[0] as Map<String, dynamic>;
-            final overviewPolyline = route['overview_polyline'] as Map<String, dynamic>;
+            final overviewPolyline =
+                route['overview_polyline'] as Map<String, dynamic>;
             final points = overviewPolyline['points'] as String;
-            
+
             // Decode the polyline
             final decodedPoints = _decodePolyline(points);
-            print('Successfully decoded ${decodedPoints.length} points for route');
-            
+            print(
+              'Successfully decoded ${decodedPoints.length} points for route',
+            );
+
             return decodedPoints;
           } else {
             print('No routes found in response');
@@ -56,7 +70,9 @@ class GoogleDirectionsService {
           return null;
         }
       } else {
-        print('Directions API request failed with status: ${response.statusCode}');
+        print(
+          'Directions API request failed with status: ${response.statusCode}',
+        );
         return null;
       }
     } catch (e) {
@@ -78,32 +94,29 @@ class GoogleDirectionsService {
       int b;
       int shift = 0;
       int result = 0;
-      
+
       do {
         b = encoded.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
       } while (b >= 0x20);
-      
+
       int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lat += dlat;
 
       shift = 0;
       result = 0;
-      
+
       do {
         b = encoded.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
       } while (b >= 0x20);
-      
+
       int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lng += dlng;
 
-      points.add(LatLng(
-        lat / 1E5,
-        lng / 1E5,
-      ));
+      points.add(LatLng(lat / 1E5, lng / 1E5));
     }
 
     return points;
