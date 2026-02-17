@@ -1,0 +1,194 @@
+00:00 +0: loading C:/Users/lihai/Documents/Github/Fried-Chicken/test/building_search_service_extended_test.dart
+00:00 +0: BuildingSearchService Extended Tests Location in Concordia Building Location at SGW center is in a building
+00:00 +1: BuildingSearchService Extended Tests Location in Concordia Building Location at Loyola center is in a building
+00:00 +2: BuildingSearchService Extended Tests Location in Concordia Building Random location far away is not in building
+00:00 +3: BuildingSearchService Extended Tests Location in Concordia Building Location in building polygon returns true or false consistently
+00:00 +4: BuildingSearchService Extended Tests Location in Concordia Building Points within building bounds are detected
+00:00 +5: BuildingSearchService Extended Tests Location in Concordia Building Multiple locations can be checked independently
+00:00 +6: BuildingSearchService Extended Tests Find Building by Location Valid building location returns building
+00:00 +7: BuildingSearchService Extended Tests Find Building by Location Building polygons have valid centers
+00:00 +8: BuildingSearchService Extended Tests Find Building by Location All buildings can be found by their center
+00:00 +9: BuildingSearchService Extended Tests Search with Google Places Empty query returns empty list
+00:00 +10: BuildingSearchService Extended Tests Search with Google Places Whitespace only query returns empty list
+00:00 +11: BuildingSearchService Extended Tests Search with Google Places Search returns list of SearchResult
+00:00 +12: BuildingSearchService Extended Tests Search with Google Places Search with location bias
+00:00 +13: BuildingSearchService Extended Tests Search with Google Places Search without location bias uses default
+00:00 +14: BuildingSearchService Extended Tests Combined Suggestions Empty query returns no suggestions when query is empty
+00:00 +15: BuildingSearchService Extended Tests Combined Suggestions Single character query returns suggestions
+[DEBUG] Getting combined suggestions for: H
+[DEBUG] Found 15 Concordia building suggestions
+[DEBUG] Fetching Google Places predictions for: H
+[DEBUG] Location bias: null
+[DEBUG] Request body: {"input":"H","languageCode":"en","locationBias":{"circle":{"center":{"latitude":45.4958,"longitude":-73.5711},"radius":15000.0}}}
+[DEBUG] API Response status: 200
+[DEBUG] Google Places API response received
+[DEBUG] Response keys: [suggestions]
+[DEBUG] Found 5 Google Places predictions
+[DEBUG] Suggestion 0 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 0 full placePrediction: {place: places/ChIJf36fuIsiyUwRlycCPeU6Ob8, placeId: ChIJf36fuIsiyUwRlycCPeU6Ob8, text: {text: Hôpital du Sacré-Cœur-de-Montréal, Boulevard Gouin Ouest, Montreal, QC, Canada, matches: [{endOffset: 1}]}, structuredFormat: {mainText: {text: Hôpital du Sacré-Cœur-de-Montréal, matches: [{endOffset: 1}]}, secondaryText: {text: Boulevard Gouin Ouest, Montreal, QC, Canada}}, types: [general_hospital, health, point_of_interest, hospital, service, establishment]}
+[DEBUG] Suggestion 0 extracted placeId: ChIJf36fuIsiyUwRlycCPeU6Ob8
+[DEBUG] Created prediction 0: Hôpital du Sacré-Cœur-de-Montréal
+[DEBUG] Suggestion 1 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 1 full placePrediction: {place: places/ChIJ52ufySEcyUwRRaTendo3P5s, placeId: ChIJ52ufySEcyUwRRaTendo3P5s, text: {text: Hôpital Maisonneuve-Rosemont, Assomption Boulevard, Montreal, QC, Canada, matches: [{endOffset: 1}]}, structuredFormat: {mainText: {text: Hôpital Maisonneuve-Rosemont, matches: [{endOffset: 1}]}, secondaryText: {text: Assomption Boulevard, Montreal, QC, Canada}}, types: [medical_clinic, point_of_interest, skin_care_clinic, health, establishment, service, general_hospital, hospital]}
+[DEBUG] Suggestion 1 extracted placeId: ChIJ52ufySEcyUwRRaTendo3P5s
+[DEBUG] Created prediction 1: Hôpital Maisonneuve-Rosemont
+[DEBUG] Suggestion 2 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 2 full placePrediction: {place: places/ChIJCbapSbgbyUwRSJuRFovkjc4, placeId: ChIJCbapSbgbyUwRSJuRFovkjc4, text: {text: Hôpital Notre-Dame, Sherbrooke Street East, Montreal, QC, Canada, matches: [{endOffset: 1}]}, structuredFormat: {mainText: {text: Hôpital Notre-Dame, matches: [{endOffset: 1}]}, secondaryText: {text: Sherbrooke Street East, Montreal, QC, Canada}}, types: [service, hospital, establishment, point_of_interest, medical_center, general_hospital, health]}
+[DEBUG] Suggestion 2 extracted placeId: ChIJCbapSbgbyUwRSJuRFovkjc4
+[DEBUG] Created prediction 2: Hôpital Notre-Dame
+[DEBUG] Suggestion 3 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 3 full placePrediction: {place: places/ChIJxV-osCUFyUwRTKICttXOqFo, placeId: ChIJxV-osCUFyUwRTKICttXOqFo, text: {text: Hôpital Charles-Le Moyne, Taschereau Boulevard, Greenfield Park, QC, Canada, matches: [{endOffset: 1}]}, structuredFormat: {mainText: {text: Hôpital Charles-Le Moyne, matches: [{endOffset: 1}]}, secondaryText: {text: Taschereau Boulevard, Greenfield Park, QC, Canada}}, types: [hospital, point_of_interest, service, health, establishment]}
+[DEBUG] Suggestion 3 extracted placeId: ChIJxV-osCUFyUwRTKICttXOqFo
+[DEBUG] Created prediction 3: Hôpital Charles-Le Moyne
+[DEBUG] Suggestion 4 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 4 full placePrediction: {place: places/ChIJtfFuqFgDyUwRlf-ssNdI_hQ, placeId: ChIJtfFuqFgDyUwRlf-ssNdI_hQ, text: {text: Hôpital Pierre-Boucher, Boulevard Jacques-Cartier Est, Longueuil, QC, Canada, matches: [{endOffset: 1}]}, structuredFormat: {mainText: {text: Hôpital Pierre-Boucher, matches: [{endOffset: 1}]}, secondaryText: {text: Boulevard Jacques-Cartier Est, Longueuil, QC, Canada}}, types: [hospital, point_of_interest, health, service, establishment]}
+[DEBUG] Suggestion 4 extracted placeId: ChIJtfFuqFgDyUwRlf-ssNdI_hQ
+[DEBUG] Created prediction 4: Hôpital Pierre-Boucher
+[DEBUG] Returning 5 predictions
+[DEBUG] Received 5 Google Places predictions
+[DEBUG] Adding place: Hôpital du Sacré-Cœur-de-Montréal - Boulevard Gouin Ouest, Montreal, QC, Canada
+[DEBUG] Adding place: Hôpital Maisonneuve-Rosemont - Assomption Boulevard, Montreal, QC, Canada
+[DEBUG] Adding place: Hôpital Notre-Dame - Sherbrooke Street East, Montreal, QC, Canada
+[DEBUG] Adding place: Hôpital Charles-Le Moyne - Taschereau Boulevard, Greenfield Park, QC, Canada
+[DEBUG] Adding place: Hôpital Pierre-Boucher - Boulevard Jacques-Cartier Est, Longueuil, QC, Canada
+[DEBUG] Total suggestions: 7
+00:00 +16: BuildingSearchService Extended Tests Combined Suggestions Multiple character query returns suggestions
+[DEBUG] Getting combined suggestions for: Hall
+[DEBUG] Found 6 Concordia building suggestions
+[DEBUG] Fetching Google Places predictions for: Hall
+[DEBUG] Location bias: null
+[DEBUG] Request body: {"input":"Hall","languageCode":"en","locationBias":{"circle":{"center":{"latitude":45.4958,"longitude":-73.5711},"radius":15000.0}}}
+[DEBUG] API Response status: 200
+[DEBUG] Google Places API response received
+[DEBUG] Response keys: [suggestions]
+[DEBUG] Found 5 Google Places predictions
+[DEBUG] Suggestion 0 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 0 full placePrediction: {place: places/ChIJfXnnYmoayUwR7yHbwJ6yXt4, placeId: ChIJfXnnYmoayUwR7yHbwJ6yXt4, text: {text: Hall Building Auditorium, Boulevard De Maisonneuve Ouest, Montreal, QC, Canada, matches: [{endOffset: 4}]}, structuredFormat: {mainText: {text: Hall Building Auditorium, matches: [{endOffset: 4}]}, secondaryText: {text: Boulevard De Maisonneuve Ouest, Montreal, QC, Canada}}, types: [event_venue, establishment, point_of_interest, auditorium]}
+[DEBUG] Suggestion 0 extracted placeId: ChIJfXnnYmoayUwR7yHbwJ6yXt4
+[DEBUG] Created prediction 0: Hall Building Auditorium
+[DEBUG] Suggestion 1 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 1 full placePrediction: {place: places/ChIJKw8YUWoayUwRcBXZvsJ8Zww, placeId: ChIJKw8YUWoayUwRcBXZvsJ8Zww, text: {text: Henry F. Hall Building, Boulevard De Maisonneuve Ouest, Montreal, QC, Canada, matches: [{startOffset: 9, endOffset: 13}]}, structuredFormat: {mainText: {text: Henry F. Hall Building, matches: [{startOffset: 9, endOffset: 13}]}, secondaryText: {text: Boulevard De Maisonneuve Ouest, Montreal, QC, Canada}}, types: [point_of_interest, educational_institution, university, establishment]}
+[DEBUG] Suggestion 1 extracted placeId: ChIJKw8YUWoayUwRcBXZvsJ8Zww
+[DEBUG] Created prediction 1: Henry F. Hall Building
+[DEBUG] Suggestion 2 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 2 full placePrediction: {place: places/ChIJLaaX1K8byUwRdnEkZDexzFI, placeId: ChIJLaaX1K8byUwRdnEkZDexzFI, text: {text: Redpath Hall, Rue McTavish, Montreal, QC, Canada, matches: [{startOffset: 8, endOffset: 12}]}, structuredFormat: {mainText: {text: Redpath Hall, matches: [{startOffset: 8, endOffset: 12}]}, secondaryText: {text: Rue McTavish, Montreal, QC, Canada}}, types: [establishment, academic_department, point_of_interest]}
+[DEBUG] Suggestion 2 extracted placeId: ChIJLaaX1K8byUwRdnEkZDexzFI
+[DEBUG] Created prediction 2: Redpath Hall
+[DEBUG] Suggestion 3 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 3 full placePrediction: {place: places/ChIJVdx-TPCroyoRrnz1Tjvw6gU, placeId: ChIJVdx-TPCroyoRrnz1Tjvw6gU, text: {text: St-Louis Hallé - Courtiers Immobiliers Greenfield Park, Victoria Avenue, Greenfield Park, QC, Canada, matches: [{startOffset: 9, endOffset: 13}]}, structuredFormat: {mainText: {text: St-Louis Hallé - Courtiers Immobiliers Greenfield Park, matches: [{startOffset: 9, endOffset: 13}]}, secondaryText: {text: Victoria Avenue, Greenfield Park, QC, Canada}}, types: [real_estate_agency, establishment, point_of_interest, finance, consultant, service]}
+[DEBUG] Suggestion 3 extracted placeId: ChIJVdx-TPCroyoRrnz1Tjvw6gU
+[DEBUG] Created prediction 3: St-Louis Hallé - Courtiers Immobiliers Greenfield Park
+[DEBUG] Suggestion 4 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 4 full placePrediction: {place: places/ChIJuxH7OUYayUwRGuhP0uLWJC0, placeId: ChIJuxH7OUYayUwRGuhP0uLWJC0, text: {text: Salle Tanna Schulich, Sherbrooke Street West, Montreal, QC, Canada, matches: [{endOffset: 20}]}, structuredFormat: {mainText: {text: Salle Tanna Schulich, matches: [{endOffset: 20}]}, secondaryText: {text: Sherbrooke Street West, Montreal, QC, Canada}}, types: [point_of_interest, live_music_venue, auditorium, establishment, concert_hall, event_venue]}
+[DEBUG] Suggestion 4 extracted placeId: ChIJuxH7OUYayUwRGuhP0uLWJC0
+[DEBUG] Created prediction 4: Salle Tanna Schulich
+[DEBUG] Returning 5 predictions
+[DEBUG] Received 5 Google Places predictions
+[DEBUG] Adding place: Hall Building Auditorium - Boulevard De Maisonneuve Ouest, Montreal, QC, Canada
+[DEBUG] Adding place: Henry F. Hall Building - Boulevard De Maisonneuve Ouest, Montreal, QC, Canada
+[DEBUG] Adding place: Redpath Hall - Rue McTavish, Montreal, QC, Canada
+[DEBUG] Adding place: St-Louis Hallé - Courtiers Immobiliers Greenfield Park - Victoria Avenue, Greenfield Park, QC, Canada
+[DEBUG] Adding place: Salle Tanna Schulich - Sherbrooke Street West, Montreal, QC, Canada
+[DEBUG] Total suggestions: 7
+00:01 +17: BuildingSearchService Extended Tests Combined Suggestions Query with location bias
+[DEBUG] Getting combined suggestions for: building
+[DEBUG] Found 19 Concordia building suggestions
+[DEBUG] Fetching Google Places predictions for: building
+[DEBUG] Location bias: LatLng(45.4973, -73.5789)
+[DEBUG] Request body: {"input":"building","languageCode":"en","locationBias":{"circle":{"center":{"latitude":45.4973,"longitude":-73.5789},"radius":5000.0}}}
+[DEBUG] API Response status: 200
+[DEBUG] Google Places API response received
+[DEBUG] Response keys: [suggestions]
+[DEBUG] Found 5 Google Places predictions
+[DEBUG] Suggestion 0 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 0 full placePrediction: {place: places/ChIJi1nk8bkbyUwR3GBc-86105w, placeId: ChIJi1nk8bkbyUwR3GBc-86105w, text: {text: Building 360 Saint-Jacques, Rue Saint-Jacques, Montreal, QC, Canada, matches: [{endOffset: 8}]}, structuredFormat: {mainText: {text: Building 360 Saint-Jacques, matches: [{endOffset: 8}]}, secondaryText: {text: Rue Saint-Jacques, Montreal, QC, Canada}}, types: [establishment, real_estate_agency, service, point_of_interest]}
+[DEBUG] Suggestion 0 extracted placeId: ChIJi1nk8bkbyUwR3GBc-86105w
+[DEBUG] Created prediction 0: Building 360 Saint-Jacques
+[DEBUG] Suggestion 1 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 1 full placePrediction: {place: places/ChIJt0D0dJgbyUwREf_ji_XmJII, placeId: ChIJt0D0dJgbyUwREf_ji_XmJII, text: {text: Building 21, Sherbrooke Street West, Montreal, QC, Canada, matches: [{endOffset: 8}]}, structuredFormat: {mainText: {text: Building 21, matches: [{endOffset: 8}]}, secondaryText: {text: Sherbrooke Street West, Montreal, QC, Canada}}, types: [establishment, research_institute, point_of_interest]}
+[DEBUG] Suggestion 1 extracted placeId: ChIJt0D0dJgbyUwREf_ji_XmJII
+[DEBUG] Created prediction 1: Building 21
+[DEBUG] Suggestion 2 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 2 full placePrediction: {place: places/ChIJuxH7OUYayUwRqaD-Klh0_i4, placeId: ChIJuxH7OUYayUwRqaD-Klh0_i4, text: {text: Schulich School of Music, Sherbrooke Street West, Montreal, QC, Canada, matches: [{endOffset: 24}]}, structuredFormat: {mainText: {text: Schulich School of Music, matches: [{endOffset: 24}]}, secondaryText: {text: Sherbrooke Street West, Montreal, QC, Canada}}, types: [academic_department, school, service, auditorium, concert_hall, live_music_venue, educational_institution, point_of_interest, event_venue, establishment]}
+[DEBUG] Suggestion 2 extracted placeId: ChIJuxH7OUYayUwRqaD-Klh0_i4
+[DEBUG] Created prediction 2: Schulich School of Music
+[DEBUG] Suggestion 3 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 3 full placePrediction: {place: places/ChIJX6Xgl0cayUwR6J6xCR3fdfo, placeId: ChIJX6Xgl0cayUwR6J6xCR3fdfo, text: {text: Macdonald Engineering Building, Sherbrooke Street West, Montreal, QC, Canada, matches: [{startOffset: 22, endOffset: 30}]}, structuredFormat: {mainText: {text: Macdonald Engineering Building, matches: [{startOffset: 22, endOffset: 30}]}, secondaryText: {text: Sherbrooke Street West, Montreal, QC, Canada}}, types: [university, educational_institution, establishment, point_of_interest]}
+[DEBUG] Suggestion 3 extracted placeId: ChIJX6Xgl0cayUwR6J6xCR3fdfo
+[DEBUG] Created prediction 3: Macdonald Engineering Building
+[DEBUG] Suggestion 4 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 4 full placePrediction: {place: places/ChIJi4-GfkcayUwRLASQqY6ze30, placeId: ChIJi4-GfkcayUwRLASQqY6ze30, text: {text: McGill University - Leacock Building, Sherbrooke Street West, Montreal, QC, Canada, matches: [{startOffset: 28, endOffset: 36}]}, structuredFormat: {mainText: {text: McGill University - Leacock Building, matches: [{startOffset: 28, endOffset: 36}]}, secondaryText: {text: Sherbrooke Street West, Montreal, QC, Canada}}, types: [academic_department, point_of_interest, establishment]}
+[DEBUG] Suggestion 4 extracted placeId: ChIJi4-GfkcayUwRLASQqY6ze30
+[DEBUG] Created prediction 4: McGill University - Leacock Building
+[DEBUG] Returning 5 predictions
+[DEBUG] Received 5 Google Places predictions
+[DEBUG] Adding place: Building 360 Saint-Jacques - Rue Saint-Jacques, Montreal, QC, Canada
+[DEBUG] Adding place: Building 21 - Sherbrooke Street West, Montreal, QC, Canada
+[DEBUG] Adding place: Schulich School of Music - Sherbrooke Street West, Montreal, QC, Canada
+[DEBUG] Adding place: Macdonald Engineering Building - Sherbrooke Street West, Montreal, QC, Canada
+[DEBUG] Adding place: McGill University - Leacock Building - Sherbrooke Street West, Montreal, QC, Canada
+[DEBUG] Total suggestions: 7
+00:01 +18: BuildingSearchService Extended Tests Combined Suggestions Search term matching works
+[DEBUG] Getting combined suggestions for: engineering
+[DEBUG] Found 4 Concordia building suggestions
+[DEBUG] Fetching Google Places predictions for: engineering
+[DEBUG] Location bias: null
+[DEBUG] Request body: {"input":"engineering","languageCode":"en","locationBias":{"circle":{"center":{"latitude":45.4958,"longitude":-73.5711},"radius":15000.0}}}
+[DEBUG] API Response status: 200
+[DEBUG] Google Places API response received
+[DEBUG] Response keys: [suggestions]
+[DEBUG] Found 5 Google Places predictions
+[DEBUG] Suggestion 0 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 0 full placePrediction: {place: places/ChIJCcoB80cayUwR2ARQHHbUALY, placeId: ChIJCcoB80cayUwR2ARQHHbUALY, text: {text: Engineering Undergraduate Society of McGill University, Rue University, Montreal, QC, Canada, matches: [{endOffset: 11}]}, structuredFormat: {mainText: {text: Engineering Undergraduate Society of McGill University, matches: [{endOffset: 11}]}, secondaryText: {text: Rue University, Montreal, QC, Canada}}, types: [association_or_organization, point_of_interest, establishment]}
+[DEBUG] Suggestion 0 extracted placeId: ChIJCcoB80cayUwR2ARQHHbUALY
+[DEBUG] Created prediction 0: Engineering Undergraduate Society of McGill University
+[DEBUG] Suggestion 1 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 1 full placePrediction: {place: places/ChIJ08LyhmoayUwR_jkrnrcBGbQ, placeId: ChIJ08LyhmoayUwR_jkrnrcBGbQ, text: {text: Engineering and Computer Science Association (ECA) Concordia, Boulevard De Maisonneuve Ouest, Montreal, QC, Canada, matches: [{endOffset: 11}]}, structuredFormat: {mainText: {text: Engineering and Computer Science Association (ECA) Concordia, matches: [{endOffset: 11}]}, secondaryText: {text: Boulevard De Maisonneuve Ouest, Montreal, QC, Canada}}, types: [establishment, association_or_organization, point_of_interest]}
+[DEBUG] Suggestion 1 extracted placeId: ChIJ08LyhmoayUwR_jkrnrcBGbQ
+[DEBUG] Created prediction 1: Engineering and Computer Science Association (ECA) Concordia
+[DEBUG] Suggestion 2 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 2 full placePrediction: {place: places/ChIJC-PijWoayUwRHwmKxYAiLU8, placeId: ChIJC-PijWoayUwRHwmKxYAiLU8, text: {text: Engineering and Commerce Case Competition, Mackay Street, Montreal, QC, Canada, matches: [{endOffset: 11}]}, structuredFormat: {mainText: {text: Engineering and Commerce Case Competition, matches: [{endOffset: 11}]}, secondaryText: {text: Mackay Street, Montreal, QC, Canada}}, types: [point_of_interest, establishment]}
+[DEBUG] Suggestion 2 extracted placeId: ChIJC-PijWoayUwRHwmKxYAiLU8
+[DEBUG] Created prediction 2: Engineering and Commerce Case Competition
+[DEBUG] Suggestion 3 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 3 full placePrediction: {place: places/ChIJmUGyjUcayUwRHFPWseMD9pQ, placeId: ChIJmUGyjUcayUwRHFPWseMD9pQ, text: {text: McGill University : Department of Civil Engineering, Sherbrooke Street West, Montreal, QC, Canada, matches: [{startOffset: 40, endOffset: 51}]}, structuredFormat: {mainText: {text: McGill University : Department of Civil Engineering, matches: [{startOffset: 40, endOffset: 51}]}, secondaryText: {text: Sherbrooke Street West, Montreal, QC, Canada}}, types: [establishment, academic_department, point_of_interest]}
+[DEBUG] Suggestion 3 extracted placeId: ChIJmUGyjUcayUwRHFPWseMD9pQ
+[DEBUG] Created prediction 3: McGill University : Department of Civil Engineering
+[DEBUG] Suggestion 4 placePrediction keys: [place, placeId, text, structuredFormat, types]
+[DEBUG] Suggestion 4 full placePrediction: {place: places/ChIJiUaO9AkbyUwRaae7oll6U2k, placeId: ChIJiUaO9AkbyUwRaae7oll6U2k, text: {text: Concordia University Department of Computer Science and Software Engineering, Guy Street, Montreal, QC, Canada, matches: [{startOffset: 65, endOffset: 76}]}, structuredFormat: {mainText: {text: Concordia University Department of Computer Science and Software Engineering, matches: [{startOffset: 65, endOffset: 76}]}, secondaryText: {text: Guy Street, Montreal, QC, Canada}}, types: [university, educational_institution, establishment, point_of_interest]}
+[DEBUG] Suggestion 4 extracted placeId: ChIJiUaO9AkbyUwRaae7oll6U2k
+[DEBUG] Created prediction 4: Concordia University Department of Computer Science and Software Engineering
+[DEBUG] Returning 5 predictions
+[DEBUG] Received 5 Google Places predictions
+[DEBUG] Adding place: Engineering Undergraduate Society of McGill University - Rue University, Montreal, QC, Canada
+[DEBUG] Adding place: Engineering and Computer Science Association (ECA) Concordia - Boulevard De Maisonneuve Ouest, Montreal, QC, Canada
+[DEBUG] Adding place: Engineering and Commerce Case Competition - Mackay Street, Montreal, QC, Canada
+[DEBUG] Adding place: McGill University : Department of Civil Engineering - Sherbrooke Street West, Montreal, QC, Canada
+[DEBUG] Adding place: Concordia University Department of Computer Science and Software Engineering - Guy Street, Montreal, QC, Canada
+[DEBUG] Total suggestions: 7
+00:01 +19: BuildingSearchService Extended Tests Building Code Lookup Valid building codes have names
+00:01 +20: BuildingSearchService Extended Tests Building Code Lookup Invalid building code returns null
+00:01 +21: BuildingSearchService Extended Tests Building Code Lookup Empty code returns null
+00:01 +22: BuildingSearchService Extended Tests Building Code Lookup Case sensitivity in building codes
+00:01 +23: BuildingSearchService Extended Tests Building Code Lookup All building polygons have names
+00:01 +24: BuildingSearchService Extended Tests Building Search Consistency Search by code is consistent
+00:01 +25: BuildingSearchService Extended Tests Building Search Consistency Search by name is consistent
+00:01 +26: BuildingSearchService Extended Tests Building Search Consistency Search and building code lookup are consistent
+00:01 +27: BuildingSearchService Extended Tests Suggestion Retrieval Get all buildings returns list
+00:01 +28: BuildingSearchService Extended Tests Suggestion Retrieval Get suggestions for query returns list
+00:01 +29: BuildingSearchService Extended Tests Suggestion Retrieval Empty query suggestions
+00:01 +30: BuildingSearchService Extended Tests Suggestion Retrieval All buildings list is not empty
+00:01 +31: BuildingSearchService Extended Tests Suggestion Retrieval Suggestions prioritize exact matches
+00:01 +32: BuildingSearchService Extended Tests Location Point Validation Building centers are within Montreal bounds
+00:01 +33: BuildingSearchService Extended Tests Location Point Validation Building points are valid coordinates
+00:01 +34: BuildingSearchService Extended Tests Location Point Validation SGW campus buildings exist
+00:01 +35: BuildingSearchService Extended Tests Location Point Validation Loyola campus buildings exist
+00:01 +36: BuildingSearchService Extended Tests Query Processing Query whitespace is trimmed
+00:01 +37: BuildingSearchService Extended Tests Query Processing Query case is normalized
+00:01 +38: BuildingSearchService Extended Tests Query Processing Partial queries work correctly
+00:01 +39: BuildingSearchService Extended Tests Query Processing Search term queries work
+00:01 +40: BuildingSearchService Extended Tests Data Integrity Building codes are not empty
+00:01 +41: BuildingSearchService Extended Tests Data Integrity Building names are not empty
+00:01 +42: BuildingSearchService Extended Tests Data Integrity Building polygons have points
+00:01 +43: BuildingSearchService Extended Tests Data Integrity No duplicate building codes
+00:01 +44: All tests passed!
