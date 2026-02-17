@@ -59,8 +59,9 @@ class BuildingSearchService {
     return _findBuildingByLocation(location) != null;
   }
 
-  /// Search for a building by query string (legacy method for backward compatibility)
+  /// Search for a building by query string (prioritize exact matches, allow partial for search terms)
   /// Returns the matching BuildingPolygon if found, null otherwise
+  /// This method prioritizes exact matches to avoid false positives like "Hall's Restaurant" matching "Hall Building"
   static BuildingPolygon? searchBuilding(String query) {
     if (query.trim().isEmpty) {
       return null;
@@ -68,33 +69,38 @@ class BuildingSearchService {
 
     final normalizedQuery = query.toLowerCase().trim();
 
-    // First, try exact code match
+    // First, try exact code match (e.g., "MB", "LB")
     for (final buildingName in concordiaBuildingNames) {
       if (buildingName.code.toLowerCase() == normalizedQuery) {
         return _findBuildingByCode(buildingName.code);
       }
     }
 
-    // Then, try exact name match
+    // Then, try exact name match (e.g., "JSMB Building", "Hall Building")
     for (final buildingName in concordiaBuildingNames) {
       if (buildingName.name.toLowerCase() == normalizedQuery) {
         return _findBuildingByCode(buildingName.code);
       }
     }
 
-    // Try partial name match
+    // Try exact search terms match first (e.g., "gm" for "Guy Metro")
     for (final buildingName in concordiaBuildingNames) {
-      if (buildingName.name.toLowerCase().contains(normalizedQuery)) {
-        return _findBuildingByCode(buildingName.code);
+      for (final term in buildingName.searchTerms) {
+        if (term.toLowerCase() == normalizedQuery) {
+          return _findBuildingByCode(buildingName.code);
+        }
       }
     }
 
-    // Try search terms match
-    for (final buildingName in concordiaBuildingNames) {
-      for (final term in buildingName.searchTerms) {
-        if (term.toLowerCase().contains(normalizedQuery) ||
-            normalizedQuery.contains(term.toLowerCase())) {
-          return _findBuildingByCode(buildingName.code);
+    // Only allow partial matches on search terms (not building names)
+    // This allows "engi" to match "engineering" but prevents "Hall" from matching "Hill"
+    if (normalizedQuery.length >= 3) {
+      for (final buildingName in concordiaBuildingNames) {
+        for (final term in buildingName.searchTerms) {
+          if (term.toLowerCase().startsWith(normalizedQuery) ||
+              term.toLowerCase().contains(normalizedQuery)) {
+            return _findBuildingByCode(buildingName.code);
+          }
         }
       }
     }

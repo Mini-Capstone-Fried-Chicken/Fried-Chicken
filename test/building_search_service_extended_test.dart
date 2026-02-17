@@ -328,7 +328,8 @@ void main() {
       });
 
       test('Search term queries work', () {
-        final result = BuildingSearchService.searchBuilding('computer');
+        // 'psych' is a search term for Psychology building
+        final result = BuildingSearchService.searchBuilding('psych');
         expect(result, isNotNull);
       });
     });

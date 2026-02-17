@@ -612,14 +612,30 @@ Future<void> _openLink(String url) async {
     );
 
     if (results.isNotEmpty) {
-      final firstResult = results.first;
+      // Find the first non-Concordia result, or use the first result if all are Concordia
+      SearchResult? selectedResult;
       
-      if (firstResult.isConcordiaBuilding && firstResult.buildingPolygon != null) {
-        // It's a Concordia building found via Google Places
-        _onBuildingTapped(firstResult.buildingPolygon!);
-      } else {
-        // It's a non-Concordia place
-        _onPlaceSelected(firstResult);
+      // Priority: non-Concordia buildings first
+      for (final result in results) {
+        if (!result.isConcordiaBuilding) {
+          selectedResult = result;
+          break;
+        }
+      }
+      
+      // If all results are Concordia buildings, use the first one
+      if (selectedResult == null && results.isNotEmpty) {
+        selectedResult = results.first;
+      }
+      
+      if (selectedResult != null) {
+        if (selectedResult.isConcordiaBuilding && selectedResult.buildingPolygon != null) {
+          // It's a Concordia building found via Google Places
+          _onBuildingTapped(selectedResult.buildingPolygon!);
+        } else {
+          // It's a non-Concordia place
+          _onPlaceSelected(selectedResult);
+        }
       }
     } else {
       // Show a message that the place wasn't found
@@ -712,16 +728,6 @@ Future<void> _openLink(String url) async {
 
     // Fetch the route
     await _fetchRoute();
-
-    // Show confirmation message
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Showing route to ${place.name}'),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.green[700],
-      ),
-    );
   }
 
   Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
@@ -950,20 +956,7 @@ Future<void> _openLink(String url) async {
       );
     }
 
-    // Add marker for selected non-Concordia place
-    if (_selectedSearchResult != null && !_selectedSearchResult!.isConcordiaBuilding) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('selected_place'),
-          position: _selectedSearchResult!.location,
-          infoWindow: InfoWindow(
-            title: _selectedSearchResult!.name,
-            snippet: _selectedSearchResult!.address ?? 'Not a Concordia building',
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      );
-    }
+    // Note: selected non-Concordia marker intentionally omitted to avoid red pin reappearing
 
     // Add markers for route preview mode
     if (_showRoutePreview) {
