@@ -45,7 +45,10 @@ class PlaceResult {
 
 /// Service for searching places using Google Maps Places API (New)
 class GooglePlacesService {
-  static const String _apiKey = 'AIzaSyBu67d8z_Vd2eUsfASieUTgwkDHlRmk8GY';
+  static const String _apiKey = String.fromEnvironment(
+    'GOOGLE_PLACES_API_KEY',
+    defaultValue: '', // Use empty string if not provided for safety
+  );
   static const String _baseUrl = 'https://places.googleapis.com/v1';
 
   /// Search for places using Google Places API Text Search

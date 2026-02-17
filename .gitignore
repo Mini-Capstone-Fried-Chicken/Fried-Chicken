@@ -91,6 +91,14 @@ windows/flutter/ephemeral/
 ../flutter/generated_plugins.cmake
 
 ####################################
+# Environment Variables & Secrets
+####################################
+.env
+.env.local
+.env.*.local
+.flutter_secure_storage
+
+####################################
 # Symbolication / Obfuscation
 ####################################
 app.*.symbols

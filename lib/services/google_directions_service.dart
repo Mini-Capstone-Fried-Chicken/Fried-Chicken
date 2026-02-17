@@ -4,7 +4,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Service for getting directions using Google Maps Directions API
 class GoogleDirectionsService {
-  static const String _apiKey = 'AIzaSyBu67d8z_Vd2eUsfASieUTgwkDHlRmk8GY';
+  static const String _apiKey = String.fromEnvironment(
+    'GOOGLE_DIRECTIONS_API_KEY',
+    defaultValue: '', // Use empty string if not provided for safety
+  );
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api';
 
   /// Get route polyline points from origin to destination
