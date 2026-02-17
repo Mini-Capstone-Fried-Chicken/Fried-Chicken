@@ -64,59 +64,59 @@ import 'package:campus_app/shared/widgets/route_preview_panel.dart';
 void _setupGoogleMapsMock() {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
-    const MethodChannel('plugins.flutter.io/google_maps'),
-    (MethodCall call) async {
-      switch (call.method) {
-        case 'map#waitForMap':
-          return null;
-        case 'map#update':
-          return null;
-        case 'camera#move':
-          return null;
-        case 'camera#animate':
-          return null;
-        case 'map#getVisibleRegion':
-          return {
-            'southwest': {'lat': 45.49, 'lng': -73.59},
-            'northeast': {'lat': 45.51, 'lng': -73.57},
-          };
-        case 'map#getScreenCoordinate':
-          return {'x': 200, 'y': 400};
-        case 'map#getLatLng':
-          return {'lat': 45.4973, 'lng': -73.5789};
-        case 'map#isCompassEnabled':
-          return true;
-        case 'map#isMapToolbarEnabled':
-          return false;
-        case 'map#getMinMaxZoomLevels':
-          return {'min': 3.0, 'max': 21.0};
-        case 'map#isZoomGesturesEnabled':
-          return true;
-        case 'map#isZoomControlsEnabled':
-          return false;
-        case 'map#isTiltGesturesEnabled':
-          return true;
-        case 'map#isRotateGesturesEnabled':
-          return true;
-        case 'map#isScrollGesturesEnabled':
-          return true;
-        case 'map#isMyLocationButtonEnabled':
-          return false;
-        case 'map#setStyle':
-          return [true, null];
-        case 'markers#update':
-          return null;
-        case 'polygons#update':
-          return null;
-        case 'polylines#update':
-          return null;
-        case 'circles#update':
-          return null;
-        default:
-          return null;
-      }
-    },
-  );
+        const MethodChannel('plugins.flutter.io/google_maps'),
+        (MethodCall call) async {
+          switch (call.method) {
+            case 'map#waitForMap':
+              return null;
+            case 'map#update':
+              return null;
+            case 'camera#move':
+              return null;
+            case 'camera#animate':
+              return null;
+            case 'map#getVisibleRegion':
+              return {
+                'southwest': {'lat': 45.49, 'lng': -73.59},
+                'northeast': {'lat': 45.51, 'lng': -73.57},
+              };
+            case 'map#getScreenCoordinate':
+              return {'x': 200, 'y': 400};
+            case 'map#getLatLng':
+              return {'lat': 45.4973, 'lng': -73.5789};
+            case 'map#isCompassEnabled':
+              return true;
+            case 'map#isMapToolbarEnabled':
+              return false;
+            case 'map#getMinMaxZoomLevels':
+              return {'min': 3.0, 'max': 21.0};
+            case 'map#isZoomGesturesEnabled':
+              return true;
+            case 'map#isZoomControlsEnabled':
+              return false;
+            case 'map#isTiltGesturesEnabled':
+              return true;
+            case 'map#isRotateGesturesEnabled':
+              return true;
+            case 'map#isScrollGesturesEnabled':
+              return true;
+            case 'map#isMyLocationButtonEnabled':
+              return false;
+            case 'map#setStyle':
+              return [true, null];
+            case 'markers#update':
+              return null;
+            case 'polygons#update':
+              return null;
+            case 'polylines#update':
+              return null;
+            case 'circles#update':
+              return null;
+            default:
+              return null;
+          }
+        },
+      );
 }
 
 // ============================================================================
@@ -127,32 +127,32 @@ void _setupGeolocatorMock() {
   const channel = MethodChannel('flutter.baseflow.com/geolocator');
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(channel, (MethodCall call) async {
-    switch (call.method) {
-      case 'isLocationServiceEnabled':
-        return true;
-      case 'checkPermission':
-        return 3; // LocationPermission.always
-      case 'requestPermission':
-        return 3;
-      case 'getCurrentPosition':
-        return {
-          'latitude': 45.4973,
-          'longitude': -73.5789,
-          'accuracy': 10.0,
-          'altitude': 0.0,
-          'speed': 0.0,
-          'speed_accuracy': 0.0,
-          'heading': 0.0,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'floor': null,
-          'is_mocked': false,
-        };
-      case 'getPositionStream':
-        return null;
-      default:
-        return null;
-    }
-  });
+        switch (call.method) {
+          case 'isLocationServiceEnabled':
+            return true;
+          case 'checkPermission':
+            return 3; // LocationPermission.always
+          case 'requestPermission':
+            return 3;
+          case 'getCurrentPosition':
+            return {
+              'latitude': 45.4973,
+              'longitude': -73.5789,
+              'accuracy': 10.0,
+              'altitude': 0.0,
+              'speed': 0.0,
+              'speed_accuracy': 0.0,
+              'heading': 0.0,
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+              'floor': null,
+              'is_mocked': false,
+            };
+          case 'getPositionStream':
+            return null;
+          default:
+            return null;
+        }
+      });
 }
 
 // ============================================================================
@@ -270,26 +270,30 @@ void main() {
         (concordiaSGW.latitude + concordiaLoyola.latitude) / 2,
         (concordiaSGW.longitude + concordiaLoyola.longitude) / 2,
       );
-      expect(
-        [Campus.sgw, Campus.loyola, Campus.none],
-        contains(detectCampus(mid)),
-      );
+      expect([
+        Campus.sgw,
+        Campus.loyola,
+        Campus.none,
+      ], contains(detectCampus(mid)));
     });
 
     test('all Concordia building centres return valid Campus', () {
       for (final b in buildingPolygons) {
-        expect(
-          [Campus.sgw, Campus.loyola, Campus.none],
-          contains(detectCampus(b.center)),
-        );
+        expect([
+          Campus.sgw,
+          Campus.loyola,
+          Campus.none,
+        ], contains(detectCampus(b.center)));
       }
     });
 
     test('buildings inside SGW radius → Campus.sgw', () {
       for (final b in buildingPolygons) {
         final d = Geolocator.distanceBetween(
-          b.center.latitude, b.center.longitude,
-          concordiaSGW.latitude, concordiaSGW.longitude,
+          b.center.latitude,
+          b.center.longitude,
+          concordiaSGW.latitude,
+          concordiaSGW.longitude,
         );
         if (d < campusRadius) expect(detectCampus(b.center), Campus.sgw);
       }
@@ -298,8 +302,10 @@ void main() {
     test('buildings inside Loyola radius → Campus.loyola', () {
       for (final b in buildingPolygons) {
         final d = Geolocator.distanceBetween(
-          b.center.latitude, b.center.longitude,
-          concordiaLoyola.latitude, concordiaLoyola.longitude,
+          b.center.latitude,
+          b.center.longitude,
+          concordiaLoyola.latitude,
+          concordiaLoyola.longitude,
         );
         if (d < campusRadius) expect(detectCampus(b.center), Campus.loyola);
       }
@@ -391,88 +397,95 @@ void main() {
   // 4. build() with map ENABLED – exercises _createBuildingPolygons,
   //    _createMarkers, _createCircles, and all GoogleMap parameters
   // --------------------------------------------------------------------------
-  group('build() with GoogleMap enabled (executes polygon/marker/circle methods)', () {
-    testWidgets('renders without crash (SGW)', (tester) async {
-      await pumpWithMap(tester, initialCampus: Campus.sgw);
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+  group(
+    'build() with GoogleMap enabled (executes polygon/marker/circle methods)',
+    () {
+      testWidgets('renders without crash (SGW)', (tester) async {
+        await pumpWithMap(tester, initialCampus: Campus.sgw);
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      });
 
-    testWidgets('renders without crash (Loyola)', (tester) async {
-      await pumpWithMap(tester, initialCampus: Campus.loyola);
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+      testWidgets('renders without crash (Loyola)', (tester) async {
+        await pumpWithMap(tester, initialCampus: Campus.loyola);
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      });
 
-    testWidgets('renders without crash (Campus.none)', (tester) async {
-      await pumpWithMap(tester, initialCampus: Campus.none);
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+      testWidgets('renders without crash (Campus.none)', (tester) async {
+        await pumpWithMap(tester, initialCampus: Campus.none);
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      });
 
-    testWidgets('GoogleMap widget present when not disabled', (tester) async {
-      await pumpWithMap(tester);
-      expect(find.byType(GoogleMap), findsOneWidget);
-    });
+      testWidgets('GoogleMap widget present when not disabled', (tester) async {
+        await pumpWithMap(tester);
+        expect(find.byType(GoogleMap), findsOneWidget);
+      });
 
-    testWidgets('MapSearchBar present', (tester) async {
-      await pumpWithMap(tester);
-      expect(find.byType(MapSearchBar), findsOneWidget);
-    });
+      testWidgets('MapSearchBar present', (tester) async {
+        await pumpWithMap(tester);
+        expect(find.byType(MapSearchBar), findsOneWidget);
+      });
 
-    testWidgets('CampusToggle present', (tester) async {
-      await pumpWithMap(tester);
-      expect(find.byType(CampusToggle), findsOneWidget);
-    });
+      testWidgets('CampusToggle present', (tester) async {
+        await pumpWithMap(tester);
+        expect(find.byType(CampusToggle), findsOneWidget);
+      });
 
-    testWidgets('FABs present', (tester) async {
-      await pumpWithMap(tester);
-      expect(find.byType(FloatingActionButton), findsWidgets);
-    });
+      testWidgets('FABs present', (tester) async {
+        await pumpWithMap(tester);
+        expect(find.byType(FloatingActionButton), findsWidgets);
+      });
 
-    testWidgets('with location enabled – location FAB tap', (tester) async {
-      await pumpWithMap(tester);
-      final locFab = find.byWidgetPredicate(
-        (w) => w is FloatingActionButton && w.heroTag == 'location_button',
-      );
-      if (locFab.evaluate().isNotEmpty) {
-        await tester.tap(locFab.first, warnIfMissed: false);
-        await tester.pump();
-      }
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+      testWidgets('with location enabled – location FAB tap', (tester) async {
+        await pumpWithMap(tester);
+        final locFab = find.byWidgetPredicate(
+          (w) => w is FloatingActionButton && w.heroTag == 'location_button',
+        );
+        if (locFab.evaluate().isNotEmpty) {
+          await tester.tap(locFab.first, warnIfMissed: false);
+          await tester.pump();
+        }
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      });
 
-    testWidgets('campus FAB tap → _goToMyLocation', (tester) async {
-      await pumpWithMap(tester);
-      final campusFab = find.byWidgetPredicate(
-        (w) => w is FloatingActionButton && w.heroTag == 'campus_button',
-      );
-      if (campusFab.evaluate().isNotEmpty) {
-        await tester.tap(campusFab.first, warnIfMissed: false);
-        await tester.pump();
-      }
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+      testWidgets('campus FAB tap → _goToMyLocation', (tester) async {
+        await pumpWithMap(tester);
+        final campusFab = find.byWidgetPredicate(
+          (w) => w is FloatingActionButton && w.heroTag == 'campus_button',
+        );
+        if (campusFab.evaluate().isNotEmpty) {
+          await tester.tap(campusFab.first, warnIfMissed: false);
+          await tester.pump();
+        }
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      });
 
-    testWidgets('dispose with live map', (tester) async {
-      await pumpWithMap(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: Text('done'))),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('done'), findsOneWidget);
-    });
-  });
+      testWidgets('dispose with live map', (tester) async {
+        await pumpWithMap(tester);
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: Text('done'))),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('done'), findsOneWidget);
+      });
+    },
+  );
 
   // --------------------------------------------------------------------------
   // 5. _createBuildingPolygons executed via map-enabled build()
   //    Pump multiple times so polygon colour/style branches all execute
   // --------------------------------------------------------------------------
   group('_createBuildingPolygons styling branches', () {
-    testWidgets('no selected / no current building → default style executes', (tester) async {
+    testWidgets('no selected / no current building → default style executes', (
+      tester,
+    ) async {
       await pumpWithMap(tester);
       // All buildings render with default burgundy style
       expect(find.byType(GoogleMap), findsOneWidget);
     });
 
-    testWidgets('with debugSelectedBuilding → selected style branch executes', (tester) async {
+    testWidgets('with debugSelectedBuilding → selected style branch executes', (
+      tester,
+    ) async {
       await pumpWithMap(tester, debugSelectedBuilding: firstBuilding);
       // The building polygon for firstBuilding uses selectedBlue style
       expect(find.byType(GoogleMap), findsOneWidget);
@@ -556,7 +569,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('left-edge anchor → clamped margin still shown', (tester) async {
+    testWidgets('left-edge anchor → clamped margin still shown', (
+      tester,
+    ) async {
       await pumpNoMap(
         tester,
         debugSelectedBuilding: firstBuilding,
@@ -603,9 +618,13 @@ void main() {
         matching: find.byIcon(Icons.close),
       );
 
-      expect(closeIcon, findsOneWidget, reason: 'Close icon should exist in popup');
+      expect(
+        closeIcon,
+        findsOneWidget,
+        reason: 'Close icon should exist in popup',
+      );
       await tester.tap(closeIcon.first);
-      
+
       // After tapping close, the internal state _selectedBuildingPoly is cleared
       // However, debugSelectedBuilding is still set, so popup remains via widget tree
       // Simulate clearance by pumping without debugSelectedBuilding
@@ -621,7 +640,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      
+
       // Now the popup should be gone since _selectedBuildingPoly is null
       expect(find.byType(BuildingInfoPopup), findsNothing);
     });
@@ -653,25 +672,28 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('with injected location → _getDirections enters route preview', (tester) async {
-      await pumpWithMap(
-        tester,
-        debugSelectedBuilding: firstBuilding,
-        debugAnchorOffset: const Offset(200, 400),
-        isLoggedIn: true,
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'with injected location → _getDirections enters route preview',
+      (tester) async {
+        await pumpWithMap(
+          tester,
+          debugSelectedBuilding: firstBuilding,
+          debugAnchorOffset: const Offset(200, 400),
+          isLoggedIn: true,
+        );
+        await tester.pumpAndSettle();
 
-      final dirBtn = find.descendant(
-        of: find.byType(BuildingInfoPopup),
-        matching: find.textContaining('Direction', findRichText: true),
-      );
-      if (dirBtn.evaluate().isNotEmpty) {
-        await tester.tap(dirBtn.first, warnIfMissed: false);
-        await tester.pump(const Duration(milliseconds: 500));
-      }
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+        final dirBtn = find.descendant(
+          of: find.byType(BuildingInfoPopup),
+          matching: find.textContaining('Direction', findRichText: true),
+        );
+        if (dirBtn.evaluate().isNotEmpty) {
+          await tester.tap(dirBtn.first, warnIfMissed: false);
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      },
+    );
   });
 
   // --------------------------------------------------------------------------
@@ -708,7 +730,9 @@ void main() {
       expect(find.byType(RoutePreviewPanel), findsNothing);
     });
 
-    testWidgets('close button on RoutePreviewPanel → _closeRoutePreview', (tester) async {
+    testWidgets('close button on RoutePreviewPanel → _closeRoutePreview', (
+      tester,
+    ) async {
       await pumpAndTriggerRoutePreview(tester);
 
       final panel = find.byType(RoutePreviewPanel);
@@ -744,7 +768,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('typing in origin field → _onRouteOriginChanged', (tester) async {
+    testWidgets('typing in origin field → _onRouteOriginChanged', (
+      tester,
+    ) async {
       await pumpAndTriggerRoutePreview(tester);
 
       final panel = find.byType(RoutePreviewPanel);
@@ -762,7 +788,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('typing in destination field → _onRouteDestinationChanged', (tester) async {
+    testWidgets('typing in destination field → _onRouteDestinationChanged', (
+      tester,
+    ) async {
       await pumpAndTriggerRoutePreview(tester);
 
       final panel = find.byType(RoutePreviewPanel);
@@ -845,7 +873,9 @@ void main() {
       }
     }
 
-    testWidgets('empty link → guard: url.trim().isEmpty → return', (tester) async {
+    testWidgets('empty link → guard: url.trim().isEmpty → return', (
+      tester,
+    ) async {
       await pumpNoMap(
         tester,
         debugSelectedBuilding: firstBuilding,
@@ -856,7 +886,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('whitespace link → guard: url.trim().isEmpty → return', (tester) async {
+    testWidgets('whitespace link → guard: url.trim().isEmpty → return', (
+      tester,
+    ) async {
       await pumpNoMap(
         tester,
         debugSelectedBuilding: firstBuilding,
@@ -867,7 +899,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('malformed link → Uri.tryParse returns null → return', (tester) async {
+    testWidgets('malformed link → Uri.tryParse returns null → return', (
+      tester,
+    ) async {
       await pumpNoMap(
         tester,
         debugSelectedBuilding: firstBuilding,
@@ -963,7 +997,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('typing Concordia building name fires suggestion API', (tester) async {
+    testWidgets('typing Concordia building name fires suggestion API', (
+      tester,
+    ) async {
       await pumpNoMap(tester);
       await tester.pumpAndSettle();
       final tf = find.byType(TextField);
@@ -1004,12 +1040,16 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('known building code → Concordia building path', (tester) async {
+    testWidgets('known building code → Concordia building path', (
+      tester,
+    ) async {
       await submit(tester, firstBuilding.code);
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('known building name → Concordia building path', (tester) async {
+    testWidgets('known building name → Concordia building path', (
+      tester,
+    ) async {
       await submit(tester, firstBuilding.name);
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
@@ -1025,7 +1065,9 @@ void main() {
   // 14. _hideBuildingPopup (search focus with no building selected)
   // --------------------------------------------------------------------------
   group('_hideBuildingPopup', () {
-    testWidgets('focus with null selection → _hideBuildingPopup is a no-op', (tester) async {
+    testWidgets('focus with null selection → _hideBuildingPopup is a no-op', (
+      tester,
+    ) async {
       await pumpNoMap(tester);
       await tester.pumpAndSettle();
       final tf = find.byType(TextField);
@@ -1041,7 +1083,9 @@ void main() {
   // 15. FABs
   // --------------------------------------------------------------------------
   group('Location & Campus FABs', () {
-    testWidgets('location FAB tap with null location → guard fires', (tester) async {
+    testWidgets('location FAB tap with null location → guard fires', (
+      tester,
+    ) async {
       await pumpNoMap(tester);
       await tester.pumpAndSettle();
       final fab = find.byWidgetPredicate(
@@ -1067,7 +1111,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('location FAB with real location → animateCamera called', (tester) async {
+    testWidgets('location FAB with real location → animateCamera called', (
+      tester,
+    ) async {
       await pumpWithMap(tester);
       await tester.pumpAndSettle();
       final fab = find.byWidgetPredicate(
@@ -1095,7 +1141,9 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('none → _lastCameraTarget = concordiaSGW (else branch)', (tester) async {
+    testWidgets('none → _lastCameraTarget = concordiaSGW (else branch)', (
+      tester,
+    ) async {
       await pumpNoMap(tester, initialCampus: Campus.none);
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
@@ -1150,14 +1198,24 @@ void main() {
       await pumpNoMap(tester, initialCampus: Campus.sgw);
       await tester.pumpAndSettle();
       final toggle = tester.widget<CampusToggle>(find.byType(CampusToggle));
-      expect([Campus.sgw, Campus.loyola, Campus.none], contains(toggle.currentCampus));
+      expect([
+        Campus.sgw,
+        Campus.loyola,
+        Campus.none,
+      ], contains(toggle.currentCampus));
     });
 
-    testWidgets('Loyola → CampusToggle receives loyola or none', (tester) async {
+    testWidgets('Loyola → CampusToggle receives loyola or none', (
+      tester,
+    ) async {
       await pumpNoMap(tester, initialCampus: Campus.loyola);
       await tester.pumpAndSettle();
       final toggle = tester.widget<CampusToggle>(find.byType(CampusToggle));
-      expect([Campus.sgw, Campus.loyola, Campus.none], contains(toggle.currentCampus));
+      expect([
+        Campus.sgw,
+        Campus.loyola,
+        Campus.none,
+      ], contains(toggle.currentCampus));
     });
   });
 
@@ -1167,42 +1225,56 @@ void main() {
   group('Geolocator.distanceBetween', () {
     test('self → 0', () {
       final d = Geolocator.distanceBetween(
-        concordiaSGW.latitude, concordiaSGW.longitude,
-        concordiaSGW.latitude, concordiaSGW.longitude,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
       );
       expect(d, closeTo(0, 1.0));
     });
 
     test('SGW ↔ Loyola is 5–15 km', () {
       final d = Geolocator.distanceBetween(
-        concordiaSGW.latitude, concordiaSGW.longitude,
-        concordiaLoyola.latitude, concordiaLoyola.longitude,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
+        concordiaLoyola.latitude,
+        concordiaLoyola.longitude,
       );
       expect(d, inInclusiveRange(5000.0, 15000.0));
     });
 
     test('symmetric', () {
       final d1 = Geolocator.distanceBetween(
-        concordiaSGW.latitude, concordiaSGW.longitude,
-        concordiaLoyola.latitude, concordiaLoyola.longitude,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
+        concordiaLoyola.latitude,
+        concordiaLoyola.longitude,
       );
       final d2 = Geolocator.distanceBetween(
-        concordiaLoyola.latitude, concordiaLoyola.longitude,
-        concordiaSGW.latitude, concordiaSGW.longitude,
+        concordiaLoyola.latitude,
+        concordiaLoyola.longitude,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
       );
       expect(d1, closeTo(d2, 0.1));
     });
 
     test('far point > campusRadius', () {
       final d = Geolocator.distanceBetween(
-          0, 0, concordiaSGW.latitude, concordiaSGW.longitude);
+        0,
+        0,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
+      );
       expect(d, greaterThan(campusRadius));
     });
 
     test('50 m from SGW < campusRadius', () {
       final d = Geolocator.distanceBetween(
-        45.4977, -73.5789,
-        concordiaSGW.latitude, concordiaSGW.longitude,
+        45.4977,
+        -73.5789,
+        concordiaSGW.latitude,
+        concordiaSGW.longitude,
       );
       expect(d, lessThan(campusRadius));
     });

@@ -66,9 +66,7 @@ void main() {
               'status': 'OK',
               'routes': [
                 {
-                  'overview_polyline': {
-                    'points': 'u{_vFj|xiVnB?',
-                  },
+                  'overview_polyline': {'points': 'u{_vFj|xiVnB?'},
                 },
               ],
             }),
@@ -95,9 +93,7 @@ void main() {
                 'status': 'OK',
                 'routes': [
                   {
-                    'overview_polyline': {
-                      'points': '_p~iF~ps|U_ulLnnqC',
-                    },
+                    'overview_polyline': {'points': '_p~iF~ps|U_ulLnnqC'},
                   },
                 ],
               }),
@@ -121,10 +117,7 @@ void main() {
       test('returns null when status is not OK', () async {
         final mockClient = MockHttpClient((request) {
           return http.Response(
-            json.encode({
-              'status': 'ZERO_RESULTS',
-              'routes': [],
-            }),
+            json.encode({'status': 'ZERO_RESULTS', 'routes': []}),
             200,
           );
         });
@@ -141,10 +134,7 @@ void main() {
       test('returns null when routes array is empty', () async {
         final mockClient = MockHttpClient((request) {
           return http.Response(
-            json.encode({
-              'status': 'OK',
-              'routes': [],
-            }),
+            json.encode({'status': 'OK', 'routes': []}),
             200,
           );
         });
@@ -223,9 +213,7 @@ void main() {
               'status': 'OK',
               'routes': [
                 {
-                  'overview_polyline': {
-                    'points': '_p~iF~ps|U',
-                  },
+                  'overview_polyline': {'points': '_p~iF~ps|U'},
                 },
               ],
             }),
@@ -277,9 +265,7 @@ void main() {
               'status': 'OK',
               'routes': [
                 {
-                  'overview_polyline': {
-                    'points': '????',
-                  },
+                  'overview_polyline': {'points': '????'},
                 },
               ],
             }),
@@ -333,9 +319,7 @@ void main() {
               'status': 'OK',
               'routes': [
                 {
-                  'overview_polyline': {
-                    'points': '_p~iF~ps|U',
-                  },
+                  'overview_polyline': {'points': '_p~iF~ps|U'},
                 },
               ],
             }),
@@ -359,9 +343,7 @@ void main() {
               'status': 'OK',
               'routes': [
                 {
-                  'overview_polyline': {
-                    'points': '_p~iF~ps|U',
-                  },
+                  'overview_polyline': {'points': '_p~iF~ps|U'},
                 },
               ],
             }),
@@ -386,9 +368,7 @@ void main() {
             json.encode({
               'status': 'OK',
               'routes': [
-                {
-                  'summary': 'Route summary',
-                },
+                {'summary': 'Route summary'},
               ],
             }),
             200,
@@ -418,10 +398,7 @@ void main() {
         for (final status in errorStatuses) {
           final mockClient = MockHttpClient((request) {
             return http.Response(
-              json.encode({
-                'status': status,
-                'routes': [],
-              }),
+              json.encode({'status': status, 'routes': []}),
               200,
             );
           });
@@ -432,7 +409,11 @@ void main() {
             destination: const LatLng(45.6, -73.6),
           );
 
-          expect(result, isNull, reason: 'Should return null for status: $status');
+          expect(
+            result,
+            isNull,
+            reason: 'Should return null for status: $status',
+          );
         }
       });
     });

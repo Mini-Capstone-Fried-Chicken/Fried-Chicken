@@ -192,8 +192,8 @@ class BuildingSearchService {
 
     // Get Google Places autocomplete predictions
     try {
-      final placePredictions =
-          await GooglePlacesService.instance.getAutocompletePredictions(
+      final placePredictions = await GooglePlacesService.instance
+          .getAutocompletePredictions(
             query,
             location: userLocation,
             radius: 5000,

@@ -17,7 +17,8 @@ class GoogleDirectionsService {
   static final GoogleDirectionsService instance = GoogleDirectionsService();
 
   /// Constructor with optional HTTP client injection
-  GoogleDirectionsService({http.Client? client}) : _client = client ?? http.Client();
+  GoogleDirectionsService({http.Client? client})
+    : _client = client ?? http.Client();
 
   /// Get route polyline points from origin to destination
   /// Returns null if route cannot be found

@@ -61,7 +61,8 @@ class GooglePlacesService {
   static final GooglePlacesService instance = GooglePlacesService();
 
   /// Constructor with optional HTTP client injection
-  GooglePlacesService({http.Client? client}) : _client = client ?? http.Client();
+  GooglePlacesService({http.Client? client})
+    : _client = client ?? http.Client();
 
   /// Search for places using Google Places API Text Search
   /// Returns a list of PlaceResult

@@ -62,18 +62,12 @@ void main() {
                   'id': 'place1',
                   'displayName': {'text': 'Test Place 1'},
                   'formattedAddress': '123 Test St',
-                  'location': {
-                    'latitude': 45.5,
-                    'longitude': -73.5,
-                  },
+                  'location': {'latitude': 45.5, 'longitude': -73.5},
                 },
                 {
                   'id': 'place2',
                   'displayName': {'text': 'Test Place 2'},
-                  'location': {
-                    'latitude': 45.6,
-                    'longitude': -73.6,
-                  },
+                  'location': {'latitude': 45.6, 'longitude': -73.6},
                 },
               ],
             }),
@@ -100,10 +94,7 @@ void main() {
           expect(body['locationBias']['circle']['center']['longitude'], -73.5);
           expect(body['locationBias']['circle']['radius'], 5000.0);
 
-          return http.Response(
-            json.encode({'places': []}),
-            200,
-          );
+          return http.Response(json.encode({'places': []}), 200);
         });
 
         final service = GooglePlacesService(client: mockClient);
@@ -116,10 +107,7 @@ void main() {
 
       test('returns empty list when no places in response', () async {
         final mockClient = MockHttpClient((request) {
-          return http.Response(
-            json.encode({}),
-            200,
-          );
+          return http.Response(json.encode({}), 200);
         });
 
         final service = GooglePlacesService(client: mockClient);
@@ -130,10 +118,7 @@ void main() {
 
       test('returns empty list when places array is null', () async {
         final mockClient = MockHttpClient((request) {
-          return http.Response(
-            json.encode({'places': null}),
-            200,
-          );
+          return http.Response(json.encode({'places': null}), 200);
         });
 
         final service = GooglePlacesService(client: mockClient);
@@ -171,10 +156,7 @@ void main() {
               'places': [
                 {
                   'id': 'place1',
-                  'location': {
-                    'latitude': 45.5,
-                    'longitude': -73.5,
-                  },
+                  'location': {'latitude': 45.5, 'longitude': -73.5},
                 },
               ],
             }),
@@ -201,10 +183,7 @@ void main() {
               'id': 'ChIJ123',
               'displayName': {'text': 'Test Place'},
               'formattedAddress': '123 Test St',
-              'location': {
-                'latitude': 45.5,
-                'longitude': -73.5,
-              },
+              'location': {'latitude': 45.5, 'longitude': -73.5},
             }),
             200,
           );
@@ -228,10 +207,7 @@ void main() {
             json.encode({
               'id': 'ChIJ123',
               'displayName': {'text': 'Test Place'},
-              'location': {
-                'latitude': 45.5,
-                'longitude': -73.5,
-              },
+              'location': {'latitude': 45.5, 'longitude': -73.5},
             }),
             200,
           );
@@ -248,10 +224,7 @@ void main() {
             json.encode({
               'id': 'places/ChIJ456',
               'displayName': {'text': 'Test Place'},
-              'location': {
-                'latitude': 45.5,
-                'longitude': -73.5,
-              },
+              'location': {'latitude': 45.5, 'longitude': -73.5},
             }),
             200,
           );
@@ -287,10 +260,7 @@ void main() {
         final mockClient = MockHttpClient((request) {
           return http.Response(
             json.encode({
-              'location': {
-                'latitude': 45.5,
-                'longitude': -73.5,
-              },
+              'location': {'latitude': 45.5, 'longitude': -73.5},
             }),
             200,
           );
@@ -401,10 +371,7 @@ void main() {
           expect(body['locationBias']['circle']['center']['longitude'], -73.5);
           expect(body['locationBias']['circle']['radius'], 3000.0);
 
-          return http.Response(
-            json.encode({'suggestions': []}),
-            200,
-          );
+          return http.Response(json.encode({'suggestions': []}), 200);
         });
 
         final service = GooglePlacesService(client: mockClient);
@@ -415,29 +382,32 @@ void main() {
         );
       });
 
-      test('uses default Concordia location bias when no location provided', () async {
-        final mockClient = MockHttpClient((request) {
-          final body = json.decode(request.body);
-          expect(body['locationBias']['circle']['center']['latitude'], 45.4958);
-          expect(body['locationBias']['circle']['center']['longitude'], -73.5711);
-          expect(body['locationBias']['circle']['radius'], 15000.0);
+      test(
+        'uses default Concordia location bias when no location provided',
+        () async {
+          final mockClient = MockHttpClient((request) {
+            final body = json.decode(request.body);
+            expect(
+              body['locationBias']['circle']['center']['latitude'],
+              45.4958,
+            );
+            expect(
+              body['locationBias']['circle']['center']['longitude'],
+              -73.5711,
+            );
+            expect(body['locationBias']['circle']['radius'], 15000.0);
 
-          return http.Response(
-            json.encode({'suggestions': []}),
-            200,
-          );
-        });
+            return http.Response(json.encode({'suggestions': []}), 200);
+          });
 
-        final service = GooglePlacesService(client: mockClient);
-        await service.getAutocompletePredictions('test');
-      });
+          final service = GooglePlacesService(client: mockClient);
+          await service.getAutocompletePredictions('test');
+        },
+      );
 
       test('returns empty list when no suggestions in response', () async {
         final mockClient = MockHttpClient((request) {
-          return http.Response(
-            json.encode({}),
-            200,
-          );
+          return http.Response(json.encode({}), 200);
         });
 
         final service = GooglePlacesService(client: mockClient);
@@ -484,9 +454,7 @@ void main() {
           return http.Response(
             json.encode({
               'suggestions': [
-                {
-                  'otherField': 'value',
-                },
+                {'otherField': 'value'},
               ],
             }),
             200,
@@ -505,9 +473,7 @@ void main() {
             json.encode({
               'suggestions': [
                 {
-                  'placePrediction': {
-                    'placeId': 'place1',
-                  },
+                  'placePrediction': {'placeId': 'place1'},
                 },
               ],
             }),
@@ -528,10 +494,7 @@ void main() {
         final mockClient = MockHttpClient((request) {
           return http.Response(
             json.encode({
-              'error': {
-                'code': 400,
-                'message': 'Invalid request',
-              },
+              'error': {'code': 400, 'message': 'Invalid request'},
             }),
             200,
           );
@@ -557,9 +520,7 @@ void main() {
                     },
                   },
                 },
-                {
-                  'placePrediction': 'invalid',
-                },
+                {'placePrediction': 'invalid'},
               ],
             }),
             200,
@@ -618,10 +579,7 @@ void main() {
       });
 
       test('fromJson handles missing structured_formatting', () {
-        final json = {
-          'place_id': 'ChIJ123',
-          'description': 'Test Place',
-        };
+        final json = {'place_id': 'ChIJ123', 'description': 'Test Place'};
 
         final prediction = PlacePrediction.fromJson(json);
 
