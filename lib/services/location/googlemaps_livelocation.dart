@@ -653,24 +653,73 @@ Future<void> _openLink(String url) async {
       selection: TextSelection.collapsed(offset: result.name.length),
     );
 
-    // Animate camera to the place
-    controller.animateCamera(
-      CameraUpdate.newLatLngZoom(result.location, 18),
-    );
+    if (result.isConcordiaBuilding) {
+      // For Concordia buildings: just animate camera
+      controller.animateCamera(
+        CameraUpdate.newLatLngZoom(result.location, 18),
+      );
 
-    // Show info about whether it's a Concordia building
+      // Show info about the Concordia building
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${result.name} is a Concordia building'),
+          duration: const Duration(seconds: 3),
+          backgroundColor: const Color(0xFF800020),
+        ),
+      );
+    } else {
+      // For non-Concordia buildings: automatically show route preview
+      if (_currentLocation == null) {
+        // If current location is not available, just show the place
+        controller.animateCamera(
+          CameraUpdate.newLatLngZoom(result.location, 18),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${result.name} is not a Concordia building'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.grey[700],
+          ),
+        );
+      } else {
+        // Automatically enter route preview mode
+        _enterRoutePreviewForPlace(result);
+      }
+    }
+  }
+
+  Future<void> _enterRoutePreviewForPlace(SearchResult place) async {
+    if (_currentLocation == null) return;
+
+    print('[DEBUG] Entering route preview for non-Concordia place: ${place.name}');
+
+    // Enter route preview mode with current location as origin and selected place as destination
+    setState(() {
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _showRoutePreview = true;
+      _routeOrigin = _currentLocation;
+      _routeDestination = place.location;
+      _routeOriginText = 'Current location';
+      _routeDestinationText = place.name;
+      _selectedSearchResult = place;
+    });
+
+    print('[DEBUG] Route preview initialized - origin: $_routeOrigin, destination: $_routeDestination');
+
+    // Fetch the route
+    await _fetchRoute();
+
+    // Show confirmation message
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          result.isConcordiaBuilding
-              ? '${result.name} is a Concordia building'
-              : '${result.name} is not a Concordia building',
-        ),
-        duration: const Duration(seconds: 3),
-        backgroundColor: result.isConcordiaBuilding
-            ? const Color(0xFF800020)
-            : Colors.grey[700],
+        content: Text('Showing route to ${place.name}'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.green[700],
       ),
     );
   }
