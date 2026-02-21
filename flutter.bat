@@ -4,11 +4,22 @@ REM It allows you to run: flutter run (instead of: flutter-run.bat run)
 
 setlocal enabledelayedexpansion
 
-REM Set a proper PATH with essential system directories
-set PATH=C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows;C:\Program Files\Git\cmd;C:\Users\lihai\Documents\Flutter\flutter\bin;%PATH%
+REM Resolve the real Flutter executable from PATH and avoid self-recursion
+set "THIS_SCRIPT=%~f0"
+set "FLUTTER_SDK="
+for /f "delims=" %%F in ('where flutter 2^>nul') do (
+    if /I not "%%~fF"=="%THIS_SCRIPT%" (
+        set "FLUTTER_SDK=%%~fF"
+        goto flutter_found
+    )
+)
 
-REM Expected location of the real Flutter SDK
-set FLUTTER_SDK=C:\Users\lihai\Documents\Flutter\flutter\bin\flutter.bat
+:flutter_found
+if "%FLUTTER_SDK%"=="" (
+    echo [ERROR] Could not find a Flutter SDK executable in PATH.
+    echo Ensure Flutter is installed and added to PATH.
+    exit /b 1
+)
 
 REM Only process 'run', 'build', and 'drive' commands - pass others through unchanged
 if "%1"=="" goto run_flutter
@@ -41,15 +52,9 @@ if exist "%FLUTTER_SDK%" (
 :load_env
 REM Check if .env file exists
 if not exist .env (
-    echo.
-    echo [ERROR] .env file not found in %CD%
-    echo Please create .env file by copying from .env.example
-    echo.
-    echo Solution:
-    echo   copy .env.example .env
-    echo   [then edit .env and add your actual API keys]
-    echo.
-    exit /b 1
+    echo [WARNING] .env file not found in %CD%
+    echo [WARNING] Running without API key dart-defines.
+    goto run_flutter
 )
 
 REM Load environment variables from .env
@@ -95,11 +100,14 @@ echo.
 echo [INFO] Running: flutter %*
 echo.
 
-REM Call the real flutter with API keys
+REM Build optional dart-define arguments only when keys exist
+set "EXTRA_ARGS="
+if not "!GOOGLE_DIRECTIONS_API_KEY!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=GOOGLE_DIRECTIONS_API_KEY=!GOOGLE_DIRECTIONS_API_KEY!"
+if not "!GOOGLE_PLACES_API_KEY!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=GOOGLE_PLACES_API_KEY=!GOOGLE_PLACES_API_KEY!"
+
+REM Call the real flutter with optional API keys
 if exist "%FLUTTER_SDK%" (
-    call "%FLUTTER_SDK%" %* ^
-        --dart-define=GOOGLE_DIRECTIONS_API_KEY=!GOOGLE_DIRECTIONS_API_KEY! ^
-        --dart-define=GOOGLE_PLACES_API_KEY=!GOOGLE_PLACES_API_KEY!
+    call "%FLUTTER_SDK%" %* !EXTRA_ARGS!
     exit /b !errorlevel!
 ) else (
     echo [ERROR] Could not find Flutter SDK at %FLUTTER_SDK%

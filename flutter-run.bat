@@ -5,15 +5,36 @@ REM        flutter-run.bat build apk
 
 setlocal enabledelayedexpansion
 
+REM Resolve the real Flutter executable from PATH and avoid local wrapper recursion
+set "THIS_SCRIPT=%~f0"
+set "PROJECT_FLUTTER_WRAPPER=%~dp0flutter.bat"
+set "FLUTTER_SDK="
+for /f "delims=" %%F in ('where flutter 2^>nul') do (
+    if /I not "%%~fF"=="%THIS_SCRIPT%" if /I not "%%~fF"=="%PROJECT_FLUTTER_WRAPPER%" (
+        set "FLUTTER_SDK=%%~fF"
+        goto flutter_found
+    )
+)
+
+:flutter_found
+if "%FLUTTER_SDK%"=="" (
+    echo [ERROR] Could not find a Flutter SDK executable in PATH.
+    echo Ensure Flutter is installed and added to PATH.
+    exit /b 1
+)
+
+REM Only apply dart-defines to commands that support build/run options
+if "%1"=="run" goto load_env
+if "%1"=="build" goto load_env
+if "%1"=="drive" goto load_env
+goto run_flutter
+
+ :load_env
 REM Check if .env file exists
 if not exist .env (
-    echo Error: .env file not found!
-    echo Please create .env file by copying from .env.example
-    echo.
-    echo Example:
-    echo   copy .env.example .env
-    echo   (edit .env and add your actual API keys)
-    exit /b 1
+    echo [WARNING] .env file not found in %CD%
+    echo [WARNING] Running without API key dart-defines.
+    goto run_flutter
 )
 
 REM Load environment variables from .env
@@ -38,9 +59,7 @@ for /f "usebackq delims=" %%x in (.env) do (
             set "!temp_key!=!temp_value!"
             
             REM Debug output
-            if not "!temp_key:~0,6!"=="GOOGLE" goto skip_debug
-            echo   ✓ !temp_key! loaded
-            :skip_debug
+            if "!temp_key:~0,6!"=="GOOGLE" echo   ✓ !temp_key! loaded
         )
     )
 )
@@ -66,9 +85,22 @@ echo   With GOOGLE_DIRECTIONS_API_KEY=!GOOGLE_DIRECTIONS_API_KEY!
 echo   With GOOGLE_PLACES_API_KEY=!GOOGLE_PLACES_API_KEY!
 echo.
 
+REM Build optional dart-define arguments only when keys exist
+set "EXTRA_ARGS="
+if not "!GOOGLE_DIRECTIONS_API_KEY!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=GOOGLE_DIRECTIONS_API_KEY=!GOOGLE_DIRECTIONS_API_KEY!"
+if not "!GOOGLE_PLACES_API_KEY!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=GOOGLE_PLACES_API_KEY=!GOOGLE_PLACES_API_KEY!"
+
+goto execute_flutter
+
+:run_flutter
+echo.
+echo Running: flutter %*
+echo.
+set "EXTRA_ARGS="
+
+:execute_flutter
 REM Run Flutter with API keys as dart-define parameters
-flutter %* ^
-    --dart-define=GOOGLE_DIRECTIONS_API_KEY=!GOOGLE_DIRECTIONS_API_KEY! ^
-    --dart-define=GOOGLE_PLACES_API_KEY=!GOOGLE_PLACES_API_KEY!
+call "%FLUTTER_SDK%" %* !EXTRA_ARGS!
+exit /b !errorlevel!
 
 endlocal
