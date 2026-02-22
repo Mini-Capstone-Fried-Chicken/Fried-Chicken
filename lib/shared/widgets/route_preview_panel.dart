@@ -1,6 +1,36 @@
 import 'package:flutter/material.dart';
 import '../../data/search_suggestion.dart';
 
+enum RouteTravelMode { driving, walking, bicycling, transit }
+
+extension RouteTravelModeX on RouteTravelMode {
+  String get apiValue {
+    switch (this) {
+      case RouteTravelMode.driving:
+        return 'driving';
+      case RouteTravelMode.walking:
+        return 'walking';
+      case RouteTravelMode.bicycling:
+        return 'bicycling';
+      case RouteTravelMode.transit:
+        return 'transit';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case RouteTravelMode.driving:
+        return 'Driving';
+      case RouteTravelMode.walking:
+        return 'Walking';
+      case RouteTravelMode.bicycling:
+        return 'Biking';
+      case RouteTravelMode.transit:
+        return 'Transit';
+    }
+  }
+}
+
 class RoutePreviewPanel extends StatefulWidget {
   final String originText;
   final String destinationText;
@@ -335,8 +365,8 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
 }
 
 class RouteTravelModeBar extends StatelessWidget {
-  final String selectedTravelMode;
-  final ValueChanged<String> onTravelModeSelected;
+  final RouteTravelMode selectedTravelMode;
+  final ValueChanged<RouteTravelMode> onTravelModeSelected;
   final Map<String, String?> modeDurations;
   final bool isLoadingDurations;
   final VoidCallback onClose;
@@ -359,8 +389,8 @@ class RouteTravelModeBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
-    final selectedLabel = _modeLabel(selectedTravelMode);
-    final selectedDuration = modeDurations[selectedTravelMode];
+    final selectedLabel = selectedTravelMode.label;
+    final selectedDuration = modeDurations[selectedTravelMode.apiValue];
     final durationLabel = isLoadingDurations
         ? '...'
         : (selectedDuration?.trim().isNotEmpty == true
@@ -416,9 +446,9 @@ class RouteTravelModeBar extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: _buildTravelModeButton(
-                    mode: 'driving',
+                    mode: RouteTravelMode.driving,
                     icon: Icons.directions_car,
-                    label: _durationLabelFor('driving'),
+                    label: _durationLabelFor(RouteTravelMode.driving),
                     labelSize: 11,
                     selectedColor: Colors.white,
                   ),
@@ -427,9 +457,9 @@ class RouteTravelModeBar extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: _buildTravelModeButton(
-                    mode: 'walking',
+                    mode: RouteTravelMode.walking,
                     icon: Icons.directions_walk,
-                    label: _durationLabelFor('walking'),
+                    label: _durationLabelFor(RouteTravelMode.walking),
                     labelSize: 11,
                     selectedColor: Colors.white,
                   ),
@@ -438,9 +468,9 @@ class RouteTravelModeBar extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: _buildTravelModeButton(
-                    mode: 'bicycling',
+                    mode: RouteTravelMode.bicycling,
                     icon: Icons.directions_bike,
-                    label: _durationLabelFor('bicycling'),
+                    label: _durationLabelFor(RouteTravelMode.bicycling),
                     labelSize: 11,
                     selectedColor: Colors.white,
                   ),
@@ -449,9 +479,9 @@ class RouteTravelModeBar extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: _buildTravelModeButton(
-                    mode: 'transit',
+                    mode: RouteTravelMode.transit,
                     icon: Icons.directions_transit,
-                    label: _durationLabelFor('transit'),
+                    label: _durationLabelFor(RouteTravelMode.transit),
                     labelSize: 11,
                     selectedColor: Colors.white,
                   ),
@@ -500,8 +530,8 @@ class RouteTravelModeBar extends StatelessWidget {
     );
   }
 
-  String _durationLabelFor(String mode) {
-    final duration = modeDurations[mode];
+  String _durationLabelFor(RouteTravelMode mode) {
+    final duration = modeDurations[mode.apiValue];
     if (isLoadingDurations) {
       return '...';
     }
@@ -509,7 +539,7 @@ class RouteTravelModeBar extends StatelessWidget {
   }
 
   Widget _buildTravelModeButton({
-    required String mode,
+    required RouteTravelMode mode,
     required IconData icon,
     required String label,
     double labelSize = 10,
@@ -557,21 +587,6 @@ class RouteTravelModeBar extends StatelessWidget {
     );
   }
 
-  String _modeLabel(String mode) {
-    switch (mode) {
-      case 'driving':
-        return 'Driving';
-      case 'walking':
-        return 'Walking';
-      case 'bicycling':
-        return 'Biking';
-      case 'transit':
-        return 'Transit';
-      default:
-        return 'Route';
-    }
-  }
-
   (String, String) _splitDuration(String label) {
     final match = RegExp(r'^(\d+)\s*(.*)$').firstMatch(label);
     if (match == null) {
@@ -583,7 +598,7 @@ class RouteTravelModeBar extends StatelessWidget {
   }
 
   Widget _buildRouteDetails() {
-    if (selectedTravelMode == 'transit') {
+    if (selectedTravelMode == RouteTravelMode.transit) {
       if (transitDetails.isEmpty) {
         return const Text(
           'Transit details unavailable',
@@ -615,8 +630,8 @@ class RouteTravelModeBar extends StatelessWidget {
       );
     }
 
-    final distance = modeDistances[selectedTravelMode];
-    final arrival = modeArrivalTimes[selectedTravelMode];
+    final distance = modeDistances[selectedTravelMode.apiValue];
+    final arrival = modeArrivalTimes[selectedTravelMode.apiValue];
     final distanceLabel = distance?.trim().isNotEmpty == true
         ? distance!
         : 'Distance N/A';

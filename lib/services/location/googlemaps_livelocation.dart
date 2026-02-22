@@ -106,7 +106,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   LatLng? _routeDestination;
   String _routeOriginText = 'Current location';
   String _routeDestinationText = '';
-  String _selectedTravelMode = 'driving';
+  RouteTravelMode _selectedTravelMode = RouteTravelMode.driving;
   final Map<String, String?> _routeDurations = {};
   final Map<String, String?> _routeDistances = {};
   final Map<String, String?> _routeArrivalTimes = {};
@@ -117,11 +117,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   List<SearchSuggestion> _routeDestinationSuggestions = [];
   Timer? _routeDebounceTimer;
 
-  static const List<String> _supportedTravelModes = [
-    'driving',
-    'walking',
-    'bicycling',
-    'transit',
+  static const List<RouteTravelMode> _supportedTravelModes = [
+    RouteTravelMode.driving,
+    RouteTravelMode.walking,
+    RouteTravelMode.bicycling,
+    RouteTravelMode.transit,
   ];
 
   StreamSubscription<Position>? _posSub;
@@ -334,7 +334,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routePointsByMode.clear();
       _routeSegmentsByMode.clear();
       _isLoadingRouteData = false;
-      _selectedTravelMode = 'driving';
+      _selectedTravelMode = RouteTravelMode.driving;
       if (clearSearch) {
         _searchController.clear();
       }
@@ -402,7 +402,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         (mode) => GoogleDirectionsService.instance.getRouteDetails(
           origin: origin,
           destination: destination,
-          mode: mode,
+          mode: mode.apiValue,
         ),
       );
 
@@ -414,7 +414,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final segmentsByMode = <String, List<DirectionsRouteSegment>>{};
 
       for (var i = 0; i < _supportedTravelModes.length; i++) {
-        final mode = _supportedTravelModes[i];
+        final mode = _supportedTravelModes[i].apiValue;
         final route = results[i];
         durations[mode] = route?.durationText;
         distances[mode] = route?.distanceText;
@@ -459,15 +459,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _applySelectedModeRoute({required bool animateCamera}) {
-    final selectedSegments = _routeSegmentsByMode[_selectedTravelMode];
-    if (_selectedTravelMode == 'transit' &&
+    final selectedModeKey = _selectedTravelMode.apiValue;
+    final selectedSegments = _routeSegmentsByMode[selectedModeKey];
+    if (_selectedTravelMode == RouteTravelMode.transit &&
         selectedSegments != null &&
         selectedSegments.isNotEmpty) {
       _applyTransitSegments(selectedSegments, animateCamera: animateCamera);
       return;
     }
 
-    final selectedPoints = _routePointsByMode[_selectedTravelMode];
+    final selectedPoints = _routePointsByMode[selectedModeKey];
 
     if (selectedPoints == null || selectedPoints.isEmpty) {
       setState(() {
@@ -483,7 +484,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           points: selectedPoints,
           color: const Color(0xFF76263D),
           width: 5,
-          patterns: [PatternItem.dot, PatternItem.gap(10)],
+          patterns: _selectedTravelMode == RouteTravelMode.driving
+              ? const []
+              : [PatternItem.dot, PatternItem.gap(10)],
         ),
       };
     });
@@ -553,7 +556,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routePointsByMode.clear();
       _routeSegmentsByMode.clear();
       _isLoadingRouteData = false;
-      _selectedTravelMode = 'driving';
+      _selectedTravelMode = RouteTravelMode.driving;
       _searchController.clear();
     });
   }
@@ -804,14 +807,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _fetchRoutesAndDurations();
   }
 
-  void _onTravelModeSelected(String mode) {
-    if (!_supportedTravelModes.contains(mode)) return;
-
+  void _onTravelModeSelected(RouteTravelMode mode) {
     setState(() {
       _selectedTravelMode = mode;
     });
 
-    if (_routePointsByMode.containsKey(mode)) {
+    if (_routePointsByMode.containsKey(mode.apiValue)) {
       _applySelectedModeRoute(animateCamera: false);
       return;
     }
@@ -1429,7 +1430,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       ),
     );
 
-    if (_showRoutePreview && _selectedTravelMode == 'transit') {
+    if (_showRoutePreview && _selectedTravelMode == RouteTravelMode.transit) {
       final segments = _routeSegmentsByMode['transit'] ?? const [];
       final seen = <String>{};
 
