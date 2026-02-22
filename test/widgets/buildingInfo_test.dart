@@ -25,6 +25,7 @@ void main() {
               morePressed = true;
             },
             isLoggedIn: isLoggedIn,
+            onGetDirections: () {},
           ),
         ),
       );
@@ -53,6 +54,7 @@ void main() {
                           morePressed = true;
                         },
                         isLoggedIn: isLoggedIn,
+                        onGetDirections: () {},
                       ),
                     );
                   },
@@ -71,8 +73,9 @@ void main() {
       expect(find.text('This is a test building description.'), findsOneWidget);
     });
 
-    testWidgets('renders core controls (close + More + action icons)',
-        (WidgetTester tester) async {
+    testWidgets('renders core controls (close + More + action icons)', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       expect(find.byIcon(Icons.close), findsOneWidget);
@@ -82,23 +85,24 @@ void main() {
       expect(find.widgetWithIcon(IconButton, Icons.map), findsOneWidget);
     });
 
-    testWidgets('save button is hidden when logged out',
-        (WidgetTester tester) async {
+    testWidgets('save button is hidden when logged out', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: false));
 
       expect(find.byIcon(Icons.bookmark_border), findsNothing);
       expect(find.byIcon(Icons.bookmark), findsNothing);
     });
 
-    testWidgets('save button is visible when logged in',
-        (WidgetTester tester) async {
+    testWidgets('save button is visible when logged in', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
     });
 
-    testWidgets('tapping save toggles to unsave',
-        (WidgetTester tester) async {
+    testWidgets('tapping save toggles to unsave', (WidgetTester tester) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       await tester.tap(find.byIcon(Icons.bookmark_border));
@@ -107,8 +111,9 @@ void main() {
       expect(find.byIcon(Icons.bookmark), findsOneWidget);
     });
 
-    testWidgets('close button triggers onClose callback',
-        (WidgetTester tester) async {
+    testWidgets('close button triggers onClose callback', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       await tester.tap(find.byIcon(Icons.close));
@@ -117,8 +122,9 @@ void main() {
       expect(closePressed, isTrue);
     });
 
-    testWidgets('More button triggers onMore callback',
-        (WidgetTester tester) async {
+    testWidgets('More button triggers onMore callback', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       await tester.tap(find.text('More'));
@@ -127,8 +133,9 @@ void main() {
       expect(morePressed, isTrue);
     });
 
-    testWidgets('other icon buttons can be tapped',
-        (WidgetTester tester) async {
+    testWidgets('other icon buttons can be tapped', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
 
       await tester.tap(find.widgetWithIcon(IconButton, Icons.directions));
@@ -138,8 +145,9 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('clicking a building opens popup with correct info',
-        (WidgetTester tester) async {
+    testWidgets('clicking a building opens popup with correct info', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createBuildingWithPopup(isLoggedIn: true));
 
       await tester.tap(find.byKey(const Key('buildingButton')));
@@ -154,8 +162,9 @@ void main() {
       expect(find.text('More'), findsOneWidget);
     });
 
-    testWidgets('popup can be closed after opening from building tap',
-        (WidgetTester tester) async {
+    testWidgets('popup can be closed after opening from building tap', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createBuildingWithPopup(isLoggedIn: true));
 
       await tester.tap(find.byKey(const Key('buildingButton')));
@@ -168,8 +177,9 @@ void main() {
       expect(closePressed, isTrue);
     });
 
-    testWidgets('More button works when popup opened from building tap',
-        (WidgetTester tester) async {
+    testWidgets('More button works when popup opened from building tap', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createBuildingWithPopup(isLoggedIn: true));
 
       await tester.tap(find.byKey(const Key('buildingButton')));
@@ -181,8 +191,9 @@ void main() {
       expect(morePressed, isTrue);
     });
 
-    testWidgets('shows top icons for accessibility and facilities',
-        (WidgetTester tester) async {
+    testWidgets('shows top icons for accessibility and facilities', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -192,6 +203,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: true,
+              onGetDirections: () {},
               accessibility: true,
               facilities: const [
                 'Washrooms',
@@ -215,8 +227,9 @@ void main() {
       expect(find.byIcon(Icons.local_parking), findsOneWidget);
     });
 
-    testWidgets('facility matching is case-insensitive',
-        (WidgetTester tester) async {
+    testWidgets('facility matching is case-insensitive', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -226,6 +239,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['COFFEE SHOP'],
             ),
           ),
@@ -235,8 +249,9 @@ void main() {
       expect(find.byIcon(Icons.local_cafe), findsOneWidget);
     });
 
-    testWidgets('facility matching supports typos like washroms',
-        (WidgetTester tester) async {
+    testWidgets('facility matching supports typos like washroms', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -246,6 +261,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['washroms near entrance'],
             ),
           ),
@@ -255,9 +271,9 @@ void main() {
       expect(find.byIcon(Icons.wc), findsOneWidget);
     });
 
-
-    testWidgets('tapping a top icon shows label overlay then auto-hides',
-        (WidgetTester tester) async {
+    testWidgets('tapping a top icon shows label overlay then auto-hides', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -267,6 +283,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['Coffee shop'],
             ),
           ),
@@ -282,9 +299,9 @@ void main() {
       expect(find.text('Coffee'), findsNothing);
     });
 
-
-    testWidgets('label text is bold and has no underline',
-        (WidgetTester tester) async {
+    testWidgets('label text is bold and has no underline', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -294,6 +311,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['Coffee shop'],
             ),
           ),
@@ -308,9 +326,9 @@ void main() {
       expect(text.style?.decoration, TextDecoration.none);
     });
 
-
-    testWidgets('tapping another top icon replaces previous label',
-        (WidgetTester tester) async {
+    testWidgets('tapping another top icon replaces previous label', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -320,6 +338,7 @@ void main() {
               onClose: () {},
               onMore: () {},
               isLoggedIn: false,
+              onGetDirections: () {},
               facilities: const ['Coffee shop', 'Washrooms'],
             ),
           ),

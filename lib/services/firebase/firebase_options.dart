@@ -42,8 +42,8 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCGyz5Z6uLqqBDVBJnVUeZ4l23fJ6iXE6s',
-    appId: '1:269147380829:web:18211cd2e4047c764801b4',
-    messagingSenderId: '269147380829',
+    appId: '1:513179995905:web:18211cd2e4047c764801b4',
+    messagingSenderId: '513179995905',
     projectId: 'friedchicken-b3a11',
     authDomain: 'friedchicken-b3a11.firebaseapp.com',
     storageBucket: 'friedchicken-b3a11.firebasestorage.app',
@@ -53,16 +53,16 @@ class DefaultFirebaseOptions {
   // OLD API KEYS (only web working rn)
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCT_le11Nu9HgExLm-FkYc_rb752yqzpNw',
-    appId: '1:513179995905:android:0dc4addadb741ef7a45500',
-    messagingSenderId: '513179995905',
+    appId: '1:693887777183:android:0dc4addadb741ef7a45500',
+    messagingSenderId: '693887777183',
     projectId: 'campus-11a11',
     storageBucket: 'campus-11a11.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDcTrJtf1LmmLJuDDmCbXIHlCwPzx2PSEw',
-    appId: '1:513179995905:ios:03fcdacd97c14042a45500',
-    messagingSenderId: '513179995905',
+    appId: '1:693887777183:ios:03fcdacd97c14042a45500',
+    messagingSenderId: '693887777183',
     projectId: 'campus-11a11',
     storageBucket: 'campus-11a11.firebasestorage.app',
     iosBundleId: 'com.example.campusApp',
@@ -70,8 +70,8 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDcTrJtf1LmmLJuDDmCbXIHlCwPzx2PSEw',
-    appId: '1:513179995905:ios:03fcdacd97c14042a45500',
-    messagingSenderId: '513179995905',
+    appId: '1:693887777183:ios:03fcdacd97c14042a45500',
+    messagingSenderId: '693887777183',
     projectId: 'campus-11a11',
     storageBucket: 'campus-11a11.firebasestorage.app',
     iosBundleId: 'com.example.campusApp',
@@ -79,8 +79,8 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyCKbY7I3cvhYpIhRBZKGgfCvYgZZmPBv1Y',
-    appId: '1:513179995905:web:2e1ff09bc80f207ea45500',
-    messagingSenderId: '513179995905',
+    appId: '1:693887777183:web:2e1ff09bc80f207ea45500',
+    messagingSenderId: '693887777183',
     projectId: 'campus-11a11',
     authDomain: 'campus-11a11.firebaseapp.com',
     storageBucket: 'campus-11a11.firebasestorage.app',

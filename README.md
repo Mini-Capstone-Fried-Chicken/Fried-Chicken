@@ -19,15 +19,24 @@ samples, guidance on mobile development, and a full API reference.
 ```
 flutter --version
 ```
-2. Run the following command to start the front end server:
+2. (Recommended) Create your local `.env` file for API-powered features:
+```
+copy .env.example .env
+```
+Then fill in your own values for `GOOGLE_DIRECTIONS_API_KEY` and `GOOGLE_PLACES_API_KEY`.
+
+3. Run the app:
 ```
 flutter run
 ```
-3. Select the Web browser to open the project.
+
+If you use this repository's `flutter.bat` wrapper on Windows, it will auto-load keys from `.env` when available.
+
+4. Select the Web browser to open the project.
 ---
-4. Project automatically opens up on the selected web.
+5. Project automatically opens up on the selected web.
 ---
-5. Alternatively, use the following command to run the app:
+6. Alternatively, use the following command to run the app:
 ```
 flutter run -d chrome --web-port=3827
 ```

@@ -11,6 +11,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final List<String> facilities;
   final VoidCallback? onMore;
   final bool isLoggedIn;
+  final VoidCallback onGetDirections;
 
   const BuildingInfoPopup({
     super.key,
@@ -21,6 +22,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.facilities = const [],
     this.onMore,
     required this.isLoggedIn,
+    required this.onGetDirections,
   });
 
   @override
@@ -34,7 +36,8 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   Timer? _labelTimer;
 
   TooltipTriggerMode? get _triggerMode {
-    final isTouch = !kIsWeb &&
+    final isTouch =
+        !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     return isTouch ? TooltipTriggerMode.longPress : null;
@@ -51,7 +54,6 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     _hideIconLabel();
 
     final overlay = Overlay.of(context);
-    if (overlay == null) return;
 
     _labelEntry = OverlayEntry(
       builder: (_) {
@@ -143,10 +145,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     return false;
   }
 
-  Widget _topIcon({
-    required IconData icon,
-    required String tooltip,
-  }) {
+  Widget _topIcon({required IconData icon, required String tooltip}) {
     const burgundy = Color(0xFF76263D);
     final link = LayerLink();
 
@@ -174,7 +173,13 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     if (widget.accessibility) {
       topIcons.add(_topIcon(icon: Icons.accessible, tooltip: 'Accessible'));
     }
-    if (_hasFacility(['washroom', 'washrooms', 'washroms', 'restroom', 'toilet'])) {
+    if (_hasFacility([
+      'washroom',
+      'washrooms',
+      'washroms',
+      'restroom',
+      'toilet',
+    ])) {
       topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
     }
     if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
@@ -247,7 +252,10 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                     icon: const Icon(Icons.close),
                     color: burgundy,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
                   ),
                 ),
               ],
@@ -275,7 +283,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 _buildIconButton(
                   icon: Icons.directions,
                   tooltip: 'Get directions',
-                  onPressed: () {},
+                  onPressed: widget.onGetDirections,
                 ),
                 const SizedBox(width: 10),
                 _buildIconButton(
@@ -292,7 +300,10 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 onPressed: widget.onMore ?? () {},
                 style: TextButton.styleFrom(
                   foregroundColor: burgundy,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   minimumSize: const Size(0, 32),
                 ),
                 child: const Text('More'),
