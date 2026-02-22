@@ -1276,6 +1276,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
+/*
   Future<void> _createBlueDotIcon() async {
     _blueDotIcon =
         await BitmapDescriptor.fromAssetImage(
@@ -1290,6 +1291,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
       BitmapDescriptor.hueAzure,
     );
+  }
+  */
+  Future<void> _createBlueDotIcon() async {
+    _blueDotIcon =
+      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
   }
 
   Future<void> _startLocationUpdates() async {
