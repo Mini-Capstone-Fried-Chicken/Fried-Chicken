@@ -154,6 +154,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
+                                key: const Key('start_field'),
                                 controller: _originController,
                                 focusNode: _originFocus,
                                 style: const TextStyle(
@@ -174,6 +175,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                               ),
                             ),
                             IconButton(
+                              key: const Key('clear_route_button'),
                               onPressed: widget.onClose,
                               icon: const Icon(Icons.close),
                               color: Colors.white,
@@ -207,6 +209,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
+                                key: const Key('destination_field'),
                                 controller: _destinationController,
                                 focusNode: _destinationFocus,
                                 style: const TextStyle(
