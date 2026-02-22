@@ -23,6 +23,7 @@ import '../../features/indoor/data/building_info.dart';
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
+const String currentLocationTag = "Current location";
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
@@ -104,7 +105,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _showRoutePreview = false;
   LatLng? _routeOrigin;
   LatLng? _routeDestination;
-  String _routeOriginText = 'Current location';
+  String _routeOriginText = currentLocationTag;
   String _routeDestinationText = '';
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
@@ -350,7 +351,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _showRoutePreview = true;
       _routeOrigin = origin;
       _routeDestination = destination;
-      _routeOriginText = 'Current location';
+      _routeOriginText = currentLocationTag;
       _routeDestinationText =
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
     });
@@ -742,7 +743,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _showRoutePreview = true;
       _routeOrigin = _currentLocation;
       _routeDestination = place.location;
-      _routeOriginText = 'Current location';
+      _routeOriginText = currentLocationTag;
       _routeDestinationText = place.name;
       _selectedSearchResult = place;
     });

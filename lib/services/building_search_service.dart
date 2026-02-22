@@ -71,42 +71,70 @@ class BuildingSearchService {
 
     final normalizedQuery = query.toLowerCase().trim();
 
-    // First, try exact code match (e.g., "MB", "LB")
+    final exactCodeMatch = _findExactCodeMatch(normalizedQuery);
+    if (exactCodeMatch != null) {
+      return exactCodeMatch;
+    }
+
+    final exactNameMatch = _findExactNameMatch(normalizedQuery);
+    if (exactNameMatch != null) {
+      return exactNameMatch;
+    }
+
+    final exactSearchTermMatch = _findExactSearchTermMatch(normalizedQuery);
+    if (exactSearchTermMatch != null) {
+      return exactSearchTermMatch;
+    }
+
+    if (normalizedQuery.length < 3) {
+      return null;
+    }
+
+    return _findPartialSearchTermMatch(normalizedQuery);
+  }
+
+  static BuildingPolygon? _findExactCodeMatch(String normalizedQuery) {
     for (final buildingName in concordiaBuildingNames) {
-      if (buildingName.code.toLowerCase() == normalizedQuery) {
+      final normalizedCode = buildingName.code.toLowerCase();
+      if (normalizedCode == normalizedQuery) {
         return _findBuildingByCode(buildingName.code);
       }
     }
+    return null;
+  }
 
-    // Then, try exact name match (e.g., "JSMB Building", "Hall Building")
+  static BuildingPolygon? _findExactNameMatch(String normalizedQuery) {
     for (final buildingName in concordiaBuildingNames) {
-      if (buildingName.name.toLowerCase() == normalizedQuery) {
+      final normalizedName = buildingName.name.toLowerCase();
+      if (normalizedName == normalizedQuery) {
         return _findBuildingByCode(buildingName.code);
       }
     }
+    return null;
+  }
 
-    // Try exact search terms match first (e.g., "gm" for "Guy Metro")
+  static BuildingPolygon? _findExactSearchTermMatch(String normalizedQuery) {
     for (final buildingName in concordiaBuildingNames) {
       for (final term in buildingName.searchTerms) {
-        if (term.toLowerCase() == normalizedQuery) {
+        final normalizedTerm = term.toLowerCase();
+        if (normalizedTerm == normalizedQuery) {
           return _findBuildingByCode(buildingName.code);
         }
       }
     }
+    return null;
+  }
 
-    // Only allow partial matches on search terms (not building names)
-    // This allows "engi" to match "engineering" but prevents "Hall" from matching "Hill"
-    if (normalizedQuery.length >= 3) {
-      for (final buildingName in concordiaBuildingNames) {
-        for (final term in buildingName.searchTerms) {
-          if (term.toLowerCase().startsWith(normalizedQuery) ||
-              term.toLowerCase().contains(normalizedQuery)) {
-            return _findBuildingByCode(buildingName.code);
-          }
+  static BuildingPolygon? _findPartialSearchTermMatch(String normalizedQuery) {
+    for (final buildingName in concordiaBuildingNames) {
+      for (final term in buildingName.searchTerms) {
+        final normalizedTerm = term.toLowerCase();
+        if (normalizedTerm.startsWith(normalizedQuery) ||
+            normalizedTerm.contains(normalizedQuery)) {
+          return _findBuildingByCode(buildingName.code);
         }
       }
     }
-
     return null;
   }
 
@@ -124,43 +152,85 @@ class BuildingSearchService {
     final normalizedQuery = query.toLowerCase().trim();
     final suggestions = <BuildingName>[];
 
-    // Add exact code matches first
-    for (final buildingName in concordiaBuildingNames) {
-      if (buildingName.code.toLowerCase() == normalizedQuery) {
-        suggestions.add(buildingName);
-      }
-    }
-
-    // Add exact name matches
-    for (final buildingName in concordiaBuildingNames) {
-      if (buildingName.name.toLowerCase() == normalizedQuery &&
-          !suggestions.contains(buildingName)) {
-        suggestions.add(buildingName);
-      }
-    }
-
-    // Add partial matches
-    for (final buildingName in concordiaBuildingNames) {
-      if ((buildingName.code.toLowerCase().contains(normalizedQuery) ||
-              buildingName.name.toLowerCase().contains(normalizedQuery)) &&
-          !suggestions.contains(buildingName)) {
-        suggestions.add(buildingName);
-      }
-    }
-
-    // Add search term matches
-    for (final buildingName in concordiaBuildingNames) {
-      for (final term in buildingName.searchTerms) {
-        if ((term.toLowerCase().contains(normalizedQuery) ||
-                normalizedQuery.contains(term.toLowerCase())) &&
-            !suggestions.contains(buildingName)) {
-          suggestions.add(buildingName);
-          break;
-        }
-      }
-    }
+    _addExactCodeSuggestions(normalizedQuery, suggestions);
+    _addExactNameSuggestions(normalizedQuery, suggestions);
+    _addPartialCodeOrNameSuggestions(normalizedQuery, suggestions);
+    _addSearchTermSuggestions(normalizedQuery, suggestions);
 
     return suggestions;
+  }
+
+  static void _addExactCodeSuggestions(
+    String normalizedQuery,
+    List<BuildingName> suggestions,
+  ) {
+    for (final buildingName in concordiaBuildingNames) {
+      final normalizedCode = buildingName.code.toLowerCase();
+      if (normalizedCode == normalizedQuery) {
+        _addUniqueSuggestion(buildingName, suggestions);
+      }
+    }
+  }
+
+  static void _addExactNameSuggestions(
+    String normalizedQuery,
+    List<BuildingName> suggestions,
+  ) {
+    for (final buildingName in concordiaBuildingNames) {
+      final normalizedName = buildingName.name.toLowerCase();
+      if (normalizedName == normalizedQuery) {
+        _addUniqueSuggestion(buildingName, suggestions);
+      }
+    }
+  }
+
+  static void _addPartialCodeOrNameSuggestions(
+    String normalizedQuery,
+    List<BuildingName> suggestions,
+  ) {
+    for (final buildingName in concordiaBuildingNames) {
+      final normalizedCode = buildingName.code.toLowerCase();
+      final normalizedName = buildingName.name.toLowerCase();
+      final codeMatches = normalizedCode.contains(normalizedQuery);
+      final nameMatches = normalizedName.contains(normalizedQuery);
+      if (codeMatches || nameMatches) {
+        _addUniqueSuggestion(buildingName, suggestions);
+      }
+    }
+  }
+
+  static void _addSearchTermSuggestions(
+    String normalizedQuery,
+    List<BuildingName> suggestions,
+  ) {
+    for (final buildingName in concordiaBuildingNames) {
+      if (_hasMatchingSearchTerm(buildingName, normalizedQuery)) {
+        _addUniqueSuggestion(buildingName, suggestions);
+      }
+    }
+  }
+
+  static bool _hasMatchingSearchTerm(
+    BuildingName buildingName,
+    String normalizedQuery,
+  ) {
+    for (final term in buildingName.searchTerms) {
+      final normalizedTerm = term.toLowerCase();
+      if (normalizedTerm.contains(normalizedQuery) ||
+          normalizedQuery.contains(normalizedTerm)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static void _addUniqueSuggestion(
+    BuildingName buildingName,
+    List<BuildingName> suggestions,
+  ) {
+    if (!suggestions.contains(buildingName)) {
+      suggestions.add(buildingName);
+    }
   }
 
   /// Get combined suggestions from Concordia buildings and Google Places
