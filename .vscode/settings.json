@@ -1,0 +1,7 @@
+{
+  "dart.flutterSdkPath": "${env:FLUTTER_SDK_PATH}",
+  "[dart]": {
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.formatOnSave": true
+  }
+}

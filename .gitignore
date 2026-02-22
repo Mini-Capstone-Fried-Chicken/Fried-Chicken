@@ -13,6 +13,7 @@ Thumbs.db
 .svn/
 .swiftpm/
 migrate_working_dir/
+*.env
 
 ####################################
 # IDEs
@@ -96,6 +97,14 @@ windows/flutter/ephemeral/
 ../flutter/generated_plugin_registrant.cc
 ../flutter/generated_plugin_registrant.h
 ../flutter/generated_plugins.cmake
+
+####################################
+# Environment Variables & Secrets
+####################################
+.env
+.env.local
+.env.*.local
+.flutter_secure_storage
 
 ####################################
 # Symbolication / Obfuscation

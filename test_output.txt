@@ -1,0 +1,130 @@
+00:00 +0: loading C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart
+00:00 +0: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Polygon Center Calculation Triangle polygon center calculation
+00:00 +1: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Polygon Center Calculation Square polygon center calculation
+00:00 +2: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Polygon Center Calculation Single point returns same point
+00:00 +3: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Polygon Center Calculation Real building polygon has valid center
+00:00 +4: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Polygon Center Calculation All building centers are within Montreal bounds
+00:00 +5: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Polygon Center Calculation Polygon center is within building polygon bounds
+00:00 +6: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection SGW center detects SGW campus
+00:00 +7: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Loyola center detects Loyola campus
+00:00 +8: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Point near SGW detects SGW
+00:00 +9: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Point near Loyola detects Loyola
+00:00 +10: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Far point detects no campus
+00:00 +11: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Campus at opposite end of world
+00:00 +12: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Campus radius boundary SGW
+00:00 +13: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Campus radius boundary Loyola
+00:00 +14: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Campus Detection Between campuses detects closest
+00:00 +15: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Bounds Calculation Single point bounds
+00:00 +16: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Bounds Calculation Multiple points bounds
+00:00 +17: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Bounds Calculation Bounds with negative and positive coordinates
+00:00 +18: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Bounds Calculation Building polygon bounds
+00:00 +19: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Coordinate Validation Valid Montreal coordinates
+00:00 +20: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Coordinate Validation SGW campus coordinates
+00:00 +21: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Coordinate Validation Loyola campus coordinates
+00:00 +22: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Coordinate Validation Campus radius constant
+00:00 +23: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Coordinate Validation All building coordinates are valid
+00:00 +24: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Distance Calculation Distance between SGW and Loyola
+00:00 +25: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Distance Calculation Distance from point to itself is zero
+00:00 +26: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Distance Calculation Distance is symmetric
+00:00 +27: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Distance Calculation Campus radius defines detection boundary
+00:00 +28: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Enum Campus States Campus enum has expected values
+00:00 +29: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Enum Campus States Campus enum can be compared
+00:00 +30: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Enum Campus States Campus detection returns valid enum value
+00:00 +31: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Detection from Location Building centers are within bounds
+00:00 +32: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Detection from Location Multiple building centers are distinct
+00:00 +33: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Data Integrity All buildings have points
+00:00 +34: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Data Integrity All buildings have centers
+00:00 +35: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Data Integrity All buildings have codes and names
+00:00 +36: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Data Integrity Building polygons have minimum 3 points
+00:00 +37: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Building Data Integrity No duplicate building codes in polygon list
+00:00 +38: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Edge Cases and Boundary Conditions Campus detection at equator
+00:00 +39: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Edge Cases and Boundary Conditions Campus detection at poles
+00:00 +40: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Edge Cases and Boundary Conditions Campus detection at date line
+00:00 +41: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Edge Cases and Boundary Conditions Very small polygon coordinates
+00:00 +42: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_extended_test.dart: GoogleMaps Live Location Tests Edge Cases and Boundary Conditions Very large coordinate differences
+00:00 +43: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus identifies SGW campus
+00:00 +44: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus identifies Loyola campus
+00:00 +45: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus returns none for distant location
+00:00 +46: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus with point near SGW
+00:00 +47: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus with point near Loyola
+00:00 +48: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus returns valid enum value
+00:00 +49: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function detectCampus with multiple test points
+00:00 +50: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Function Campus enum has three values
+00:00 +51: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants concordiaSGW constant is valid
+00:00 +52: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants concordiaLoyola constant is valid
+00:00 +53: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants campusRadius is positive
+00:00 +54: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants campusAutoSwitchRadius is positive
+00:00 +55: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Campus radius values are reasonable
+00:00 +56: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Both campuses have different coordinates
+00:00 +57: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests OutdoorMapPage Widget Initialization OutdoorMapPage initializes with SGW campus
+[DEBUG] Starting location updates...
+00:00 +58: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests OutdoorMapPage Widget Initialization OutdoorMapPage initializes with Loyola campus
+[DEBUG] Starting location updates...
+00:00 +59: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests OutdoorMapPage Widget Initialization OutdoorMapPage initializes with no campus
+[DEBUG] Starting location updates...
+00:00 +60: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests OutdoorMapPage Widget Initialization OutdoorMapPage accepts debug parameters
+[DEBUG] Starting location updates...
+00:00 +61: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests OutdoorMapPage Widget Initialization OutdoorMapPage creates state
+[DEBUG] Starting location updates...
+00:00 +62: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Coordinate Range Validation All building centers are within valid latitude range
+00:00 +63: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Coordinate Range Validation All building centers are within valid longitude range
+00:00 +64: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Coordinate Range Validation All building points are valid coordinates
+00:00 +65: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Coordinate Range Validation SGW campus is in Montreal bounds
+00:00 +66: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Coordinate Range Validation Loyola campus is in Montreal bounds
+00:00 +67: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Building Polygon Data All buildings have valid polygons
+00:00 +68: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Building Polygon Data All buildings have centers
+00:00 +69: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Building Polygon Data Building centers are within their bounds
+00:00 +70: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Building Polygon Data Building codes are unique
+00:00 +71: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Building Polygon Data Building names are not empty
+00:00 +72: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Edge Cases Point at exact boundary returns a campus
+00:00 +73: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Edge Cases Point equidistant from both campuses
+00:00 +74: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Edge Cases Point at maximum latitude
+00:00 +75: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Edge Cases Point at minimum latitude
+00:00 +76: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Detection Edge Cases Point at date line
+00:00 +77: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Outdoor Map Page Properties OutdoorMapPage has initialCampus property
+00:00 +78: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Outdoor Map Page Properties OutdoorMapPage has isLoggedIn property
+00:00 +79: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Outdoor Map Page Properties OutdoorMapPage has debug properties
+00:00 +80: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Outdoor Map Page Properties OutdoorMapPage has default debug values
+00:00 +81: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Outdoor Map Page Properties OutdoorMapPage creates correct state
+00:00 +82: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Distance and Location Calculations Distance between SGW and Loyola is non-zero
+00:00 +83: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Distance and Location Calculations Distance between identical points is zero
+00:00 +84: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Distance and Location Calculations Campus radius defines detection threshold
+00:00 +85: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Distance and Location Calculations Auto-switch radius matches campus radius
+00:00 +86: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Sanity SGW latitude is in Montreal range
+00:00 +87: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Sanity SGW longitude is in Montreal range
+00:00 +88: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Sanity Loyola latitude is in Montreal range
+00:00 +89: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Sanity Loyola longitude is in Montreal range
+00:00 +90: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Sanity SGW is north of Loyola
+00:00 +91: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Constants Sanity SGW is west of Loyola
+00:00 +92: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Lifecycle and State OutdoorMapPage widget builds successfully
+[DEBUG] Starting location updates...
+00:00 +93: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Lifecycle and State Multiple widget instances can be created
+00:00 +94: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Lifecycle and State Widget handles property changes
+[DEBUG] Starting location updates...
+00:00 +95: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Lifecycle and State Widget with all debug flags enabled
+[DEBUG] Starting location updates...
+00:00 +96: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Lifecycle and State Widget clears correct debug parameters
+00:00 +97: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Lifecycle and State Widget state is preserved through pump
+[DEBUG] Starting location updates...
+00:00 +98: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Constructor and Properties OutdoorMapPage constructor with all parameters
+00:00 +99: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Constructor and Properties OutdoorMapPage constructor with minimal parameters
+00:00 +100: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Constructor and Properties OutdoorMapPage inherits from StatefulWidget
+00:00 +101: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Constructor and Properties OutdoorMapPage createState returns proper type
+00:00 +102: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Constructor and Properties Widget properties are final
+00:00 +103: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Enum Values Campus.sgw is valid enum value
+00:00 +104: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Enum Values Campus.loyola is valid enum value
+00:00 +105: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Enum Values Campus.none is valid enum value
+00:00 +106: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Enum Values Campus enum values are distinct
+00:00 +107: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Enum Values Campus enum can be compared for equality
+00:00 +108: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Campus Enum Values Campus enum values have correct comparisons
+00:00 +109: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Integration Tests OutdoorMapPage renders with SGW campus
+[DEBUG] Starting location updates...
+00:00 +110: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Integration Tests OutdoorMapPage renders with Loyola campus
+[DEBUG] Starting location updates...
+00:00 +111: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Integration Tests OutdoorMapPage renders with Campus.none
+[DEBUG] Starting location updates...
+00:00 +112: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Integration Tests OutdoorMapPage handles logged in state
+[DEBUG] Starting location updates...
+00:00 +113: C:/Users/lihai/Documents/Github/Fried-Chicken/test/googlemaps_livelocation_widget_test.dart: GoogleMaps Live Location Widget Tests Widget Integration Tests OutdoorMapPage handles logged out state
+[DEBUG] Starting location updates...
+00:00 +114: All tests passed!
