@@ -121,6 +121,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     required IconData icon,
     required String tooltip,
     required VoidCallback onPressed,
+    Key? key,
   }) {
     const burgundy = Color(0xFF76263D);
     return Tooltip(
@@ -128,6 +129,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       triggerMode: _triggerMode,
       showDuration: const Duration(seconds: 1),
       child: IconButton(
+        key: key,
         onPressed: onPressed,
         icon: Icon(icon, color: burgundy),
         iconSize: 25,
@@ -285,6 +287,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 _buildIconButton(
                   icon: Icons.directions,
                   tooltip: 'Get directions',
+                  key: const Key('get_directions_button'),
                   onPressed: widget.onGetDirections,
                 ),
                 const SizedBox(width: 10),

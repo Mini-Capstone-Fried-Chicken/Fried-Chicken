@@ -1588,7 +1588,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-/*
+  /*
   Future<void> _createBlueDotIcon() async {
     _blueDotIcon =
         await BitmapDescriptor.fromAssetImage(
@@ -1606,8 +1606,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
   */
   Future<void> _createBlueDotIcon() async {
-    _blueDotIcon =
-      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    _blueDotIcon = BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueAzure,
+    );
   }
 
   Future<void> _startLocationUpdates() async {
@@ -1950,6 +1951,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               left: 20,
               right: 20,
               child: MapSearchBar(
+                key: const Key('destination_search_bar'),
                 campusLabel: campusLabel,
                 controller: _searchController,
                 onSubmitted: _onSearchSubmitted,
