@@ -228,6 +228,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                   _buildIconButton(
                     icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
                     tooltip: _isSaved ? 'Unsave' : 'Save',
+                    key: const Key('save_toggle_button'),
                     onPressed: () {
                       setState(() {
                         _isSaved = !_isSaved;
@@ -303,6 +304,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
               opacity: 0.7,
               child: TextButton(
                 onPressed: widget.onMore ?? () {},
+                key: const Key('more_info_button'),
                 style: TextButton.styleFrom(
                   foregroundColor: burgundy,
                   padding: const EdgeInsets.symmetric(
