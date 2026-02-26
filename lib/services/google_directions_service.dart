@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../services/navigation_steps.dart';
 
 class DirectionsRouteResult {
   final List<LatLng> points;
@@ -11,6 +12,7 @@ class DirectionsRouteResult {
   final String? transitLineColorHex;
   final bool transitHasBus;
   final List<DirectionsRouteSegment> transitSegments;
+  final List<NavigationStep> steps;
 
   const DirectionsRouteResult({
     required this.points,
@@ -21,6 +23,7 @@ class DirectionsRouteResult {
     this.transitLineColorHex,
     this.transitHasBus = false,
     this.transitSegments = const [],
+    this.steps = const [],
   });
 }
 
@@ -123,6 +126,8 @@ class GoogleDirectionsService {
             String? transitLineColorHex;
             bool transitHasBus = false;
             List<DirectionsRouteSegment> transitSegments = [];
+            List<NavigationStep> navSteps = [];
+
             if (legs != null && legs.isNotEmpty) {
               final firstLeg = legs[0] as Map<String, dynamic>;
               final duration = firstLeg['duration'] as Map<String, dynamic>?;
@@ -130,9 +135,10 @@ class GoogleDirectionsService {
               durationSeconds = duration?['value'] as int?;
               final distance = firstLeg['distance'] as Map<String, dynamic>?;
               distanceText = distance?['text'] as String?;
-
               final steps = firstLeg['steps'] as List<dynamic>?;
+
               if (steps != null) {
+                navSteps = _extractNavigationSteps(steps);
                 const railTypes = {
                   'SUBWAY',
                   'METRO_RAIL',
@@ -146,6 +152,11 @@ class GoogleDirectionsService {
                 for (final rawStep in steps) {
                   final step = rawStep as Map<String, dynamic>;
                   final travelMode = step['travel_mode'] as String?;
+                  final polyline = step['polyline'] as Map<String, dynamic>?;
+                  final encoded = polyline?['points'] as String?;
+                  final stepPoints = (encoded != null && encoded.isNotEmpty)
+                      ? _decodePolyline(encoded)
+                      : <LatLng>[];
                   if (travelMode != 'TRANSIT') continue;
 
                   final transitDetails =
@@ -191,6 +202,7 @@ class GoogleDirectionsService {
               transitLineColorHex: transitLineColorHex,
               transitHasBus: transitHasBus,
               transitSegments: transitSegments,
+              steps: navSteps,
             );
           } else {
             print('No routes found in response');
@@ -309,5 +321,72 @@ class GoogleDirectionsService {
     }
 
     return segments;
+  }
+
+  static List<NavigationStep> _extractNavigationSteps(List<dynamic> steps) {
+    final out = <NavigationStep>[];
+
+    for (final rawStep in steps) {
+      final step = rawStep as Map<String, dynamic>;
+      final travelMode =
+          (step['travel_mode'] as String?)?.toLowerCase() ?? 'walking';
+
+      final polyline = step['polyline'] as Map<String, dynamic>?;
+      final encoded = polyline?['points'] as String?;
+      final stepPoints = (encoded != null && encoded.isNotEmpty)
+          ? _decodePolyline(encoded)
+          : <LatLng>[];
+      final html = step['html_instructions'] as String? ?? '';
+      final instruction = stripHtml(html);
+
+      final distance = step['distance'] as Map<String, dynamic>?;
+      final duration = step['duration'] as Map<String, dynamic>?;
+
+      final distanceText = distance?['text'] as String?;
+      final durationText = duration?['text'] as String?;
+
+      final maneuver = step['maneuver'] as String?;
+
+      // Transit details if present
+      String? transitVehicleType;
+      String? transitLineShortName;
+      String? transitLineName;
+      String? transitHeadsign;
+
+      if (travelMode == 'transit') {
+        final transitDetails = step['transit_details'] as Map<String, dynamic>?;
+        final line = transitDetails?['line'] as Map<String, dynamic>?;
+        final vehicle = line?['vehicle'] as Map<String, dynamic>?;
+
+        transitVehicleType = (vehicle?['type'] as String?)?.toUpperCase();
+        transitLineShortName = line?['short_name'] as String?;
+        transitLineName = line?['name'] as String?;
+        transitHeadsign = transitDetails?['headsign'] as String?;
+      }
+
+      // Skip empty instructions (sometimes happens)
+      if (instruction.trim().isEmpty && travelMode != 'transit') {
+        continue;
+      }
+
+      out.add(
+        NavigationStep(
+          instruction: instruction.trim().isEmpty
+              ? 'Continue'
+              : instruction.trim(),
+          travelMode: travelMode,
+          points: stepPoints,
+          distanceText: distanceText,
+          durationText: durationText,
+          maneuver: maneuver,
+          transitVehicleType: transitVehicleType,
+          transitLineShortName: transitLineShortName,
+          transitLineName: transitLineName,
+          transitHeadsign: transitHeadsign,
+        ),
+      );
+    }
+
+    return out;
   }
 }

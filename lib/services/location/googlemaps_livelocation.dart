@@ -18,6 +18,7 @@ import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
+import '../../services/navigation_steps.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -112,6 +113,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, String?> _routeArrivalTimes = {};
   final Map<String, List<LatLng>> _routePointsByMode = {};
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
+
+  final Map<String, List<NavigationStep>> _routeStepsByMode = {};
+  // Navigation session state (when user presses Start)
+  bool _isNavigating = false;
+  String? _navModeKey; // 'walking'/'driving'/'bicycling'/'transit'
+  int _navStepIndex = 0;
   bool _isLoadingRouteData = false;
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
@@ -412,6 +419,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final arrivalTimes = <String, String?>{};
       final pointsByMode = <String, List<LatLng>>{};
       final segmentsByMode = <String, List<DirectionsRouteSegment>>{};
+      final stepsByMode = <String, List<NavigationStep>>{};
 
       for (var i = 0; i < _supportedTravelModes.length; i++) {
         final mode = _supportedTravelModes[i].apiValue;
@@ -419,6 +427,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         durations[mode] = route?.durationText;
         distances[mode] = route?.distanceText;
         arrivalTimes[mode] = _formatArrivalTime(route?.durationSeconds);
+        stepsByMode[mode] = route?.steps ?? const [];
         if (route != null && route.points.isNotEmpty) {
           pointsByMode[mode] = route.points;
         }
@@ -445,6 +454,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeSegmentsByMode
           ..clear()
           ..addAll(segmentsByMode);
+        _routeStepsByMode
+          ..clear()
+          ..addAll(stepsByMode);
+
         _isLoadingRouteData = false;
       });
 
@@ -456,6 +469,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _isLoadingRouteData = false;
       });
     }
+  }
+
+  void _openStepsForSelectedMode() {
+    final key = _selectedTravelMode.apiValue;
+    final steps = _routeStepsByMode[key] ?? const [];
+
+    showNavigationStepsModal(
+      context,
+      title: _selectedTravelMode.label,
+      steps: steps,
+      totalDuration: _routeDurations[key],
+      totalDistance: _routeDistances[key],
+    );
   }
 
   void _applySelectedModeRoute({required bool animateCamera}) {
@@ -542,6 +568,60 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     final bounds = _calculateBounds(allPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+  }
+
+  void _startNavigation() {
+    final key = _selectedTravelMode.apiValue;
+    final steps = _routeStepsByMode[key] ?? const [];
+
+    if (steps.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No steps available for this route')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isNavigating = true;
+      _navModeKey = key;
+      _navStepIndex = 0;
+    });
+  }
+
+  void _stopNavigation() {
+    setState(() {
+      _isNavigating = false;
+      _navModeKey = null;
+      _navStepIndex = 0;
+    });
+  }
+
+  void _maybeAdvanceNavigationStep(LatLng user) {
+    final key = _navModeKey;
+    if (key == null) return;
+
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return;
+
+    // If already at last step, do nothing
+    if (_navStepIndex >= steps.length - 1) return;
+
+    final current = steps[_navStepIndex];
+    final end =
+        current.endPoint; // needs Step 1 (points stored in NavigationStep)
+    if (end == null) return;
+
+    final d = Geolocator.distanceBetween(
+      user.latitude,
+      user.longitude,
+      end.latitude,
+      end.longitude,
+    );
+
+    // 20m threshold
+    if (d <= 20) {
+      setState(() => _navStepIndex += 1);
+    }
   }
 
   void _closeRoutePreview() {
@@ -1372,6 +1452,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             _currentCampus = detectCampus(newLatLng);
             _currentBuildingPoly = detectBuildingPoly(newLatLng);
           });
+
+          if (_isNavigating) {
+            _maybeAdvanceNavigationStep(newLatLng);
+          }
         });
   }
 
@@ -1465,6 +1549,17 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
 
     return circles;
+  }
+
+  NavigationStep? _getCurrentNavStep() {
+    final key = _navModeKey;
+    if (key == null) return null;
+
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return null;
+
+    if (_navStepIndex < 0 || _navStepIndex >= steps.length) return null;
+    return steps[_navStepIndex];
   }
 
   void _switchCampus(Campus newCampus) {
@@ -1588,6 +1683,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               circles: _createCircles(),
               polygons: _createBuildingPolygons(),
               polylines: _routePolylines,
+            ),
+
+          if (_isNavigating)
+            Positioned(
+              top: 80,
+              left: 0,
+              right: 0,
+              child: PointerInterceptor(
+                child: NavigationNextStepHeader(
+                  modeLabel: _selectedTravelMode.label,
+                  nextStep: _getCurrentNavStep(),
+                  onStop: _stopNavigation,
+                  onShowSteps: _openStepsForSelectedMode,
+                ),
+              ),
             ),
           if (!_showRoutePreview)
             Positioned(
@@ -1719,6 +1829,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     modeDurations: _routeDurations,
                     isLoadingDurations: _isLoadingRouteData,
                     onClose: _closeRoutePreview,
+                    onStart: _startNavigation,
+                    isNavigating: _isNavigating,
+                    onShowSteps: _openStepsForSelectedMode,
                     transitDetails: _buildTransitDetailItems(),
                     modeDistances: _routeDistances,
                     modeArrivalTimes: _routeArrivalTimes,

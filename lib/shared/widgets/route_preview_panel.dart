@@ -373,6 +373,9 @@ class RouteTravelModeBar extends StatelessWidget {
   final List<TransitDetailItem> transitDetails;
   final Map<String, String?> modeDistances;
   final Map<String, String?> modeArrivalTimes;
+  final VoidCallback onShowSteps;
+  final VoidCallback onStart;
+  final bool isNavigating;
 
   const RouteTravelModeBar({
     super.key,
@@ -384,6 +387,9 @@ class RouteTravelModeBar extends StatelessWidget {
     required this.transitDetails,
     required this.modeDistances,
     required this.modeArrivalTimes,
+    required this.onShowSteps,
+    required this.onStart,
+    required this.isNavigating,
   });
 
   @override
@@ -429,6 +435,47 @@ class RouteTravelModeBar extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // Steps button (you already added this earlier)
+              TextButton(
+                onPressed: onShowSteps,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Steps',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              TextButton(
+                onPressed: isNavigating ? null : onStart,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withOpacity(
+                    isNavigating ? 0.10 : 0.18,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  isNavigating ? 'Started' : 'Start',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 6),
+
               IconButton(
                 onPressed: onClose,
                 icon: const Icon(Icons.close),
