@@ -115,6 +115,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
 
   final Map<String, List<NavigationStep>> _routeStepsByMode = {};
+  // --- Navigation camera follow state ---
+  bool _navigationFollowUser =
+      false; // true while we follow user during navigation
+  DateTime _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+  // tuning params (adjust as desired)
+  static const double _navZoom = 18.0;
+  static const double _navTilt =
+      60.0; // degrees — gives angled view like Google Maps
+  // Default aerial map view
+  static const double _defaultZoom = 15.0; // adjust to your normal map zoom
+  static const double _defaultTilt = 0.0;
+  static const double _defaultBearing = 0.0;
+  static const double _navBearingThresholdDegrees = 10.0;
+  static const double _navDistanceThresholdMeters = 5.0;
+  static const Duration _navCameraMinInterval = Duration(milliseconds: 700);
   // Navigation session state (when user presses Start)
   bool _isNavigating = false;
   String? _navModeKey; // 'walking'/'driving'/'bicycling'/'transit'
@@ -575,9 +590,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final steps = _routeStepsByMode[key] ?? const [];
 
     if (steps.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No steps available for this route')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No steps available for this route')),
+        );
+      }
       return;
     }
 
@@ -585,7 +602,31 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _isNavigating = true;
       _navModeKey = key;
       _navStepIndex = 0;
+
+      // enable camera follow
+      _navigationFollowUser = true;
+      _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
     });
+
+    // Immediately center the camera on current location (if we have it)
+    if (_currentLocation != null && _mapController != null) {
+      try {
+        final currentPos = _currentLocation!;
+        // Use a camera position with tilt & zoom and keep current bearing 0 for initial.
+        final initialCam = CameraPosition(
+          target: currentPos,
+          zoom: _navZoom,
+          tilt: _navTilt,
+          bearing: 0.0,
+        );
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(initialCam),
+        );
+      } catch (e) {
+        // ignore animate errors
+        print('Error animating camera when starting navigation: $e');
+      }
+    }
   }
 
   void _stopNavigation() {
@@ -593,7 +634,60 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _isNavigating = false;
       _navModeKey = null;
       _navStepIndex = 0;
+      _navigationFollowUser = false;
     });
+    // Reset camera to default aerial view
+    if (_mapController != null && _currentLocation != null) {
+      try {
+        final cam = CameraPosition(
+          target: _currentLocation!,
+          zoom: _defaultZoom,
+          tilt: _defaultTilt,
+          bearing: _defaultBearing,
+        );
+
+        _mapController!.animateCamera(CameraUpdate.newCameraPosition(cam));
+      } catch (e) {
+        print('Error resetting camera after navigation: $e');
+      }
+    }
+
+    // Close route preview (brings search bar back)
+    _closeRoutePreview();
+  }
+
+  void _maybeUpdateCameraForNavigation(LatLng userLatLng, double? heading) {
+    // sanity checks
+    if (_mapController == null) return;
+    if (!_navigationFollowUser) return;
+
+    final now = DateTime.now();
+
+    // Debounce: only update camera if sufficient time has elapsed
+    if (now.difference(_lastNavCameraUpdate) < _navCameraMinInterval) {
+      return;
+    }
+
+    // Compute bearing: prefer device heading if available and > 0,
+    double bearing = 0.0;
+    if (heading != null && heading >= 0.0) {
+      bearing = heading;
+    }
+
+    // Build new camera position with tilt and bearing
+    final cam = CameraPosition(
+      target: userLatLng,
+      zoom: _navZoom,
+      tilt: _navTilt,
+      bearing: bearing,
+    );
+
+    try {
+      _mapController!.animateCamera(CameraUpdate.newCameraPosition(cam));
+    } catch (e) {
+      // animate could fail if map controller disposed
+      print('Error animating navigation camera: $e');
+    }
   }
 
   void _maybeAdvanceNavigationStep(LatLng user) {
@@ -1456,6 +1550,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           if (_isNavigating) {
             _maybeAdvanceNavigationStep(newLatLng);
           }
+          // Follow the user with the camera if navigation follow mode is active
+          if (_navigationFollowUser) {
+            // pass both the LatLng and the raw position for heading if available
+            _maybeUpdateCameraForNavigation(newLatLng, position.heading);
+          }
         });
   }
 
@@ -1699,7 +1798,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 ),
               ),
             ),
-          if (!_showRoutePreview)
+          if (!_showRoutePreview && !_isNavigating)
             Positioned(
               top: 65,
               left: 20,
@@ -1797,7 +1896,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           ),
 
           // Route Preview Panel
-          if (_showRoutePreview)
+          if (_showRoutePreview && !_isNavigating)
             Positioned(
               top: 80,
               left: 0,
