@@ -107,9 +107,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   LatLng? _routeDestination;
   String _routeOriginText = currentLocationTag;
   String _routeDestinationText = '';
+  RouteTravelMode _selectedTravelMode = RouteTravelMode.driving;
+  final Map<String, String?> _routeDurations = {};
+  final Map<String, String?> _routeDistances = {};
+  final Map<String, String?> _routeArrivalTimes = {};
+  final Map<String, List<LatLng>> _routePointsByMode = {};
+  final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
+  bool _isLoadingRouteData = false;
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
   Timer? _routeDebounceTimer;
+
+  static const List<RouteTravelMode> _supportedTravelModes = [
+    RouteTravelMode.driving,
+    RouteTravelMode.walking,
+    RouteTravelMode.bicycling,
+    RouteTravelMode.transit,
+  ];
 
   StreamSubscription<Position>? _posSub;
 
@@ -315,6 +329,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _showRoutePreview = false;
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
+      _routeDurations.clear();
+      _routeDistances.clear();
+      _routeArrivalTimes.clear();
+      _routePointsByMode.clear();
+      _routeSegmentsByMode.clear();
+      _isLoadingRouteData = false;
+      _selectedTravelMode = RouteTravelMode.driving;
       if (clearSearch) {
         _searchController.clear();
       }
@@ -357,10 +378,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
 
     // Fetch the initial route
-    await _fetchRoute();
+    await _fetchRoutesAndDurations();
   }
 
-  Future<void> _fetchRoute() async {
+  Future<void> _fetchRoutesAndDurations() async {
     final origin = _routeOrigin;
     final destination = _routeDestination;
 
@@ -369,41 +390,159 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       return;
     }
 
-    print('[DEBUG] Fetching route from $origin to $destination');
+    print(
+      '[DEBUG] Fetching route data for all travel modes from $origin to $destination',
+    );
+
+    setState(() {
+      _isLoadingRouteData = true;
+    });
 
     try {
-      final routePoints = await GoogleDirectionsService.instance.getRoute(
-        origin: origin,
-        destination: destination,
-        mode: 'walking',
+      final futures = _supportedTravelModes.map(
+        (mode) => GoogleDirectionsService.instance.getRouteDetails(
+          origin: origin,
+          destination: destination,
+          mode: mode.apiValue,
+        ),
       );
 
-      if (routePoints != null && routePoints.isNotEmpty) {
-        setState(() {
-          _routePolylines = {
-            Polyline(
-              polylineId: const PolylineId('route'),
-              points: routePoints,
-              color: const Color(0xFF76263D), // Concordia burgundy
-              width: 5,
-              patterns: [PatternItem.dot, PatternItem.gap(10)],
-            ),
-          };
-        });
+      final results = await Future.wait(futures);
+      final durations = <String, String?>{};
+      final distances = <String, String?>{};
+      final arrivalTimes = <String, String?>{};
+      final pointsByMode = <String, List<LatLng>>{};
+      final segmentsByMode = <String, List<DirectionsRouteSegment>>{};
 
-        // Adjust camera to show the entire route
-        if (_mapController != null) {
-          final bounds = _calculateBounds([origin, destination]);
-          _mapController!.animateCamera(
-            CameraUpdate.newLatLngBounds(bounds, 100),
-          );
+      for (var i = 0; i < _supportedTravelModes.length; i++) {
+        final mode = _supportedTravelModes[i].apiValue;
+        final route = results[i];
+        durations[mode] = route?.durationText;
+        distances[mode] = route?.distanceText;
+        arrivalTimes[mode] = _formatArrivalTime(route?.durationSeconds);
+        if (route != null && route.points.isNotEmpty) {
+          pointsByMode[mode] = route.points;
         }
-      } else {
-        print('No route found');
+        if (route != null && route.transitSegments.isNotEmpty) {
+          segmentsByMode[mode] = route.transitSegments;
+        }
       }
+
+      if (!mounted) return;
+
+      setState(() {
+        _routeDurations
+          ..clear()
+          ..addAll(durations);
+        _routeDistances
+          ..clear()
+          ..addAll(distances);
+        _routeArrivalTimes
+          ..clear()
+          ..addAll(arrivalTimes);
+        _routePointsByMode
+          ..clear()
+          ..addAll(pointsByMode);
+        _routeSegmentsByMode
+          ..clear()
+          ..addAll(segmentsByMode);
+        _isLoadingRouteData = false;
+      });
+
+      _applySelectedModeRoute(animateCamera: true);
     } catch (e) {
       print('Error getting directions: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRouteData = false;
+      });
     }
+  }
+
+  void _applySelectedModeRoute({required bool animateCamera}) {
+    final selectedModeKey = _selectedTravelMode.apiValue;
+    final selectedSegments = _routeSegmentsByMode[selectedModeKey];
+    if (_selectedTravelMode == RouteTravelMode.transit &&
+        selectedSegments != null &&
+        selectedSegments.isNotEmpty) {
+      _applyTransitSegments(selectedSegments, animateCamera: animateCamera);
+      return;
+    }
+
+    final selectedPoints = _routePointsByMode[selectedModeKey];
+
+    if (selectedPoints == null || selectedPoints.isEmpty) {
+      setState(() {
+        _routePolylines = {};
+      });
+      return;
+    }
+
+    setState(() {
+      _routePolylines = {
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: selectedPoints,
+          color: const Color(0xFF76263D),
+          width: 5,
+          patterns: _selectedTravelMode == RouteTravelMode.driving
+              ? const []
+              : [PatternItem.dot, PatternItem.gap(10)],
+        ),
+      };
+    });
+
+    if (!animateCamera || _mapController == null) return;
+    final bounds = _calculateBounds(selectedPoints);
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+  }
+
+  void _applyTransitSegments(
+    List<DirectionsRouteSegment> segments, {
+    required bool animateCamera,
+  }) {
+    final polylines = <Polyline>{};
+    final allPoints = <LatLng>[];
+
+    for (var i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+      if (segment.points.isEmpty) {
+        continue;
+      }
+
+      allPoints.addAll(segment.points);
+
+      final isWalking = segment.travelMode.toUpperCase() == 'WALKING';
+      polylines.add(
+        Polyline(
+          polylineId: PolylineId('route_segment_$i'),
+          points: segment.points,
+          color: _resolveTransitSegmentColor(segment),
+          width: 5,
+          patterns: isWalking
+              ? [PatternItem.dot, PatternItem.gap(10)]
+              : const [],
+        ),
+      );
+    }
+
+    if (polylines.isEmpty) {
+      setState(() {
+        _routePolylines = {};
+      });
+      return;
+    }
+
+    setState(() {
+      _routePolylines = polylines;
+    });
+
+    if (!animateCamera || _mapController == null || allPoints.isEmpty) {
+      return;
+    }
+
+    final bounds = _calculateBounds(allPoints);
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
   void _closeRoutePreview() {
@@ -412,7 +551,240 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routePolylines = {};
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
+      _routeDurations.clear();
+      _routeDistances.clear();
+      _routeArrivalTimes.clear();
+      _routePointsByMode.clear();
+      _routeSegmentsByMode.clear();
+      _isLoadingRouteData = false;
+      _selectedTravelMode = RouteTravelMode.driving;
+      _searchController.clear();
     });
+  }
+
+  String? _formatArrivalTime(int? durationSeconds) {
+    if (durationSeconds == null) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    final arrival = now.add(Duration(seconds: durationSeconds));
+    int hour = arrival.hour;
+    final minute = arrival.minute.toString().padLeft(2, '0');
+    final isPm = hour >= 12;
+    final period = isPm ? 'pm' : 'am';
+    hour = hour % 12;
+    if (hour == 0) {
+      hour = 12;
+    }
+    return '$hour:$minute $period';
+  }
+
+  Color _resolveTransitSegmentColor(DirectionsRouteSegment segment) {
+    const defaultRed = Color(0xFF76263D);
+    final mode = segment.travelMode.toUpperCase();
+    if (mode == 'WALKING') {
+      return defaultRed;
+    }
+
+    final vehicleType = segment.transitVehicleType?.toUpperCase();
+    if (vehicleType == 'BUS') {
+      return Colors.blue;
+    }
+
+    final lineColor = _parseHexColor(segment.transitLineColorHex);
+    if (lineColor != null) {
+      return lineColor;
+    }
+
+    return defaultRed;
+  }
+
+  List<TransitDetailItem> _buildTransitDetailItems() {
+    final segments = _routeSegmentsByMode['transit'] ?? const [];
+    final items = <TransitDetailItem>[];
+
+    for (final segment in segments) {
+      if (segment.points.isEmpty) {
+        continue;
+      }
+
+      final travelMode = segment.travelMode.toUpperCase();
+      if (travelMode == 'WALKING') {
+        continue;
+      }
+
+      final vehicleType = segment.transitVehicleType?.toUpperCase();
+      final lineLabel =
+          segment.transitLineShortName ?? segment.transitLineName ?? 'Route';
+      final color = _resolveTransitSegmentColor(segment);
+
+      IconData icon = Icons.directions_transit;
+      String title = 'Transit $lineLabel';
+
+      if (vehicleType == 'BUS') {
+        icon = Icons.directions_bus;
+        title = 'Bus $lineLabel';
+      } else if (vehicleType == 'SUBWAY' ||
+          vehicleType == 'METRO_RAIL' ||
+          vehicleType == 'HEAVY_RAIL' ||
+          vehicleType == 'COMMUTER_TRAIN' ||
+          vehicleType == 'RAIL' ||
+          vehicleType == 'TRAM' ||
+          vehicleType == 'LIGHT_RAIL' ||
+          vehicleType == 'MONORAIL') {
+        icon = Icons.directions_subway;
+        title = 'Metro $lineLabel';
+      }
+
+      items.add(TransitDetailItem(icon: icon, color: color, title: title));
+    }
+
+    return items;
+  }
+
+  List<DirectionsRouteSegment> _getTransitDetailSegments() {
+    final segments = _routeSegmentsByMode['transit'] ?? const [];
+    return segments
+        .where(
+          (segment) =>
+              segment.travelMode.toUpperCase() == 'TRANSIT' &&
+              segment.points.isNotEmpty,
+        )
+        .toList();
+  }
+
+  String _formatTransitSegmentTitle(DirectionsRouteSegment segment) {
+    final vehicleType = segment.transitVehicleType?.toUpperCase();
+    final lineLabel =
+        segment.transitLineShortName ?? segment.transitLineName ?? 'Route';
+
+    if (vehicleType == 'BUS') {
+      return 'Bus $lineLabel';
+    }
+
+    if (vehicleType == 'SUBWAY' ||
+        vehicleType == 'METRO_RAIL' ||
+        vehicleType == 'HEAVY_RAIL' ||
+        vehicleType == 'COMMUTER_TRAIN' ||
+        vehicleType == 'RAIL' ||
+        vehicleType == 'TRAM' ||
+        vehicleType == 'LIGHT_RAIL' ||
+        vehicleType == 'MONORAIL') {
+      return 'Metro $lineLabel';
+    }
+
+    return 'Transit $lineLabel';
+  }
+
+  IconData _transitSegmentIcon(DirectionsRouteSegment segment) {
+    final vehicleType = segment.transitVehicleType?.toUpperCase();
+    if (vehicleType == 'BUS') {
+      return Icons.directions_bus;
+    }
+    if (vehicleType == 'SUBWAY' ||
+        vehicleType == 'METRO_RAIL' ||
+        vehicleType == 'HEAVY_RAIL' ||
+        vehicleType == 'COMMUTER_TRAIN' ||
+        vehicleType == 'RAIL' ||
+        vehicleType == 'TRAM' ||
+        vehicleType == 'LIGHT_RAIL' ||
+        vehicleType == 'MONORAIL') {
+      return Icons.directions_subway;
+    }
+    return Icons.directions_transit;
+  }
+
+  Widget _buildTransitDetailsCard(List<DirectionsRouteSegment> segments) {
+    const burgundy = Color(0xFF76263D);
+
+    return Container(
+      width: 340,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Transit details',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: burgundy,
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final segment in segments)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _transitSegmentIcon(segment),
+                    size: 16,
+                    color: _resolveTransitSegmentColor(segment),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _formatTransitSegmentTitle(segment),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        if (segment.transitHeadsign != null &&
+                            segment.transitHeadsign!.trim().isNotEmpty)
+                          Text(
+                            segment.transitHeadsign!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Color? _parseHexColor(String? hex) {
+    if (hex == null || hex.trim().isEmpty) {
+      return null;
+    }
+
+    final normalized = hex.trim().replaceFirst('#', '');
+    if (normalized.length != 6) {
+      return null;
+    }
+
+    final value = int.tryParse(normalized, radix: 16);
+    if (value == null) {
+      return null;
+    }
+
+    return Color(0xFF000000 | value);
   }
 
   void _switchOriginDestination() {
@@ -432,6 +804,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
     });
+
+    _fetchRoutesAndDurations();
+  }
+
+  void _onTravelModeSelected(RouteTravelMode mode) {
+    setState(() {
+      _selectedTravelMode = mode;
+    });
+
+    if (_routePointsByMode.containsKey(mode.apiValue)) {
+      _applySelectedModeRoute(animateCamera: false);
+      return;
+    }
+
+    _fetchRoutesAndDurations();
   }
 
   Future<void> _onRouteOriginChanged(String query) async {
@@ -550,7 +937,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeOriginSuggestions = [];
       });
       print('[DEBUG] Calling _fetchRoute with new origin: $newOrigin');
-      await _fetchRoute();
+      await _fetchRoutesAndDurations();
     } else {
       print('[ERROR] Could not determine origin location');
     }
@@ -587,7 +974,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDestinationText = displayText;
         _routeDestinationSuggestions = [];
       });
-      await _fetchRoute();
+      await _fetchRoutesAndDurations();
     }
   }
 
@@ -753,7 +1140,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
 
     // Fetch the route
-    await _fetchRoute();
+    await _fetchRoutesAndDurations();
   }
 
   Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
@@ -1044,6 +1431,40 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       ),
     );
 
+    if (_showRoutePreview && _selectedTravelMode == RouteTravelMode.transit) {
+      final segments = _routeSegmentsByMode['transit'] ?? const [];
+      final seen = <String>{};
+
+      for (final segment in segments) {
+        if (segment.travelMode.toUpperCase() != 'TRANSIT') {
+          continue;
+        }
+        if (segment.points.isEmpty) {
+          continue;
+        }
+
+        final endpoints = [segment.points.first, segment.points.last];
+        for (final point in endpoints) {
+          final key =
+              '${point.latitude.toStringAsFixed(6)},${point.longitude.toStringAsFixed(6)}';
+          if (!seen.add(key)) {
+            continue;
+          }
+
+          circles.add(
+            Circle(
+              circleId: CircleId('transit_stop_$key'),
+              center: point,
+              radius: 15,
+              fillColor: Colors.white,
+              strokeColor: const Color(0xFF76263D),
+              strokeWidth: 2,
+            ),
+          );
+        }
+      }
+    }
+
     return circles;
   }
 
@@ -1283,6 +1704,27 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 onDestinationSelected: _onRouteDestinationSelected,
                 originSuggestions: _routeOriginSuggestions,
                 destinationSuggestions: _routeDestinationSuggestions,
+              ),
+            ),
+
+          if (_showRoutePreview)
+            Positioned(
+              bottom: 25,
+              left: 0,
+              right: 0,
+              child: PointerInterceptor(
+                child: Center(
+                  child: RouteTravelModeBar(
+                    selectedTravelMode: _selectedTravelMode,
+                    onTravelModeSelected: _onTravelModeSelected,
+                    modeDurations: _routeDurations,
+                    isLoadingDurations: _isLoadingRouteData,
+                    onClose: _closeRoutePreview,
+                    transitDetails: _buildTransitDetailItems(),
+                    modeDistances: _routeDistances,
+                    modeArrivalTimes: _routeArrivalTimes,
+                  ),
+                ),
               ),
             ),
 
