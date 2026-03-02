@@ -2262,18 +2262,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return markers;
   }
 
-  // ignore: unused_element
-  void _turnOffIndoorMap() {
-    if (_showIndoor) {
-      setState(() {
-        _showIndoor = false;
-        _indoorPolygons = {};
-        _indoorGeoJson = null;
-        _roomLabelMarkers = {};
-      });
-    }
-  }
-
   static const String _indoorMapStyle = '''
   [
     {
