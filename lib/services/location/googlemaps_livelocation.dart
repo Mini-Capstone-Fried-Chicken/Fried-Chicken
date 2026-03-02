@@ -20,6 +20,9 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
 
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
@@ -102,54 +105,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
-  SearchResult? _selectedSearchResult; // For non-Concordia places
-
-  Set<Polyline> _routePolylines = {};
-
-  // Route preview mode
-  bool _showRoutePreview = false;
-  LatLng? _routeOrigin;
-  LatLng? _routeDestination;
-  String _routeOriginText = currentLocationTag;
-  String _routeDestinationText = '';
-  RouteTravelMode _selectedTravelMode = RouteTravelMode.driving;
-  final Map<String, String?> _routeDurations = {};
-  final Map<String, String?> _routeDistances = {};
-  final Map<String, String?> _routeArrivalTimes = {};
-  final Map<String, List<LatLng>> _routePointsByMode = {};
-  final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
-
-  final Map<String, List<NavigationStep>> _routeStepsByMode = {};
-  // --- Navigation camera follow state ---
-  bool _navigationFollowUser =
-      false; // true while we follow user during navigation
-  DateTime _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
-  // tuning params (adjust as desired)
-  static const double _navZoom = 18.0;
-  static const double _navTilt =
-      60.0; // degrees — gives angled view like Google Maps
-  // Default aerial map view
-  static const double _defaultZoom = 15.0; // adjust to your normal map zoom
-  static const double _defaultTilt = 0.0;
-  static const double _defaultBearing = 0.0;
-  static const double _navBearingThresholdDegrees = 10.0;
-  static const double _navDistanceThresholdMeters = 5.0;
-  static const Duration _navCameraMinInterval = Duration(milliseconds: 700);
-  // Navigation session state (when user presses Start)
-  bool _isNavigating = false;
-  String? _navModeKey; // 'walking'/'driving'/'bicycling'/'transit'
-  int _navStepIndex = 0;
-  bool _isLoadingRouteData = false;
-  List<SearchSuggestion> _routeOriginSuggestions = [];
-  List<SearchSuggestion> _routeDestinationSuggestions = [];
-  Timer? _routeDebounceTimer;
-
-  static const List<RouteTravelMode> _supportedTravelModes = [
-    RouteTravelMode.driving,
-    RouteTravelMode.walking,
-    RouteTravelMode.bicycling,
-    RouteTravelMode.transit,
-  ];
+  Map<String, dynamic>? _indoorGeoJson;
+  Set<Marker> _roomLabelMarkers = {};
 
   StreamSubscription<Position>? _posSub;
 
@@ -220,17 +177,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final b = _selectedBuildingPoly;
   if (b == null) return;
 
-  // Support Hall (H) and MB
+  // Support Hall (H), MB, VE, VL, and CC
   String? assetPath;
   if (b.code.toUpperCase() == 'H') {
     assetPath = 'assets/indoor_maps/geojson/Hall/h1.geojson.json';
   } else if (b.code.toUpperCase() == 'MB') {
     assetPath = 'assets/indoor_maps/geojson/MB/mb1.geojson.json';
+  } else if (b.code.toUpperCase() == 'VE') {
+    assetPath = 'assets/indoor_maps/geojson/VE/VE2.geojson.json';
+  } else if (b.code.toUpperCase() == 'VL') {
+    assetPath = 'assets/indoor_maps/geojson/VL/VL2.geojson.json';
+  } else if (b.code.toUpperCase() == 'CC') {
+    assetPath = 'assets/indoor_maps/geojson/CC/cc1.geojson.json';
   } else {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Indoor map currently only wired for Hall (H) and MB'),
+        content: Text('Indoor map currently only available for Hall (H), MB, VE, VL, and CC'),
       ),
     );
     return;
@@ -240,6 +203,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _showIndoor = false;
       _indoorPolygons = {};
+      _indoorGeoJson = null;
+      _roomLabelMarkers = {};
     });
     return;
   }
@@ -249,11 +214,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final geo = await repo.loadGeoJsonAsset(assetPath);
 
     final polys = _geoJsonToPolygons(geo);
+    final labels = await _createRoomLabels(geo);
 
     if (!mounted) return;
     setState(() {
       _showIndoor = true;
       _indoorPolygons = polys;
+      _indoorGeoJson = geo;
+      _roomLabelMarkers = labels;
     });
   } catch (e) {
     if (!mounted) return;
@@ -298,6 +266,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
+  // ...existing code...
+
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
 
@@ -322,8 +292,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           (pts[i].latitude + pts[j].latitude) / 2,
           (pts[i].longitude + pts[j].longitude) / 2,
         );
-        final dist =
-            (pts[i].latitude - pts[j].latitude) *
+        final dist = (pts[i].latitude - pts[j].latitude) *
                 (pts[i].latitude - pts[j].latitude) +
             (pts[i].longitude - pts[j].longitude) *
                 (pts[i].longitude - pts[j].longitude);
@@ -349,8 +318,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final yj = polygon[j].longitude;
 
       if (((yi > point.longitude) != (yj > point.longitude)) &&
-          (point.latitude <
-              (xj - xi) * (point.longitude - yi) / (yj - yi) + xi)) {
+          (point.latitude < (xj - xi) * (point.longitude - yi) / (yj - yi) + xi)) {
         inside = !inside;
       }
       j = i;
@@ -364,8 +332,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     double area = 0;
     int j = pts.length - 1;
     for (int i = 0; i < pts.length; i++) {
-      area +=
-          (pts[j].longitude + pts[i].longitude) *
+      area += (pts[j].longitude + pts[i].longitude) *
           (pts[j].latitude - pts[i].latitude);
       j = i;
     }
@@ -1829,9 +1796,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               ),
               myLocationEnabled: false,
               myLocationButtonEnabled: false,
-              style: _showIndoor
-                  ? _indoorMapStyle
-                  : null, // Hide POIs when indoor map is showing
+                            style: _showIndoor ? _indoorMapStyle : null, // Hide POIs when indoor map is showing
 
               onMapCreated: (controller) {
                 _mapController = controller;
@@ -2039,32 +2004,169 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final props =
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
       final id = (props['ref'] ?? polygons.length).toString();
-          final isCorridor = props['indoor'] == 'corridor';
+
+      // Determine fill color based on feature type
+      Color fillColor;
+      if (props['escalators'] == 'yes') {
+        fillColor = Colors.green; // Escalator = green
+      } else if (props['highway'] == 'elevator') {
+        fillColor = Colors.orange; // Elevator = orange
+      } else if (props['highway'] == 'steps') {
+        fillColor = Colors.pink; // Steps = pink
+      } else if (props['amenity'] == 'toilets') {
+        fillColor = Colors.blue; // Toilets = blue
+      } else if (props['indoor'] == 'corridor') {
+        fillColor = const Color.fromARGB(255, 232, 122, 149); // Corridor = lighter red
+      } else {
+        fillColor = const Color(0xFF800020); // Default room = dark red
+      }
 
       polygons.add(
-      Polygon(
-        polygonId: PolygonId('indoor-$id'),
-        points: points,
-        strokeWidth: 2,
-        strokeColor: Colors.black,
-        fillColor: isCorridor
-            ? const Color.fromARGB(255, 232, 122, 149).withOpacity(1.0) // lighter red for corridor
-            : const Color(0xFF800020).withOpacity(1.0), // dark red for rooms
-        zIndex: 20,
-      ),
-    );
+        Polygon(
+          polygonId: PolygonId('indoor-$id'),
+          points: points,
+          strokeWidth: 2,
+          strokeColor: Colors.black,
+          fillColor: fillColor.withOpacity(1.0),
+          zIndex: 20,
+        ),
+      );
     }
 
     return polygons;
   }
-  void _turnOffIndoorMap() {
-  if (_showIndoor) {
-    setState(() {
-      _showIndoor = false;
-      _indoorPolygons = {};
-    });
+
+
+  Future<BitmapDescriptor> _createTextBitmap(String text, {double fontSize = 10}) async {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    );
+    painter.layout();
+
+    final width = painter.width.ceil();
+    final height = painter.height.ceil();
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    );
+
+    painter.paint(canvas, Offset.zero);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width, height);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    final Uint8List bytes = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.bytes(bytes);
   }
-}
+
+
+  /// Creates text labels at the center of each room polygon
+  Future<Set<Marker>> _createRoomLabels(Map<String, dynamic> geojson) async {
+    final features = (geojson['features'] as List).cast<dynamic>();
+    final markers = <Marker>{};
+    int index = 0;
+
+    for (final f in features) {
+      final feature = f as Map<String, dynamic>;
+      final geometry = feature['geometry'] as Map<String, dynamic>;
+      final props =
+          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+
+      if (geometry['type'] != 'Polygon') continue;
+      if (props['indoor'] != 'room') continue;
+      if (props['ref'] == null) continue;
+
+      final rings = geometry['coordinates'] as List;
+      if (rings.isEmpty) continue;
+      final outer = rings[0] as List;
+
+      final points = outer.map<LatLng>((p) {
+        final coords = p as List;
+        final lng = (coords[0] as num).toDouble();
+        final lat = (coords[1] as num).toDouble();
+        return LatLng(lat, lng);
+      }).toList();
+
+      if (points.length < 3) continue;
+
+      // Skip very small polygons where text won't fit
+      final area = _polygonArea(points);
+      if (area < 1e-10) continue;
+
+      final center = _polygonCenter(points);
+      final ref = props['ref'].toString();
+
+      // Choose font size based on polygon area
+      final double fontSize = area > 5e-8 ? 10 : 8;
+      final icon = await _createTextBitmap(ref, fontSize: fontSize);
+
+      markers.add(
+        Marker(
+          markerId: MarkerId('room-label-${index++}-$ref'),
+          position: center,
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+          zIndex: 30,
+          consumeTapEvents: false,
+          infoWindow: InfoWindow.noText,
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+
+  void _turnOffIndoorMap() {
+    if (_showIndoor) {
+      setState(() {
+        _showIndoor = false;
+        _indoorPolygons = {};
+        _indoorGeoJson = null;
+        _roomLabelMarkers = {};
+      });
+    }
+  }
+static const String _indoorMapStyle = '''
+  [
+    {
+      "featureType": "poi",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    },
+    {
+      "featureType": "poi.school",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    },
+    {
+      "featureType": "poi.business",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    },
+    {
+      "featureType": "transit",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    }
+  ]
+  ''';
 
   @override
   void dispose() {
