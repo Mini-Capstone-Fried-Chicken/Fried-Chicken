@@ -298,35 +298,80 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
+  // ...existing code...
+
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
 
-    double area = 0;
-    double cx = 0;
-    double cy = 0;
+    // First try: simple average
+    double lat = 0;
+    double lng = 0;
+    for (final p in pts) {
+      lat += p.latitude;
+      lng += p.longitude;
+    }
+    final avg = LatLng(lat / pts.length, lng / pts.length);
 
+    // Check if the average point is inside the polygon
+    if (_isPointInPolygon(avg, pts)) return avg;
+
+    // Fallback: try midpoint of the longest diagonal
+    double maxDist = 0;
+    LatLng best = avg;
     for (int i = 0; i < pts.length; i++) {
-      final p1 = pts[i];
-      final p2 = pts[(i + 1) % pts.length];
-
-      final x1 = p1.longitude;
-      final y1 = p1.latitude;
-      final x2 = p2.longitude;
-      final y2 = p2.latitude;
-
-      final cross = x1 * y2 - x2 * y1;
-      area += cross;
-      cx += (x1 + x2) * cross;
-      cy += (y1 + y2) * cross;
+      for (int j = i + 1; j < pts.length; j++) {
+        final mid = LatLng(
+          (pts[i].latitude + pts[j].latitude) / 2,
+          (pts[i].longitude + pts[j].longitude) / 2,
+        );
+        final dist =
+            (pts[i].latitude - pts[j].latitude) *
+                (pts[i].latitude - pts[j].latitude) +
+            (pts[i].longitude - pts[j].longitude) *
+                (pts[i].longitude - pts[j].longitude);
+        if (dist > maxDist && _isPointInPolygon(mid, pts)) {
+          maxDist = dist;
+          best = mid;
+        }
+      }
     }
 
-    area *= 0.5;
-    if (area.abs() < 1e-12) return pts.first;
+    return best;
+  }
 
-    cx /= (6 * area);
-    cy /= (6 * area);
+  /// Ray-casting algorithm to check if a point is inside a polygon
+  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    bool inside = false;
+    int j = polygon.length - 1;
 
-    return LatLng(cy, cx);
+    for (int i = 0; i < polygon.length; i++) {
+      final xi = polygon[i].latitude;
+      final yi = polygon[i].longitude;
+      final xj = polygon[j].latitude;
+      final yj = polygon[j].longitude;
+
+      if (((yi > point.longitude) != (yj > point.longitude)) &&
+          (point.latitude <
+              (xj - xi) * (point.longitude - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+      j = i;
+    }
+
+    return inside;
+  }
+
+  /// Calculates the approximate area of a polygon in square degrees
+  double _polygonArea(List<LatLng> pts) {
+    double area = 0;
+    int j = pts.length - 1;
+    for (int i = 0; i < pts.length; i++) {
+      area +=
+          (pts[j].longitude + pts[i].longitude) *
+          (pts[j].latitude - pts[i].latitude);
+      j = i;
+    }
+    return area.abs() / 2;
   }
 
   void _schedulePopupUpdate() {
@@ -1806,6 +1851,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               ),
               myLocationEnabled: false,
               myLocationButtonEnabled: false,
+              style: _showIndoor
+                  ? _indoorMapStyle
+                  : null, // Hide POIs when indoor map is showing
+
               onMapCreated: (controller) {
                 _mapController = controller;
               },
@@ -1830,7 +1879,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 });
                 _updatePopupOffset();
               },
-              markers: _createMarkers(),
+              markers: {
+                ..._createMarkers(),
+                if (_showIndoor) ..._roomLabelMarkers,
+              },
               circles: _createCircles(),
               polygons: _createBuildingPolygons(),
               polylines: _routePolylines,
