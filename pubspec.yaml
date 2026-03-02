@@ -29,6 +29,8 @@ dependencies:
   plugin_platform_interface: ^2.1.8
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
   integration_test:
@@ -45,3 +47,8 @@ flutter:
     - assets/indoor_svg/
     - assets/json/
     - assets/images/
+    - assets/indoor_maps/geojson/Hall/
+    - assets/indoor_maps/geojson/MB/
+    - assets/indoor_maps/geojson/VE/
+    - assets/indoor_maps/geojson/VL/ 
+    - assets/indoor_maps/geojson/CC/

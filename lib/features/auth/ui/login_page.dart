@@ -347,6 +347,7 @@ class _SignInPageState extends State<SignInPage> {
                     if (isLogin) ...[
                       const SizedBox(height: 12),
                       Center(
+                        key: const Key('continue_as_guest_button'),
                         child: TextButton(
                           onPressed: isLoading ? null : _continueAsGuest,
                           child: const Text(
