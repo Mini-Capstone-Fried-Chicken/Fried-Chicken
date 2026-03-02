@@ -82,8 +82,9 @@ class _MapSearchBarState extends State<MapSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final String hint =
-        widget.campusLabel.trim().isEmpty ? "Search anywhere" : "Search anywhere near ${widget.campusLabel}";
+    final String hint = widget.campusLabel.trim().isEmpty
+        ? "Search anywhere"
+        : "Search anywhere near ${widget.campusLabel}";
 
     return TapRegion(
       onTapOutside: (_) {
@@ -141,12 +142,13 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     itemBuilder: (context, index) {
                       final suggestion = widget.suggestions![index];
                       return ListTile(
+                        key: Key('suggestion_${suggestion.name}'),
                         leading: Icon(
-                          suggestion.isConcordiaBuilding 
-                              ? Icons.school 
+                          suggestion.isConcordiaBuilding
+                              ? Icons.school
                               : Icons.place,
-                          color: suggestion.isConcordiaBuilding 
-                              ? burgundy 
+                          color: suggestion.isConcordiaBuilding
+                              ? burgundy
                               : Colors.grey,
                           size: 20,
                         ),
@@ -156,7 +158,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                                 suggestion.subtitle!,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: suggestion.isConcordiaBuilding 
+                                  color: suggestion.isConcordiaBuilding
                                       ? burgundy.withOpacity(0.7)
                                       : Colors.grey[600],
                                 ),
