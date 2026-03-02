@@ -7,6 +7,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final String title;
   final String description;
   final VoidCallback onClose;
+  final VoidCallback? onIndoorMap;
   final bool accessibility;
   final List<String> facilities;
   final VoidCallback? onMore;
@@ -21,6 +22,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.accessibility = false,
     this.facilities = const [],
     this.onMore,
+    this.onIndoorMap,
     required this.isLoggedIn,
     required this.onGetDirections,
   });
@@ -119,6 +121,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     required IconData icon,
     required String tooltip,
     required VoidCallback onPressed,
+    Key? key,
   }) {
     const burgundy = Color(0xFF76263D);
     return Tooltip(
@@ -126,6 +129,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       triggerMode: _triggerMode,
       showDuration: const Duration(seconds: 1),
       child: IconButton(
+        key: key,
         onPressed: onPressed,
         icon: Icon(icon, color: burgundy),
         iconSize: 25,
@@ -224,6 +228,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                   _buildIconButton(
                     icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
                     tooltip: _isSaved ? 'Unsave' : 'Save',
+                    key: const Key('save_toggle_button'),
                     onPressed: () {
                       setState(() {
                         _isSaved = !_isSaved;
@@ -283,13 +288,14 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 _buildIconButton(
                   icon: Icons.directions,
                   tooltip: 'Get directions',
+                  key: const Key('get_directions_button'),
                   onPressed: widget.onGetDirections,
                 ),
                 const SizedBox(width: 10),
                 _buildIconButton(
                   icon: Icons.map,
                   tooltip: 'Indoor map',
-                  onPressed: () {},
+                  onPressed: widget.onIndoorMap ?? () {},
                 ),
               ],
             ),
@@ -298,6 +304,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
               opacity: 0.7,
               child: TextButton(
                 onPressed: widget.onMore ?? () {},
+                key: const Key('more_info_button'),
                 style: TextButton.styleFrom(
                   foregroundColor: burgundy,
                   padding: const EdgeInsets.symmetric(

@@ -102,6 +102,7 @@ class IndoorPage extends StatelessWidget {
     final prettyTitle = "Indoor Map - ${id.trim()}";
 
     return Scaffold(
+      key : const Key('indoor_page'),
       appBar: AppBar(title: Text(prettyTitle)),
       body: FutureBuilder<_FloorData?>(
         future: _tryLoadFloorDataIfJsonExists(),
@@ -138,6 +139,7 @@ class IndoorPage extends StatelessWidget {
                 final offsetY = (boxH - drawH) / 2;
 
                 Widget stack = Stack(
+                  key: const Key('indoor_map_stack'),
                   children: [
                     Positioned(
                       left: offsetX,
@@ -171,6 +173,7 @@ class IndoorPage extends StatelessWidget {
                           width: 36,
                           height: 36,
                           child: GestureDetector(
+                            key: Key('marker_${item.name}'),
                             onTap: () => _showInfo(context, item),
                             child: Container(
                               decoration: BoxDecoration(
@@ -227,6 +230,7 @@ class IndoorPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Text(
           item.name,
+          key: const Key('room_bottomsheet_text'),
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
@@ -248,6 +252,7 @@ class IndoorPage extends StatelessWidget {
           children: [
             Text(
               info?.name ?? key,
+              key: const Key('building_bottomsheet_title'),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
