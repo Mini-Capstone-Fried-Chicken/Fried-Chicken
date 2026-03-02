@@ -12,6 +12,7 @@ import '../../data/building_polygons.dart';
 import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../features/indoor/data/building_info.dart';
+import '../../services/indoor_maps/indoor_map_repository.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -43,7 +44,6 @@ Campus detectCampus(LatLng userLocation) {
   if (loyolaDistance <= campusRadius) return Campus.loyola;
   return Campus.none;
 }
-
 
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
@@ -78,6 +78,10 @@ class OutdoorMapPage extends StatefulWidget {
   @override
   State<OutdoorMapPage> createState() => _OutdoorMapPageState();
 }
+
+// Indoor overlay state
+Set<Polygon> _indoorPolygons = {};
+bool _showIndoor = false;
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
@@ -138,7 +142,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       try {
         final bounds = await controller.getVisibleRegion();
         final lat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-        final lng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+        final lng =
+            (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
         center = LatLng(lat, lng);
       } catch (_) {
         return;
@@ -153,6 +158,53 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedCampus = newCampus;
     });
   }
+
+  Future<void> _toggleIndoorMap() async {
+  final b = _selectedBuildingPoly;
+  if (b == null) return;
+
+  // Support Hall (H) and MB
+  String? assetPath;
+  if (b.code.toUpperCase() == 'H') {
+    assetPath = 'assets/indoor_maps/geojson/Hall/h1.geojson.json';
+  } else if (b.code.toUpperCase() == 'MB') {
+    assetPath = 'assets/indoor_maps/geojson/MB/mb1.geojson.json';
+  } else {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Indoor map currently only wired for Hall (H) and MB'),
+      ),
+    );
+    return;
+  }
+
+  if (_showIndoor) {
+    setState(() {
+      _showIndoor = false;
+      _indoorPolygons = {};
+    });
+    return;
+  }
+
+  try {
+    final repo = IndoorMapRepository();
+    final geo = await repo.loadGeoJsonAsset(assetPath);
+
+    final polys = _geoJsonToPolygons(geo);
+
+    if (!mounted) return;
+    setState(() {
+      _showIndoor = true;
+      _indoorPolygons = polys;
+    });
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Failed to load indoor map: $e')));
+  }
+}
 
   Future<void> _goToMyLocation() async {
     final controller = _mapController;
@@ -170,26 +222,24 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       }
     }
 
-    controller.animateCamera(
-      CameraUpdate.newLatLngZoom(loc, 17),
-    );
+    controller.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
   }
 
-Future<void> _openLink(String url) async {
-  if (url.trim().isEmpty) return;
+  Future<void> _openLink(String url) async {
+    if (url.trim().isEmpty) return;
 
-  final uri = Uri.tryParse(url);
-  if (uri == null) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
 
-  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!ok) {
-    // optional: show a snackbar
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Could not open link")),
-    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) {
+      // optional: show a snackbar
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Could not open link")));
+    }
   }
-}
 
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
@@ -224,7 +274,10 @@ Future<void> _openLink(String url) async {
 
   void _schedulePopupUpdate() {
     _popupDebounce?.cancel();
-    _popupDebounce = Timer(const Duration(milliseconds: 16), _updatePopupOffset);
+    _popupDebounce = Timer(
+      const Duration(milliseconds: 16),
+      _updatePopupOffset,
+    );
   }
 
   Future<void> _updatePopupOffset() async {
@@ -283,7 +336,9 @@ Future<void> _openLink(String url) async {
 
     if (controller == null) return;
 
-    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((_) async {
+    controller.animateCamera(CameraUpdate.newLatLngZoom(center, 18)).then((
+      _,
+    ) async {
       if (!mounted) return;
       await _updatePopupOffset();
       if (!mounted) return;
@@ -315,17 +370,25 @@ Future<void> _openLink(String url) async {
       final strokeColor = isSelected
           ? selectedBlue.withOpacity(0.95)
           : isCurrent
-              ? Colors.blue.withOpacity(0.8)
-              : burgundy.withOpacity(0.55);
+          ? Colors.blue.withOpacity(0.8)
+          : burgundy.withOpacity(0.55);
 
       final fillColor = isSelected
           ? selectedBlue.withOpacity(0.25)
           : isCurrent
-              ? Colors.blue.withOpacity(0.25)
-              : burgundy.withOpacity(0.22);
+          ? Colors.blue.withOpacity(0.25)
+          : burgundy.withOpacity(0.22);
 
-      final strokeWidth = isSelected ? 3 : isCurrent ? 3 : 2;
-      final zIndex = isSelected ? 3 : isCurrent ? 2 : 1;
+      final strokeWidth = isSelected
+          ? 3
+          : isCurrent
+          ? 3
+          : 2;
+      final zIndex = isSelected
+          ? 3
+          : isCurrent
+          ? 2
+          : 1;
 
       polys.add(
         Polygon(
@@ -350,8 +413,9 @@ Future<void> _openLink(String url) async {
 
     _selectedCampus = widget.initialCampus;
 
-    _lastCameraTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    _lastCameraTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
     _createBlueDotIcon();
     if (!widget.debugDisableLocation) {
@@ -368,15 +432,19 @@ Future<void> _openLink(String url) async {
   }
 
   Future<void> _createBlueDotIcon() async {
-    _blueDotIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/blue_dot.png',
-    ).catchError((_) {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
-    });
+    _blueDotIcon =
+        await BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(48, 48)),
+          'assets/blue_dot.png',
+        ).catchError((_) {
+          return BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueBlue,
+          );
+        });
 
-    _blueDotIcon ??=
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueAzure,
+    );
   }
 
   Future<void> _startLocationUpdates() async {
@@ -402,26 +470,25 @@ Future<void> _openLink(String url) async {
         _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
 
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLng(newLatLng),
-      );
+      _mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
     } catch (_) {}
 
-    _posSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
-      ),
-    ).listen((position) {
-      final newLatLng = LatLng(position.latitude, position.longitude);
+    _posSub =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            distanceFilter: 5,
+          ),
+        ).listen((position) {
+          final newLatLng = LatLng(position.latitude, position.longitude);
 
-      if (!mounted) return;
-      setState(() {
-        _currentLocation = newLatLng;
-        _currentCampus = detectCampus(newLatLng);
-        _currentBuildingPoly = detectBuildingPoly(newLatLng);
-      });
-    });
+          if (!mounted) return;
+          setState(() {
+            _currentLocation = newLatLng;
+            _currentCampus = detectCampus(newLatLng);
+            _currentBuildingPoly = detectBuildingPoly(newLatLng);
+          });
+        });
   }
 
   Set<Marker> _createMarkers() {
@@ -486,16 +553,17 @@ Future<void> _openLink(String url) async {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    final LatLng initialTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
     final Campus labelCampus = _selectedCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
         ? 'SGW'
         : labelCampus == Campus.loyola
-            ? 'Loyola'
-            : '';
+        ? 'Loyola'
+        : '';
 
     final screen = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
@@ -569,19 +637,21 @@ Future<void> _openLink(String url) async {
               },
               markers: _createMarkers(),
               circles: _createCircles(),
-              polygons: _createBuildingPolygons(),
+              polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
             ),
           Positioned(
-  top: 65,
-  left: 20,
-  right: 20,
-  child: MapSearchBar(
-    campusLabel: campusLabel,
-    controller: _searchController,
-  ),
-),
+            top: 65,
+            left: 20,
+            right: 20,
+            child: MapSearchBar(
+              campusLabel: campusLabel,
+              controller: _searchController,
+            ),
+          ),
 
-          if (_selectedBuildingPoly != null && popupLeft != null && popupTop != null)
+          if (_selectedBuildingPoly != null &&
+              popupLeft != null &&
+              popupTop != null)
             Positioned(
               left: popupLeft,
               top: popupTop,
@@ -590,21 +660,28 @@ Future<void> _openLink(String url) async {
                   title:
                       '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
                   description:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.description ??
-                          'No description available.',
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.description ??
+                      'No description available.',
                   accessibility:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.accessibility ??
-                          false,
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.accessibility ??
+                      false,
                   facilities:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]?.facilities ??
-                          const [],
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
+                          ?.facilities ??
+                      const [],
                   onMore: () {
-                    final link = widget.debugLinkOverride ??
-                        (buildingInfoByCode[_selectedBuildingPoly!.code]?.link ?? '');
+                    final link =
+                        widget.debugLinkOverride ??
+                        (buildingInfoByCode[_selectedBuildingPoly!.code]
+                                ?.link ??
+                            '');
                     _openLink(link);
                   },
                   onClose: _closePopup,
                   isLoggedIn: widget.isLoggedIn,
+                  onIndoorMap: _toggleIndoorMap,
                 ),
               ),
             ),
@@ -636,8 +713,8 @@ Future<void> _openLink(String url) async {
                       _currentCampus == Campus.sgw
                           ? 'SGW Campus'
                           : _currentCampus == Campus.loyola
-                              ? 'Loyola Campus'
-                              : 'Off Campus',
+                          ? 'Loyola Campus'
+                          : 'Off Campus',
                     ),
                   ),
                 ],
@@ -662,6 +739,60 @@ Future<void> _openLink(String url) async {
       ),
     );
   }
+
+  Set<Polygon> _geoJsonToPolygons(Map<String, dynamic> geojson) {
+    final features = (geojson['features'] as List).cast<dynamic>();
+
+    final polygons = <Polygon>{};
+
+    for (final f in features) {
+      final feature = f as Map<String, dynamic>;
+      final geometry = feature['geometry'] as Map<String, dynamic>;
+      if (geometry['type'] != 'Polygon') continue;
+
+      final rings = geometry['coordinates'] as List;
+      if (rings.isEmpty) continue;
+
+      final outer = rings[0] as List;
+
+      final points = outer.map<LatLng>((p) {
+        final coords = p as List;
+        final lng = (coords[0] as num).toDouble();
+        final lat = (coords[1] as num).toDouble();
+        return LatLng(lat, lng); // GeoJSON is [lng,lat]
+      }).toList();
+
+      if (points.length < 3) continue;
+
+      final props =
+          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+      final id = (props['ref'] ?? polygons.length).toString();
+          final isCorridor = props['indoor'] == 'corridor';
+
+      polygons.add(
+      Polygon(
+        polygonId: PolygonId('indoor-$id'),
+        points: points,
+        strokeWidth: 2,
+        strokeColor: Colors.black,
+        fillColor: isCorridor
+            ? const Color.fromARGB(255, 232, 122, 149).withOpacity(1.0) // lighter red for corridor
+            : const Color(0xFF800020).withOpacity(1.0), // dark red for rooms
+        zIndex: 20,
+      ),
+    );
+    }
+
+    return polygons;
+  }
+  void _turnOffIndoorMap() {
+  if (_showIndoor) {
+    setState(() {
+      _showIndoor = false;
+      _indoorPolygons = {};
+    });
+  }
+}
 
   @override
   void dispose() {

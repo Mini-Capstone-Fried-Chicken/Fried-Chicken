@@ -43,3 +43,6 @@ flutter:
     - assets/indoor_svg/
     - assets/json/
     - assets/images/
+    - assets/indoor_maps/geojson/Hall/
+    - assets/indoor_maps/geojson/MB/
+

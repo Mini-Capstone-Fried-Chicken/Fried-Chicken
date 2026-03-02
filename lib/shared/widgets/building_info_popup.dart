@@ -10,7 +10,9 @@ class BuildingInfoPopup extends StatefulWidget {
   final bool accessibility;
   final List<String> facilities;
   final VoidCallback? onMore;
+  final VoidCallback? onIndoorMap;
   final bool isLoggedIn;
+  
 
   const BuildingInfoPopup({
     super.key,
@@ -20,6 +22,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.accessibility = false,
     this.facilities = const [],
     this.onMore,
+      this.onIndoorMap, 
     required this.isLoggedIn,
   });
 
@@ -281,7 +284,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 _buildIconButton(
                   icon: Icons.map,
                   tooltip: 'Indoor map',
-                  onPressed: () {},
+                  onPressed: widget.onIndoorMap ?? () {},
                 ),
               ],
             ),
