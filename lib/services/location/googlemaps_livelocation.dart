@@ -799,41 +799,46 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     final polys = <Polygon>{};
 
-    for (final b in buildingPolygons) {
+    Color strokeColorFor(dynamic b) {
       final isCurrent = _currentBuildingPoly?.code == b.code;
       final isSelected = _selectedBuildingPoly?.code == b.code;
+      if (isSelected) return selectedBlue.withValues(alpha: 0.95);
+      if (isCurrent) return Colors.blue.withValues(alpha: 0.95);
+      return burgundy.withValues(alpha: 0.55);
+    }
 
-      final strokeColor = isSelected
-          ? selectedBlue.withOpacity(0.95)
-          : isCurrent
-          ? Colors.blue.withOpacity(0.8)
-          : burgundy.withOpacity(0.55);
+    Color fillColorFor(dynamic b) {
+      final isCurrent = _currentBuildingPoly?.code == b.code;
+      final isSelected = _selectedBuildingPoly?.code == b.code;
+      if (isSelected) return selectedBlue.withValues(alpha: 0.25);
+      if (isCurrent) return Colors.blue.withValues(alpha: 0.25);
+      return burgundy.withValues(alpha: 0.22);
+    }
 
-      final fillColor = isSelected
-          ? selectedBlue.withOpacity(0.25)
-          : isCurrent
-          ? Colors.blue.withOpacity(0.25)
-          : burgundy.withOpacity(0.22);
+    int strokeWidthFor(dynamic b) {
+      final isCurrent = _currentBuildingPoly?.code == b.code;
+      final isSelected = _selectedBuildingPoly?.code == b.code;
+      if (isSelected || isCurrent) return 3;
+      return 2;
+    }
 
-      final strokeWidth = isSelected
-          ? 3
-          : isCurrent
-          ? 3
-          : 2;
-      final zIndex = isSelected
-          ? 3
-          : isCurrent
-          ? 2
-          : 1;
+    int zIndexFor(dynamic b) {
+      final isCurrent = _currentBuildingPoly?.code == b.code;
+      final isSelected = _selectedBuildingPoly?.code == b.code;
+      if (isSelected) return 3;
+      if (isCurrent) return 2;
+      return 1;
+    }
 
+    for (final b in buildingPolygons) {
       polys.add(
         Polygon(
           polygonId: PolygonId('poly_${b.code}'),
           points: b.points,
-          strokeWidth: strokeWidth,
-          strokeColor: strokeColor,
-          fillColor: fillColor,
-          zIndex: zIndex,
+          strokeWidth: strokeWidthFor(b),
+          strokeColor: strokeColorFor(b),
+          fillColor: fillColorFor(b),
+          zIndex: zIndexFor(b),
           consumeTapEvents: true,
           onTap: () => _onBuildingTapped(b),
         ),
@@ -892,15 +897,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _createBlueDotIcon() async {
-    _blueDotIcon =
-        await BitmapDescriptor.fromAssetImage(
-          const ImageConfiguration(size: Size(48, 48)),
-          'assets/blue_dot.png',
-        ).catchError((_) {
-          return BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueBlue,
-          );
-        });
+    try {
+      _blueDotIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/blue_dot.png',
+      );
+    } catch (_) {
+      _blueDotIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueBlue,
+      );
+    }
 
     _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
       BitmapDescriptor.hueAzure,
@@ -1001,7 +1007,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
           anchor: const Offset(0.5, 0.5),
           flat: true,
-          zIndex: 999,
+          zIndexInt: 999,
         ),
       );
     }
@@ -1038,8 +1044,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
         radius: 20,
-        fillColor: Colors.blue.withOpacity(0.1),
-        strokeColor: Colors.blue.withOpacity(0.3),
+        fillColor: Colors.blue.withValues(alpha:0.1),
+        strokeColor: Colors.blue.withValues(alpha:0.3),
         strokeWidth: 1,
       ),
     );
@@ -1079,231 +1085,234 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng initialTarget = widget.initialCampus == Campus.loyola
-        ? concordiaLoyola
-        : concordiaSGW;
-
-    final Campus labelCampus = _selectedCampus;
-
-    final String campusLabel = labelCampus == Campus.sgw
-        ? 'SGW'
-        : labelCampus == Campus.loyola
-        ? 'Loyola'
-        : '';
-
-    final screen = MediaQuery.of(context).size;
-    final topPad = MediaQuery.of(context).padding.top;
-
-    double? popupLeft;
-    double? popupTop;
-
-    // Use debug anchor offset if provided (for testing)
-    final anchorToUse = widget.debugAnchorOffset ?? _anchorOffset;
-
-    if (anchorToUse != null && !_cameraMoving) {
-      final ax = anchorToUse.dx;
-      final ay = anchorToUse.dy;
-
-      final inView =
-          ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
-
-      if (inView) {
-        double left = ax - (_popupW / 2);
-        double top = ay - (_popupH / 2);
-
-        const margin = 8.0;
-        final minLeft = margin;
-        final maxLeft = screen.width - _popupW - margin;
-        final minTop = topPad + margin;
-        final maxTop = screen.height - _popupH - margin;
-
-        if (left < minLeft) left = minLeft;
-        if (left > maxLeft) left = maxLeft;
-        if (top < minTop) top = minTop;
-        if (top > maxTop) top = maxTop;
-
-        popupLeft = left;
-        popupTop = top;
-      }
-    }
+    final initialTarget = _getInitialTarget();
+    final campusLabel = _getCampusLabel();
+    final popupOffset = _calculatePopupOffset(context);
 
     return Scaffold(
       body: Stack(
         children: [
-          if (widget.debugDisableMap)
-            const SizedBox.expand()
-          else
-            GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: initialTarget,
-                zoom: 16,
-              ),
-              myLocationEnabled: false,
-              myLocationButtonEnabled: false,
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-              onCameraMove: (pos) {
-                _lastCameraTarget = pos.target;
-                if (_selectedBuildingCenter != null) {
-                  _schedulePopupUpdate();
-                }
-              },
-              onCameraMoveStarted: () {
-                if (_selectedBuildingCenter == null) return;
-                setState(() {
-                  _cameraMoving = true;
-                });
-              },
-              onCameraIdle: () {
-                _syncToggleWithCameraCenter();
+          _buildMap(initialTarget),
 
-                if (_selectedBuildingCenter == null) return;
-                setState(() {
-                  _cameraMoving = false;
-                });
-                _updatePopupOffset();
-              },
-              markers: _createMarkers(),
-              circles: _createCircles(),
-              polygons: _createBuildingPolygons(),
-              polylines: _routePolylines,
-            ),
-          if (!_showRoutePreview)
-            Positioned(
-              top: 65,
-              left: 20,
-              right: 20,
-              child: MapSearchBar(
-                campusLabel: campusLabel,
-                controller: _searchController,
-                onSubmitted: _onSearchSubmitted,
-                suggestions: _searchSuggestions,
-                onSuggestionSelected: _onSuggestionSelected,
-                onFocus: _hideBuildingPopup,
-              ),
-            ),
+          if (!_showRoutePreview) _buildSearchBar(campusLabel),
 
-          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
-              popupLeft != null &&
-              popupTop != null)
-            Positioned(
-              left: popupLeft,
-              top: popupTop,
-              child: PointerInterceptor(
-                child: BuildingInfoPopup(
-                  title:
-                      '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
-                  description:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.description ??
-                      'No description available.',
-                  accessibility:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.accessibility ??
-                      false,
-                  facilities:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.facilities ??
-                      const [],
-                  onMore: () {
-                    final link =
-                        widget.debugLinkOverride ??
-                        (buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                        _selectedBuildingPoly)!
-                                    .code]
-                                ?.link ??
-                            '');
-                    _openLink(link);
-                  },
-                  onClose: _closePopup,
-                  isLoggedIn: widget.isLoggedIn,
-                  onGetDirections: _getDirections,
-                ),
-              ),
-            ),
+          if (popupOffset != null) _buildBuildingPopup(popupOffset),
 
-          Positioned(
-            bottom: 70,
-            left: 20,
-            child: PointerInterceptor(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'location_button',
-                    mini: true,
-                    onPressed: () {
-                      final loc = _currentLocation;
-                      if (loc == null) return;
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(loc, 17),
-                      );
-                    },
-                    child: const Icon(Icons.my_location),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.extended(
-                    heroTag: 'campus_button',
-                    onPressed: _goToMyLocation,
-                    icon: const Icon(Icons.school),
-                    label: Text(
-                      _currentCampus == Campus.sgw
-                          ? 'SGW Campus'
-                          : _currentCampus == Campus.loyola
-                          ? 'Loyola Campus'
-                          : 'Off Campus',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildFloatingButtons(),
 
-          // Route Preview Panel
-          if (_showRoutePreview)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: RoutePreviewPanel(
-                originText: _routeOriginText,
-                destinationText: _routeDestinationText,
-                onClose: _closeRoutePreview,
-                onSwitch: _switchOriginDestination,
-                onOriginChanged: _onRouteOriginChanged,
-                onDestinationChanged: _onRouteDestinationChanged,
-                onOriginSelected: _onRouteOriginSelected,
-                onDestinationSelected: _onRouteDestinationSelected,
-                originSuggestions: _routeOriginSuggestions,
-                destinationSuggestions: _routeDestinationSuggestions,
-              ),
-            ),
+          if (_showRoutePreview) _buildRoutePreview(),
 
-          if (!_showRoutePreview)
-            Positioned(
-              bottom: 25,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 280,
-                  child: CampusToggle(
-                    currentCampus: _selectedCampus,
-                    onCampusChanged: _switchCampus,
-                  ),
-                ),
-              ),
-            ),
+          if (!_showRoutePreview) _buildCampusToggle(),
         ],
       ),
     );
+  }
+
+  LatLng _getInitialTarget() {
+    return widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
+  }
+
+  String _getCampusLabel() {
+    return _selectedCampus == Campus.sgw
+        ? 'SGW'
+        : _selectedCampus == Campus.loyola
+        ? 'Loyola'
+        : '';
+  }
+
+  Offset? _calculatePopupOffset(BuildContext context) {
+    final screen = MediaQuery.of(context).size;
+    final topPad = MediaQuery.of(context).padding.top;
+    final anchor = widget.debugAnchorOffset ?? _anchorOffset;
+
+    if (anchor == null || _cameraMoving) return null;
+
+    final ax = anchor.dx;
+    final ay = anchor.dy;
+
+    final inView =
+        ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
+
+    if (!inView) return null;
+
+    double left = ax - (_popupW / 2);
+    double top = ay - (_popupH / 2);
+
+    const margin = 8.0;
+
+    left = left.clamp(margin, screen.width - _popupW - margin);
+    top = top.clamp(topPad + margin, screen.height - _popupH - margin);
+
+    return Offset(left, top);
+  }
+
+  Widget _buildMap(LatLng initialTarget) {
+    return widget.debugDisableMap
+        ? const SizedBox.expand()
+        : GoogleMap(
+      initialCameraPosition: CameraPosition(
+        target: initialTarget,
+        zoom: 16,
+      ),
+      myLocationEnabled: false,
+      myLocationButtonEnabled: false,
+      onMapCreated: (controller) => _mapController = controller,
+      onCameraMove: _onCameraMove,
+      onCameraMoveStarted: _onCameraMoveStarted,
+      onCameraIdle: _onCameraIdle,
+      markers: _createMarkers(),
+      circles: _createCircles(),
+      polygons: _createBuildingPolygons(),
+      polylines: _routePolylines,
+    );
+  }
+
+  void _onCameraMove(CameraPosition pos) {
+    _lastCameraTarget = pos.target;
+    if (_selectedBuildingCenter != null) {
+      _schedulePopupUpdate();
+    }
+  }
+
+  void _onCameraMoveStarted() {
+    if (_selectedBuildingCenter == null) return;
+    setState(() => _cameraMoving = true);
+  }
+
+  void _onCameraIdle() {
+    _syncToggleWithCameraCenter();
+    if (_selectedBuildingCenter == null) return;
+    setState(() => _cameraMoving = false);
+    _updatePopupOffset();
+  }
+
+  Widget _buildBuildingPopup(Offset offset) {
+    final building =
+        widget.debugSelectedBuilding ?? _selectedBuildingPoly;
+
+    if (building == null) return const SizedBox.shrink();
+
+    final info = buildingInfoByCode[building.code];
+
+    return Positioned(
+      left: offset.dx,
+      top: offset.dy,
+      child: PointerInterceptor(
+        child: BuildingInfoPopup(
+          title: '${info?.name ?? building.name} - ${building.code}',
+          description: info?.description ?? 'No description available.',
+          accessibility: info?.accessibility ?? false,
+          facilities: info?.facilities ?? const [],
+          onMore: () {
+            final link =
+                widget.debugLinkOverride ?? info?.link ?? '';
+            _openLink(link);
+          },
+          onClose: _closePopup,
+          isLoggedIn: widget.isLoggedIn,
+          onGetDirections: _getDirections,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingButtons() {
+    return Positioned(
+      bottom: 70,
+      left: 20,
+      child: PointerInterceptor(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton(
+              heroTag: 'location_button',
+              mini: true,
+              onPressed: _goToCurrentLocation,
+              child: const Icon(Icons.my_location),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton.extended(
+              heroTag: 'campus_button',
+              onPressed: _goToMyLocation,
+              icon: const Icon(Icons.school),
+              label: Text(_getCampusButtonLabel()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(String campusLabel) {
+    return Positioned(
+      top: 65,
+      left: 20,
+      right: 20,
+      child: MapSearchBar(
+        campusLabel: campusLabel,
+        controller: _searchController,
+        onSubmitted: _onSearchSubmitted,
+        suggestions: _searchSuggestions,
+        onSuggestionSelected: _onSuggestionSelected,
+        onFocus: _hideBuildingPopup,
+      ),
+    );
+  }
+
+  Widget _buildRoutePreview() {
+    return Positioned(
+      top: 80,
+      left: 0,
+      right: 0,
+      child: RoutePreviewPanel(
+        originText: _routeOriginText,
+        destinationText: _routeDestinationText,
+        onClose: _closeRoutePreview,
+        onSwitch: _switchOriginDestination,
+        onOriginChanged: _onRouteOriginChanged,
+        onDestinationChanged: _onRouteDestinationChanged,
+        onOriginSelected: _onRouteOriginSelected,
+        onDestinationSelected: _onRouteDestinationSelected,
+        originSuggestions: _routeOriginSuggestions,
+        destinationSuggestions: _routeDestinationSuggestions,
+      ),
+    );
+  }
+
+  Widget _buildCampusToggle() {
+    return Positioned(
+      bottom: 25,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: SizedBox(
+          width: 280,
+          child: CampusToggle(
+            currentCampus: _selectedCampus,
+            onCampusChanged: _switchCampus,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _goToCurrentLocation() {
+    final loc = _currentLocation;
+    if (loc == null) return;
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(loc, 17),
+    );
+  }
+
+  String _getCampusButtonLabel() {
+    return _currentCampus == Campus.sgw
+        ? 'SGW Campus'
+        : _currentCampus == Campus.loyola
+        ? 'Loyola Campus'
+        : 'Off Campus';
   }
 
   @override

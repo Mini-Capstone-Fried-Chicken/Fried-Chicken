@@ -3,6 +3,8 @@ import "dart:convert";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart" show rootBundle;
 import "package:flutter_svg/flutter_svg.dart";
+import 'package:vector_math/vector_math_64.dart' as vm;
+
 
 import "../../data/building_info.dart";
 
@@ -27,7 +29,8 @@ class IndoorPage extends StatelessWidget {
   String get _buildingCode {
     final clean = id.trim();
     if (clean.contains("-")) return clean.split("-").first.toUpperCase();
-    final m = RegExp(r"^([A-Za-z]+)").firstMatch(clean);
+    final Pattern pattern = RegExp(r"^([A-Za-z]+)");
+    final m = pattern.matchAsPrefix(clean);
     return (m?.group(1) ?? clean).toUpperCase();
   }
 
@@ -106,105 +109,167 @@ class IndoorPage extends StatelessWidget {
       body: FutureBuilder<_FloorData?>(
         future: _tryLoadFloorDataIfJsonExists(),
         builder: (context, snapshot) {
-          final data = snapshot.data; // null => view-only mode
+          final data = snapshot.data;
 
-          // choose coordinate box size:
           final refW = data?.svgW ?? 1024.0;
           final refH = data?.svgH ?? 1024.0;
 
-          final mapWidget = _isSvg
-              ? SvgPicture.asset(assetPath, fit: BoxFit.fill)
-              : Image.asset(assetPath, fit: BoxFit.fill);
+          final mapWidget = _buildMapWidget();
 
           return InteractiveViewer(
             minScale: 0.5,
             maxScale: 6,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final boxW = constraints.maxWidth;
-                final boxH = constraints.maxHeight;
+                final layout = _computeLayout(constraints, refW, refH);
 
-                final scale = _containScale(
-                  boxW: boxW,
-                  boxH: boxH,
-                  refW: refW,
-                  refH: refH,
-                );
-
-                final drawW = refW * scale;
-                final drawH = refH * scale;
-
-                final offsetX = (boxW - drawW) / 2;
-                final offsetY = (boxH - drawH) / 2;
-
-                Widget stack = Stack(
-                  children: [
-                    Positioned(
-                      left: offsetX,
-                      top: offsetY,
-                      width: drawW,
-                      height: drawH,
-                      child: Stack(
-                        children: [
-                          mapWidget,
-                          Positioned.fill(
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => _showBuildingInfo(
-                                  context,
-                                  data?.building ?? _buildingCode,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // markers if JSON exists
-                    if (data != null)
-                      for (final item in data.items)
-                        Positioned(
-                          left: offsetX + (item.x * scale) - 18,
-                          top: offsetY + (item.y * scale) - 18,
-                          width: 36,
-                          height: 36,
-                          child: GestureDetector(
-                            onTap: () => _showInfo(context, item),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: item.type == _PointType.classroom
-                                    ? Colors.red.withOpacity(0.25)
-                                    : Colors.blue.withOpacity(0.20),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: item.type == _PointType.classroom
-                                      ? Colors.red.withOpacity(0.7)
-                                      : Colors.blue.withOpacity(0.7),
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                  ],
+                Widget stack = _buildStack(
+                  context: context,
+                  data: data,
+                  mapWidget: mapWidget,
+                  layout: layout,
                 );
 
                 if (data?.flipHorizontally == true) {
-                  stack = Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
-                    child: stack,
-                  );
+                  stack = _flipStack(stack);
                 }
 
-                return SizedBox(width: boxW, height: boxH, child: stack);
+                return SizedBox(
+                  width: layout.boxW,
+                  height: layout.boxH,
+                  child: stack,
+                );
               },
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildMapWidget() {
+    return _isSvg
+        ? SvgPicture.asset(assetPath, fit: BoxFit.fill)
+        : Image.asset(assetPath, fit: BoxFit.fill);
+  }
+
+  _LayoutData _computeLayout(
+      BoxConstraints constraints,
+      double refW,
+      double refH,
+      ) {
+    final boxW = constraints.maxWidth;
+    final boxH = constraints.maxHeight;
+
+    final scale = _containScale(
+      boxW: boxW,
+      boxH: boxH,
+      refW: refW,
+      refH: refH,
+    );
+
+    final drawW = refW * scale;
+    final drawH = refH * scale;
+
+    final offsetX = (boxW - drawW) / 2;
+    final offsetY = (boxH - drawH) / 2;
+
+    return _LayoutData(
+      boxW: boxW,
+      boxH: boxH,
+      scale: scale,
+      drawW: drawW,
+      drawH: drawH,
+      offsetX: offsetX,
+      offsetY: offsetY,
+    );
+  }
+
+  Widget _buildStack({
+    required BuildContext context,
+    required _FloorData? data,
+    required Widget mapWidget,
+    required _LayoutData layout,
+  }) {
+    return Stack(
+      children: [
+        _buildBaseMapLayer(context, data, mapWidget, layout),
+        if (data != null) _buildMarkers(context, data, layout),
+      ],
+    );
+  }
+
+  Widget _buildBaseMapLayer(
+      BuildContext context,
+      _FloorData? data,
+      Widget mapWidget,
+      _LayoutData layout,
+      ) {
+    return Positioned(
+      left: layout.offsetX,
+      top: layout.offsetY,
+      width: layout.drawW,
+      height: layout.drawH,
+      child: Stack(
+        children: [
+          mapWidget,
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showBuildingInfo(
+                  context,
+                  data?.building ?? _buildingCode,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMarkers(
+      BuildContext context,
+      _FloorData data,
+      _LayoutData layout,
+      ) {
+    return Stack(
+      children: [
+        for (final item in data.items)
+          Positioned(
+            left: layout.offsetX + (item.x * layout.scale) - 18,
+            top: layout.offsetY + (item.y * layout.scale) - 18,
+            width: 36,
+            height: 36,
+            child: GestureDetector(
+              onTap: () => _showInfo(context, item),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: item.type == _PointType.classroom
+                      ? Colors.red.withValues(alpha: 0.25)
+                      : Colors.blue.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: item.type == _PointType.classroom
+                        ? Colors.red.withValues(alpha: 0.7)
+                        : Colors.blue.withValues(alpha: 0.7),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _flipStack(Widget stack) {
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..scaleByVector3(vm.Vector3(-1.0, 1.0, 1.0)),
+      child: stack,
     );
   }
 
@@ -294,5 +359,25 @@ class _PointItem {
     required this.x,
     required this.y,
     required this.type,
+  });
+}
+
+class _LayoutData {
+  final double boxW;
+  final double boxH;
+  final double scale;
+  final double drawW;
+  final double drawH;
+  final double offsetX;
+  final double offsetY;
+
+  const _LayoutData({
+    required this.boxW,
+    required this.boxH,
+    required this.scale,
+    required this.drawW,
+    required this.drawH,
+    required this.offsetX,
+    required this.offsetY,
   });
 }

@@ -27,7 +27,8 @@ IndoorIdInfo parseIndoorId(String id) {
   }
 
   // Compact
-  final match = RegExp(r"^([A-Za-z]+)(\d+)$").firstMatch(clean);
+  final Pattern pattern = RegExp(r"^([A-Za-z]+)(\d+)$");
+  final match = pattern.matchAsPrefix(clean);
   if (match != null) {
     return IndoorIdInfo(
       match.group(1)!.toUpperCase(),

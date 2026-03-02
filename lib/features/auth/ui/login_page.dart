@@ -128,7 +128,7 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
-  final String internet_error_message = "Connection timeout. Please check your internet.";
+  final String internetErrorMessage = "Connection timeout. Please check your internet.";
 
 
   @override
@@ -187,81 +187,16 @@ class _SignInPageState extends State<SignInPage> {
     }
 
     setState(() => isLoading = true);
+
     try {
-      final usersRef = FirebaseFirestore.instance.collection("users");
-
       if (isLogin) {
-        final query = await usersRef
-            .where("email", isEqualTo: email)
-            .where("password", isEqualTo: password)
-            .limit(1)
-            .get()
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw Exception(
-                  internet_error_message,
-                );
-              },
-            );
-
-        if (query.docs.isEmpty) {
-          setState(() => isLoading = false);
-          _showMessage("Invalid email or password.");
-          return;
-        }
-
-        await FirebaseAuth.instance.signInAnonymously().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            throw Exception("Authentication timeout.");
-          },
-        );
+        await _handleLogin(email, password);
       } else {
-        final existing = await usersRef
-            .where("email", isEqualTo: email)
-            .limit(1)
-            .get()
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw Exception(
-                  internet_error_message,
-                );
-              },
-            );
-
-        if (existing.docs.isNotEmpty) {
-          setState(() => isLoading = false);
-          _showMessage("That email is already in use.");
-          return;
-        }
-
-        await usersRef
-            .add({
-              "name": name,
-              "email": email,
-              "password": password,
-              "createdAt": FieldValue.serverTimestamp(),
-            })
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw Exception(
-                  internet_error_message,
-                );
-              },
-            );
-
-        await FirebaseAuth.instance.signInAnonymously().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            throw Exception("Authentication timeout.");
-          },
-        );
+        await _handleSignup(email, password, name);
       }
 
       if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AppShell(isLoggedIn: true)),
@@ -275,6 +210,77 @@ class _SignInPageState extends State<SignInPage> {
         setState(() => isLoading = false);
       }
     }
+  }
+
+  Future<void> _handleLogin(String email, String password) async {
+    final usersRef = FirebaseFirestore.instance.collection("users");
+
+    final query = await usersRef
+        .where("email", isEqualTo: email)
+        .where("password", isEqualTo: password)
+        .limit(1)
+        .get()
+        .timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception(internetErrorMessage);
+      },
+    );
+
+    if (query.docs.isEmpty) {
+      setState(() => isLoading = false);
+      _showMessage("Invalid email or password.");
+      return;
+    }
+
+    await FirebaseAuth.instance.signInAnonymously().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception("Authentication timeout.");
+      },
+    );
+  }
+
+  Future<void> _handleSignup(String email, String password, String name) async {
+    final usersRef = FirebaseFirestore.instance.collection("users");
+
+    final existing = await usersRef
+        .where("email", isEqualTo: email)
+        .limit(1)
+        .get()
+        .timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception(internetErrorMessage);
+      },
+    );
+
+    if (existing.docs.isNotEmpty) {
+      setState(() => isLoading = false);
+      _showMessage("That email is already in use.");
+      return;
+    }
+
+    await usersRef
+        .add({
+      "name": name,
+      "email": email,
+      "password": password,
+      "createdAt": FieldValue.serverTimestamp(),
+    })
+        .timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception(internetErrorMessage);
+      },
+    );
+
+    await FirebaseAuth.instance.signInAnonymously().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception("Authentication timeout.");
+      },
+    );
   }
 
   @override

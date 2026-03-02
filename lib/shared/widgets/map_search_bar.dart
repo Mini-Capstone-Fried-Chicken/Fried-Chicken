@@ -157,14 +157,14 @@ class _MapSearchBarState extends State<MapSearchBar> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: suggestion.isConcordiaBuilding 
-                                      ? burgundy.withOpacity(0.7)
+                                      ? burgundy.withValues(alpha:0.7)
                                       : Colors.grey[600],
                                 ),
                               )
                             : null,
                         dense: true,
                         onTap: () => _selectSuggestion(suggestion),
-                        hoverColor: burgundy.withOpacity(0.1),
+                        hoverColor: burgundy.withValues(alpha:0.1),
                       );
                     },
                   ),

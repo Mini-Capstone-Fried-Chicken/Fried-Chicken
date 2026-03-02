@@ -61,68 +61,67 @@ class _CampusAppState extends State<CampusApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF76263D)),
         useMaterial3: true,
       ),
+      home: _buildHome(),
+      onGenerateRoute: _onGenerateRoute,
+    );
+  }
 
-      // Auth gate (same logic you already had)
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          final user = snapshot.data;
-          if (user != null) {
-            return const AppShell(isLoggedIn: true);
-          }
-          return const SignInPage();
-        },
-      ),
-
-      // Your named route logic (same as before)
-      onGenerateRoute: (settings) {
-        final name = settings.name ?? "/";
-
-        if (name == "/") {
-          return MaterialPageRoute(builder: (_) => const SignInPage());
-        }
-
-        if (name == "/indoor-map") {
-          final assetPath = _findAssetPath("MB-1");
-          if (assetPath == null) {
-            return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text("MB-1 asset not found")),
-              ),
-            );
-          }
-          return MaterialPageRoute(
-            builder: (_) => IndoorPage(id: "MB-1", assetPath: assetPath),
+  Widget _buildHome() {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (name.startsWith("/indoor/")) {
-          final id = name.replaceFirst("/indoor/", "").trim();
-          final assetPath = _findAssetPath(id);
-
-          if (assetPath == null || assetPath.isEmpty) {
-            return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text("Indoor map not found")),
-              ),
-            );
-          }
-
-          return MaterialPageRoute(
-            builder: (_) => IndoorPage(id: id, assetPath: assetPath),
-          );
+        final user = snapshot.data;
+        if (user != null) {
+          return const AppShell(isLoggedIn: true);
         }
 
-        return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Center(child: Text("404"))),
-        );
+        return const SignInPage();
       },
     );
+  }
+
+  Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+    final name = settings.name ?? "/";
+
+    if (name == "/") {
+      return _simpleRoute(const SignInPage());
+    }
+
+    if (name == "/indoor-map") {
+      return _buildIndoorMapRoute("MB-1");
+    }
+
+    if (name.startsWith("/indoor/")) {
+      final id = name.replaceFirst("/indoor/", "").trim();
+      return _buildIndoorMapRoute(id);
+    }
+
+    return _simpleRoute(
+      const Scaffold(body: Center(child: Text("404"))),
+    );
+  }
+
+  Route<dynamic> _buildIndoorMapRoute(String id) {
+    final assetPath = _findAssetPath(id);
+
+    if (assetPath == null || assetPath.isEmpty) {
+      return _simpleRoute(
+        const Scaffold(body: Center(child: Text("Indoor map not found"))),
+      );
+    }
+
+    return _simpleRoute(
+      IndoorPage(id: id, assetPath: assetPath),
+    );
+  }
+
+  Route<dynamic> _simpleRoute(Widget page) {
+    return MaterialPageRoute(builder: (_) => page);
   }
 }

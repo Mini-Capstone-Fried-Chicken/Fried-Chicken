@@ -73,7 +73,7 @@ class HomePage extends StatelessWidget {
               child: Image.asset(
                 "assets/images/concordia.png",
                 fit: BoxFit.cover,
-                color: const Color(0xFF76263D).withOpacity(0.45),
+                color: const Color(0xFF76263D).withValues(alpha:0.45),
                 colorBlendMode: BlendMode.darken,
               ),
             ),

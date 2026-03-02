@@ -117,7 +117,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -142,7 +142,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 style: const TextStyle(color: Colors.white, fontSize: 14),
                                 decoration: InputDecoration(
                                   hintText: 'Starting location',
-                                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -186,7 +186,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 style: const TextStyle(color: Colors.white, fontSize: 14),
                                 decoration: InputDecoration(
                                   hintText: 'Choose destination',
-                                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -265,7 +265,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
