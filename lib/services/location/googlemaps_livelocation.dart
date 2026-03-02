@@ -89,15 +89,15 @@ class OutdoorMapPage extends StatefulWidget {
   State<OutdoorMapPage> createState() => _OutdoorMapPageState();
 }
 
-// Indoor overlay state
-Set<Polygon> _indoorPolygons = {};
-bool _showIndoor = false;
-
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
+
+  // Indoor overlay state
+  Set<Polygon> _indoorPolygons = {};
+  bool _showIndoor = false;
 
   GoogleMapController? _mapController;
 
@@ -473,12 +473,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   void _closePopup() {
     _clearSelectedBuilding(clearSearch: true);
-    setState(() {
-      _selectedBuildingPoly = null;
-      _selectedBuildingCenter = null;
-      _anchorOffset = null;
-      _searchController.clear();
-    });
   }
 
   void _clearSelectedBuilding({bool clearSearch = false}) {
@@ -2199,8 +2193,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     painter.paint(canvas, Offset.zero);
 
     final picture = recorder.endRecording();
-    final img = await picture.toImage(width, height);
-    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    ui.Image? img;
+    ByteData? byteData;
+    try {
+      img = await picture.toImage(width, height);
+      byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      img?.dispose();
+      picture.dispose();
+    }
     final Uint8List bytes = byteData!.buffer.asUint8List();
 
     return BitmapDescriptor.bytes(bytes);
