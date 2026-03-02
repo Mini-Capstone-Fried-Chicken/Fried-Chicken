@@ -1735,20 +1735,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
 
-    // Add current location marker
-    if (_currentLocation != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('current_location'),
-          position: _currentLocation!,
-          icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
-          anchor: const Offset(0.5, 0.5),
-          flat: true,
-          zIndex: 999,
-        ),
-      );
-    }
-
     // Note: selected non-Concordia marker intentionally omitted to avoid red pin reappearing
 
     // Add markers for route preview mode
