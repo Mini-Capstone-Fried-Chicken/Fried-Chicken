@@ -105,7 +105,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BitmapDescriptor? _blueDotIcon;
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
+  // ignore: unused_field
   SearchResult? _selectedSearchResult; // For non-Concordia places
+  // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
 
@@ -137,7 +139,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   static const double _defaultZoom = 15.0; // adjust to your normal map zoom
   static const double _defaultTilt = 0.0;
   static const double _defaultBearing = 0.0;
+  // ignore: unused_field
   static const double _navBearingThresholdDegrees = 10.0;
+  // ignore: unused_field
   static const double _navDistanceThresholdMeters = 5.0;
   static const Duration _navCameraMinInterval = Duration(milliseconds: 700);
   // Navigation session state (when user presses Start)
@@ -418,6 +422,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
+  // ignore: unused_element
   void _selectBuildingWithoutMap(BuildingPolygon b) {
     final center = _polygonCenter(b.points);
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
@@ -952,6 +957,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return items;
   }
 
+  // ignore: unused_element
   List<DirectionsRouteSegment> _getTransitDetailSegments() {
     final segments = _routeSegmentsByMode['transit'] ?? const [];
     return segments
@@ -1004,6 +1010,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return Icons.directions_transit;
   }
 
+  // ignore: unused_element
   Widget _buildTransitDetailsCard(List<DirectionsRouteSegment> segments) {
     const burgundy = Color(0xFF76263D);
 
@@ -1992,6 +1999,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                   },
                   onClose: _closePopup,
                   isLoggedIn: widget.isLoggedIn,
+                  onIndoorMap: _toggleIndoorMap,
                   onGetDirections: _getDirections,
                 ),
               ),
@@ -2093,94 +2101,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 ),
               ),
             ),
-
-          if (_selectedBuildingPoly != null &&
-              popupLeft != null &&
-              popupTop != null)
-            Positioned(
-              left: popupLeft,
-              top: popupTop,
-              child: PointerInterceptor(
-                child: BuildingInfoPopup(
-                  title:
-                      '${buildingInfoByCode[_selectedBuildingPoly!.code]?.name ?? _selectedBuildingPoly!.name} - ${_selectedBuildingPoly!.code}',
-                  description:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]
-                          ?.description ??
-                      'No description available.',
-                  accessibility:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]
-                          ?.accessibility ??
-                      false,
-                  facilities:
-                      buildingInfoByCode[_selectedBuildingPoly!.code]
-                          ?.facilities ??
-                      const [],
-                  onMore: () {
-                    final link =
-                        widget.debugLinkOverride ??
-                        (buildingInfoByCode[_selectedBuildingPoly!.code]
-                                ?.link ??
-                            '');
-                    _openLink(link);
-                  },
-                  onClose: _closePopup,
-                  isLoggedIn: widget.isLoggedIn,
-                  onIndoorMap: _toggleIndoorMap,
-                  onGetDirections: _getDirections,
-                ),
-              ),
-            ),
-          Positioned(
-            bottom: 70,
-            left: 20,
-            child: PointerInterceptor(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'location_button',
-                    mini: true,
-                    onPressed: () {
-                      final loc = _currentLocation;
-                      if (loc == null) return;
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(loc, 17),
-                      );
-                    },
-                    child: const Icon(Icons.my_location),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.extended(
-                    heroTag: 'campus_button',
-                    onPressed: _goToMyLocation,
-                    icon: const Icon(Icons.school),
-                    label: Text(
-                      _currentCampus == Campus.sgw
-                          ? 'SGW Campus'
-                          : _currentCampus == Campus.loyola
-                          ? 'Loyola Campus'
-                          : 'Off Campus',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: SizedBox(
-                width: 290,
-                child: CampusToggle(
-                  currentCampus: _selectedCampus,
-                  onCampusChanged: _switchCampus,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -2342,6 +2262,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return markers;
   }
 
+  // ignore: unused_element
   void _turnOffIndoorMap() {
     if (_showIndoor) {
       setState(() {
