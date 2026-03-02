@@ -18,7 +18,7 @@ import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
-import '../../services/navigation_steps.dart';
+import '../../services/indoor_maps/indoor_map_repository.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -217,51 +217,51 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _toggleIndoorMap() async {
-    final b = _selectedBuildingPoly;
-    if (b == null) return;
+  final b = _selectedBuildingPoly;
+  if (b == null) return;
 
-    // Support Hall (H) and MB
-    String? assetPath;
-    if (b.code.toUpperCase() == 'H') {
-      assetPath = 'assets/indoor_maps/geojson/Hall/h1.geojson.json';
-    } else if (b.code.toUpperCase() == 'MB') {
-      assetPath = 'assets/indoor_maps/geojson/MB/mb1.geojson.json';
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Indoor map currently only wired for Hall (H) and MB'),
-        ),
-      );
-      return;
-    }
-
-    if (_showIndoor) {
-      setState(() {
-        _showIndoor = false;
-        _indoorPolygons = {};
-      });
-      return;
-    }
-
-    try {
-      final repo = IndoorMapRepository();
-      final geo = await repo.loadGeoJsonAsset(assetPath);
-
-      final polys = _geoJsonToPolygons(geo);
-
-      if (!mounted) return;
-      setState(() {
-        _showIndoor = true;
-        _indoorPolygons = polys;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load indoor map: $e')));
-    }
+  // Support Hall (H) and MB
+  String? assetPath;
+  if (b.code.toUpperCase() == 'H') {
+    assetPath = 'assets/indoor_maps/geojson/Hall/h1.geojson.json';
+  } else if (b.code.toUpperCase() == 'MB') {
+    assetPath = 'assets/indoor_maps/geojson/MB/mb1.geojson.json';
+  } else {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Indoor map currently only wired for Hall (H) and MB'),
+      ),
+    );
+    return;
   }
+
+  if (_showIndoor) {
+    setState(() {
+      _showIndoor = false;
+      _indoorPolygons = {};
+    });
+    return;
+  }
+
+  try {
+    final repo = IndoorMapRepository();
+    final geo = await repo.loadGeoJsonAsset(assetPath);
+
+    final polys = _geoJsonToPolygons(geo);
+
+    if (!mounted) return;
+    setState(() {
+      _showIndoor = true;
+      _indoorPolygons = polys;
+    });
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Failed to load indoor map: $e')));
+  }
+}
 
   Future<void> _goToMyLocation() async {
     final controller = _mapController;
@@ -297,8 +297,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       ).showSnackBar(const SnackBar(content: Text("Could not open link")));
     }
   }
-
-  // ...existing code...
 
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
@@ -1614,16 +1612,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _currentBuildingPoly = detectBuildingPoly(newLatLng);
       });
 
-      print('[DEBUG] Current campus: $_currentCampus');
-      print('[DEBUG] Current building: ${_currentBuildingPoly?.name}');
-
       _mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
-    } catch (e) {
-      print('[ERROR] Failed to get current position: $e');
-      print(
-        '[ERROR] On emulator: Use Extended Controls (... button) > Location to set GPS coordinates',
-      );
-    }
+    } catch (_) {}
 
     _posSub =
         Geolocator.getPositionStream(
@@ -1633,9 +1623,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           ),
         ).listen((position) {
           final newLatLng = LatLng(position.latitude, position.longitude);
-          print(
-            '[DEBUG] Location update: ${position.latitude}, ${position.longitude}',
-          );
 
           if (!mounted) return;
           setState(() {
@@ -1643,15 +1630,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             _currentCampus = detectCampus(newLatLng);
             _currentBuildingPoly = detectBuildingPoly(newLatLng);
           });
-
-          if (_isNavigating) {
-            _maybeAdvanceNavigationStep(newLatLng);
-          }
-          // Follow the user with the camera if navigation follow mode is active
-          if (_navigationFollowUser) {
-            // pass both the LatLng and the raw position for heading if available
-            _maybeUpdateCameraForNavigation(newLatLng, position.heading);
-          }
         });
   }
 
@@ -1884,40 +1862,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 if (_showIndoor) ..._roomLabelMarkers,
               },
               circles: _createCircles(),
-              polygons: _createBuildingPolygons(),
-              polylines: _routePolylines,
+              polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
             ),
+          Positioned(
+            top: 65,
+            left: 20,
+            right: 20,
+            child: MapSearchBar(
+              campusLabel: campusLabel,
+              controller: _searchController,
+            ),
+          ),
 
-          if (_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: NavigationNextStepHeader(
-                  modeLabel: _selectedTravelMode.label,
-                  nextStep: _getCurrentNavStep(),
-                  onStop: _stopNavigation,
-                  onShowSteps: _openStepsForSelectedMode,
-                ),
-              ),
-            ),
-          if (!_showRoutePreview && !_isNavigating)
-            Positioned(
-              top: 65,
-              left: 20,
-              right: 20,
-              child: MapSearchBar(
-                campusLabel: campusLabel,
-                controller: _searchController,
-                onSubmitted: _onSearchSubmitted,
-                suggestions: _searchSuggestions,
-                onSuggestionSelected: _onSuggestionSelected,
-                onFocus: _hideBuildingPopup,
-              ),
-            ),
-
-          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
+          if (_selectedBuildingPoly != null &&
               popupLeft != null &&
               popupTop != null)
             Positioned(
@@ -1928,36 +1885,28 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                   title:
                       '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
                   description:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
                           ?.description ??
                       'No description available.',
                   accessibility:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
                           ?.accessibility ??
                       false,
                   facilities:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
+                      buildingInfoByCode[_selectedBuildingPoly!.code]
                           ?.facilities ??
                       const [],
                   onMore: () {
                     final link =
                         widget.debugLinkOverride ??
-                        (buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                        _selectedBuildingPoly)!
-                                    .code]
+                        (buildingInfoByCode[_selectedBuildingPoly!.code]
                                 ?.link ??
                             '');
                     _openLink(link);
                   },
                   onClose: _closePopup,
                   isLoggedIn: widget.isLoggedIn,
-                  onGetDirections: _getDirections,
+                  onIndoorMap: _toggleIndoorMap,
                 ),
               ),
             ),
@@ -2090,35 +2039,32 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final props =
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
       final id = (props['ref'] ?? polygons.length).toString();
-      final isCorridor = props['indoor'] == 'corridor';
+          final isCorridor = props['indoor'] == 'corridor';
 
       polygons.add(
-        Polygon(
-          polygonId: PolygonId('indoor-$id'),
-          points: points,
-          strokeWidth: 2,
-          strokeColor: Colors.black,
-          fillColor: isCorridor
-              ? const Color.fromARGB(255, 232, 122, 149).withOpacity(
-                  1.0,
-                ) // lighter red for corridor
-              : const Color(0xFF800020).withOpacity(1.0), // dark red for rooms
-          zIndex: 20,
-        ),
-      );
+      Polygon(
+        polygonId: PolygonId('indoor-$id'),
+        points: points,
+        strokeWidth: 2,
+        strokeColor: Colors.black,
+        fillColor: isCorridor
+            ? const Color.fromARGB(255, 232, 122, 149).withOpacity(1.0) // lighter red for corridor
+            : const Color(0xFF800020).withOpacity(1.0), // dark red for rooms
+        zIndex: 20,
+      ),
+    );
     }
 
     return polygons;
   }
-
   void _turnOffIndoorMap() {
-    if (_showIndoor) {
-      setState(() {
-        _showIndoor = false;
-        _indoorPolygons = {};
-      });
-    }
+  if (_showIndoor) {
+    setState(() {
+      _showIndoor = false;
+      _indoorPolygons = {};
+    });
   }
+}
 
   @override
   void dispose() {

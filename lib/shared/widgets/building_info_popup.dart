@@ -11,8 +11,9 @@ class BuildingInfoPopup extends StatefulWidget {
   final List<String> facilities;
   final VoidCallback? onMore;
   final VoidCallback? onIndoorMap;
+  final VoidCallback? onIndoorMap;
   final bool isLoggedIn;
-  final VoidCallback onGetDirections;
+  
 
   const BuildingInfoPopup({
     super.key,
@@ -22,7 +23,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.accessibility = false,
     this.facilities = const [],
     this.onMore,
-    this.onIndoorMap,
+      this.onIndoorMap, 
     required this.isLoggedIn,
     required this.onGetDirections,
   });
