@@ -86,6 +86,10 @@ class OutdoorMapPage extends StatefulWidget {
   State<OutdoorMapPage> createState() => _OutdoorMapPageState();
 }
 
+// Indoor overlay state
+Set<Polygon> _indoorPolygons = {};
+bool _showIndoor = false;
+
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
@@ -210,6 +214,53 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedCampus = newCampus;
     });
+  }
+
+  Future<void> _toggleIndoorMap() async {
+    final b = _selectedBuildingPoly;
+    if (b == null) return;
+
+    // Support Hall (H) and MB
+    String? assetPath;
+    if (b.code.toUpperCase() == 'H') {
+      assetPath = 'assets/indoor_maps/geojson/Hall/h1.geojson.json';
+    } else if (b.code.toUpperCase() == 'MB') {
+      assetPath = 'assets/indoor_maps/geojson/MB/mb1.geojson.json';
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indoor map currently only wired for Hall (H) and MB'),
+        ),
+      );
+      return;
+    }
+
+    if (_showIndoor) {
+      setState(() {
+        _showIndoor = false;
+        _indoorPolygons = {};
+      });
+      return;
+    }
+
+    try {
+      final repo = IndoorMapRepository();
+      final geo = await repo.loadGeoJsonAsset(assetPath);
+
+      final polys = _geoJsonToPolygons(geo);
+
+      if (!mounted) return;
+      setState(() {
+        _showIndoor = true;
+        _indoorPolygons = polys;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load indoor map: $e')));
+    }
   }
 
   Future<void> _goToMyLocation() async {
@@ -1958,6 +2009,63 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         ],
       ),
     );
+  }
+
+  Set<Polygon> _geoJsonToPolygons(Map<String, dynamic> geojson) {
+    final features = (geojson['features'] as List).cast<dynamic>();
+
+    final polygons = <Polygon>{};
+
+    for (final f in features) {
+      final feature = f as Map<String, dynamic>;
+      final geometry = feature['geometry'] as Map<String, dynamic>;
+      if (geometry['type'] != 'Polygon') continue;
+
+      final rings = geometry['coordinates'] as List;
+      if (rings.isEmpty) continue;
+
+      final outer = rings[0] as List;
+
+      final points = outer.map<LatLng>((p) {
+        final coords = p as List;
+        final lng = (coords[0] as num).toDouble();
+        final lat = (coords[1] as num).toDouble();
+        return LatLng(lat, lng); // GeoJSON is [lng,lat]
+      }).toList();
+
+      if (points.length < 3) continue;
+
+      final props =
+          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+      final id = (props['ref'] ?? polygons.length).toString();
+      final isCorridor = props['indoor'] == 'corridor';
+
+      polygons.add(
+        Polygon(
+          polygonId: PolygonId('indoor-$id'),
+          points: points,
+          strokeWidth: 2,
+          strokeColor: Colors.black,
+          fillColor: isCorridor
+              ? const Color.fromARGB(255, 232, 122, 149).withOpacity(
+                  1.0,
+                ) // lighter red for corridor
+              : const Color(0xFF800020).withOpacity(1.0), // dark red for rooms
+          zIndex: 20,
+        ),
+      );
+    }
+
+    return polygons;
+  }
+
+  void _turnOffIndoorMap() {
+    if (_showIndoor) {
+      setState(() {
+        _showIndoor = false;
+        _indoorPolygons = {};
+      });
+    }
   }
 
   @override
