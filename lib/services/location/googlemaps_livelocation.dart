@@ -1917,7 +1917,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 });
                 _updatePopupOffset();
               },
-              markers: _createMarkers(),
+              markers: {..._createMarkers(), ..._roomLabelMarkers},
               circles: _createCircles(),
               polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
               polylines: _routePolylines,
@@ -2299,7 +2299,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
 
       if (geometry['type'] != 'Polygon') continue;
-      if (props['indoor'] != 'room') continue;
       if (props['ref'] == null) continue;
 
       final rings = geometry['coordinates'] as List;
