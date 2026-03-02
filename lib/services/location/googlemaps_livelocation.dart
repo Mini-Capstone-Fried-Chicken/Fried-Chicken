@@ -18,6 +18,7 @@ import '../../shared/widgets/campus_toggle.dart';
 import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
+import '../../services/navigation_steps.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -113,6 +114,27 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, String?> _routeArrivalTimes = {};
   final Map<String, List<LatLng>> _routePointsByMode = {};
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
+
+  final Map<String, List<NavigationStep>> _routeStepsByMode = {};
+  // --- Navigation camera follow state ---
+  bool _navigationFollowUser =
+      false; // true while we follow user during navigation
+  DateTime _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+  // tuning params (adjust as desired)
+  static const double _navZoom = 18.0;
+  static const double _navTilt =
+      60.0; // degrees — gives angled view like Google Maps
+  // Default aerial map view
+  static const double _defaultZoom = 15.0; // adjust to your normal map zoom
+  static const double _defaultTilt = 0.0;
+  static const double _defaultBearing = 0.0;
+  static const double _navBearingThresholdDegrees = 10.0;
+  static const double _navDistanceThresholdMeters = 5.0;
+  static const Duration _navCameraMinInterval = Duration(milliseconds: 700);
+  // Navigation session state (when user presses Start)
+  bool _isNavigating = false;
+  String? _navModeKey; // 'walking'/'driving'/'bicycling'/'transit'
+  int _navStepIndex = 0;
   bool _isLoadingRouteData = false;
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
@@ -413,6 +435,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final arrivalTimes = <String, String?>{};
       final pointsByMode = <String, List<LatLng>>{};
       final segmentsByMode = <String, List<DirectionsRouteSegment>>{};
+      final stepsByMode = <String, List<NavigationStep>>{};
 
       for (var i = 0; i < _supportedTravelModes.length; i++) {
         final mode = _supportedTravelModes[i].apiValue;
@@ -420,6 +443,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         durations[mode] = route?.durationText;
         distances[mode] = route?.distanceText;
         arrivalTimes[mode] = _formatArrivalTime(route?.durationSeconds);
+        stepsByMode[mode] = route?.steps ?? const [];
         if (route != null && route.points.isNotEmpty) {
           pointsByMode[mode] = route.points;
         }
@@ -446,6 +470,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeSegmentsByMode
           ..clear()
           ..addAll(segmentsByMode);
+        _routeStepsByMode
+          ..clear()
+          ..addAll(stepsByMode);
+
         _isLoadingRouteData = false;
       });
 
@@ -457,6 +485,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _isLoadingRouteData = false;
       });
     }
+  }
+
+  void _openStepsForSelectedMode() {
+    final key = _selectedTravelMode.apiValue;
+    final steps = _routeStepsByMode[key] ?? const [];
+
+    showNavigationStepsModal(
+      context,
+      title: _selectedTravelMode.label,
+      steps: steps,
+      totalDuration: _routeDurations[key],
+      totalDistance: _routeDistances[key],
+    );
   }
 
   void _applySelectedModeRoute({required bool animateCamera}) {
@@ -543,6 +584,139 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     final bounds = _calculateBounds(allPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+  }
+
+  void _startNavigation() {
+    final key = _selectedTravelMode.apiValue;
+    final steps = _routeStepsByMode[key] ?? const [];
+
+    if (steps.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No steps available for this route')),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isNavigating = true;
+      _navModeKey = key;
+      _navStepIndex = 0;
+
+      // enable camera follow
+      _navigationFollowUser = true;
+      _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+    });
+
+    // Immediately center the camera on current location (if we have it)
+    if (_currentLocation != null && _mapController != null) {
+      try {
+        final currentPos = _currentLocation!;
+        // Use a camera position with tilt & zoom and keep current bearing 0 for initial.
+        final initialCam = CameraPosition(
+          target: currentPos,
+          zoom: _navZoom,
+          tilt: _navTilt,
+          bearing: 0.0,
+        );
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(initialCam),
+        );
+      } catch (e) {
+        // ignore animate errors
+        print('Error animating camera when starting navigation: $e');
+      }
+    }
+  }
+
+  void _stopNavigation() {
+    setState(() {
+      _isNavigating = false;
+      _navModeKey = null;
+      _navStepIndex = 0;
+      _navigationFollowUser = false;
+    });
+    // Reset camera to default aerial view
+    if (_mapController != null && _currentLocation != null) {
+      try {
+        final cam = CameraPosition(
+          target: _currentLocation!,
+          zoom: _defaultZoom,
+          tilt: _defaultTilt,
+          bearing: _defaultBearing,
+        );
+
+        _mapController!.animateCamera(CameraUpdate.newCameraPosition(cam));
+      } catch (e) {
+        print('Error resetting camera after navigation: $e');
+      }
+    }
+
+    // Close route preview (brings search bar back)
+    _closeRoutePreview();
+  }
+
+  void _maybeUpdateCameraForNavigation(LatLng userLatLng, double? heading) {
+    // sanity checks
+    if (_mapController == null) return;
+    if (!_navigationFollowUser) return;
+
+    final now = DateTime.now();
+
+    // Debounce: only update camera if sufficient time has elapsed
+    if (now.difference(_lastNavCameraUpdate) < _navCameraMinInterval) {
+      return;
+    }
+
+    // Compute bearing: prefer device heading if available and > 0,
+    double bearing = 0.0;
+    if (heading != null && heading >= 0.0) {
+      bearing = heading;
+    }
+
+    // Build new camera position with tilt and bearing
+    final cam = CameraPosition(
+      target: userLatLng,
+      zoom: _navZoom,
+      tilt: _navTilt,
+      bearing: bearing,
+    );
+
+    try {
+      _mapController!.animateCamera(CameraUpdate.newCameraPosition(cam));
+    } catch (e) {
+      // animate could fail if map controller disposed
+      print('Error animating navigation camera: $e');
+    }
+  }
+
+  void _maybeAdvanceNavigationStep(LatLng user) {
+    final key = _navModeKey;
+    if (key == null) return;
+
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return;
+
+    // If already at last step, do nothing
+    if (_navStepIndex >= steps.length - 1) return;
+
+    final current = steps[_navStepIndex];
+    final end =
+        current.endPoint; // needs Step 1 (points stored in NavigationStep)
+    if (end == null) return;
+
+    final d = Geolocator.distanceBetween(
+      user.latitude,
+      user.longitude,
+      end.latitude,
+      end.longitude,
+    );
+
+    // 20m threshold
+    if (d <= 20) {
+      setState(() => _navStepIndex += 1);
+    }
   }
 
   void _closeRoutePreview() {
@@ -1373,6 +1547,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             _currentCampus = detectCampus(newLatLng);
             _currentBuildingPoly = detectBuildingPoly(newLatLng);
           });
+
+          if (_isNavigating) {
+            _maybeAdvanceNavigationStep(newLatLng);
+          }
+          // Follow the user with the camera if navigation follow mode is active
+          if (_navigationFollowUser) {
+            // pass both the LatLng and the raw position for heading if available
+            _maybeUpdateCameraForNavigation(newLatLng, position.heading);
+          }
         });
   }
 
@@ -1466,6 +1649,17 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
 
     return circles;
+  }
+
+  NavigationStep? _getCurrentNavStep() {
+    final key = _navModeKey;
+    if (key == null) return null;
+
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return null;
+
+    if (_navStepIndex < 0 || _navStepIndex >= steps.length) return null;
+    return steps[_navStepIndex];
   }
 
   void _switchCampus(Campus newCampus) {
@@ -1590,7 +1784,22 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               polygons: _createBuildingPolygons(),
               polylines: _routePolylines,
             ),
-          if (!_showRoutePreview)
+
+          if (_isNavigating)
+            Positioned(
+              top: 80,
+              left: 0,
+              right: 0,
+              child: PointerInterceptor(
+                child: NavigationNextStepHeader(
+                  modeLabel: _selectedTravelMode.label,
+                  nextStep: _getCurrentNavStep(),
+                  onStop: _stopNavigation,
+                  onShowSteps: _openStepsForSelectedMode,
+                ),
+              ),
+            ),
+          if (!_showRoutePreview && !_isNavigating)
             Positioned(
               top: 65,
               left: 20,
@@ -1688,7 +1897,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           ),
 
           // Route Preview Panel
-          if (_showRoutePreview)
+          if (_showRoutePreview && !_isNavigating)
             Positioned(
               top: 80,
               left: 0,
@@ -1720,6 +1929,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     modeDurations: _routeDurations,
                     isLoadingDurations: _isLoadingRouteData,
                     onClose: _closeRoutePreview,
+                    onStart: _startNavigation,
+                    isNavigating: _isNavigating,
+                    onShowSteps: _openStepsForSelectedMode,
                     transitDetails: _buildTransitDetailItems(),
                     modeDistances: _routeDistances,
                     modeArrivalTimes: _routeArrivalTimes,
