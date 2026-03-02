@@ -26,6 +26,14 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  void _handleSignIn(BuildContext context) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInPage()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,8 +65,26 @@ class SettingsScreen extends StatelessWidget {
                 '(Temporary for testing)',
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
-            ] else
-              const Text('Not logged in (Guest mode)'),
+            ] else ...[
+              ElevatedButton.icon(
+                onPressed: () => _handleSignIn(context),
+                icon: const Icon(Icons.login),
+                label: const Text('Sign In'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF76263D),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '(Guest mode)',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
           ],
         ),
       ),
