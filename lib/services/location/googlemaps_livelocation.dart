@@ -94,14 +94,14 @@ class _IndoorFloorOption {
   final String label;
   final String assetPath;
 
-  const _IndoorFloorOption({
-    required this.label,
-    required this.assetPath,
-  });
-  }
+  const _IndoorFloorOption({required this.label, required this.assetPath});
+}
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _startRoomController = TextEditingController();
+  final TextEditingController _destinationRoomController =
+      TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
@@ -130,6 +130,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Set<Marker> _roomLabelMarkers = {};
 
   Set<Polyline> _routePolylines = {};
+
+  // Room location marker
+  Marker? _destinationRoomMarker;
 
   // Route preview mode
   bool _showRoutePreview = false;
@@ -194,75 +197,75 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   LatLng? _lastCameraTarget;
 
   List<_IndoorFloorOption> _floorsForBuilding(String code) {
-  switch (code.toUpperCase()) {
-    case 'HALL':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h2.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '8',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h8.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '9',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h9.geojson.json',
-        ),
-      ];
+    switch (code.toUpperCase()) {
+      case 'HALL':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h2.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '8',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h8.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '9',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h9.geojson.json',
+          ),
+        ];
 
-    case 'MB':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/MB/mb1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
-        ),
-      ];
+      case 'MB':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/MB/mb1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
+          ),
+        ];
 
-    case 'VE':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/VE/ve1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/VE/ve2.geojson.json',
-        ),
-      ];
+      case 'VE':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/VE/ve1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/VE/ve2.geojson.json',
+          ),
+        ];
 
-    case 'VL':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/VL/vl1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/VL/vl2.geojson.json',
-        ),
-      ];
+      case 'VL':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/VL/vl1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/VL/vl2.geojson.json',
+          ),
+        ];
 
-    case 'CC':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/CC/cc1.geojson.json',
-        ),
-      ];
+      case 'CC':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/CC/cc1.geojson.json',
+          ),
+        ];
 
-    default:
-      return const [];
+      default:
+        return const [];
+    }
   }
-}
 
   Campus _campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
@@ -315,158 +318,161 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   List<int> _getAvailableFloorsForBuilding(String code) {
-  switch (code.toUpperCase()) {
-    case 'HALL':
-      return [1]; // change later if you add more floors
-    case 'MB':
-      return [1];
-    case 'VE':
-      return [1];
-    case 'VL':
-      return [1];
-    case 'CC':
-      return [1];
-    default:
-      return [];
-  }
-}
-
-String? _getIndoorAssetPath(String buildingCode, int floor) {
-  final code = buildingCode.toUpperCase();
-  switch (code) {
-    case 'HALL':
-      return 'assets/indoor_maps/geojson/Hall/h$floor.geojson.json';
-    case 'MB':
-      return 'assets/indoor_maps/geojson/MB/mb$floor.geojson.json';
-    case 'VE':
-      return 'assets/indoor_maps/geojson/VE/ve$floor.geojson.json';
-    case 'VL':
-      return 'assets/indoor_maps/geojson/VL/vl$floor.geojson.json';
-    case 'CC':
-      return 'assets/indoor_maps/geojson/CC/cc$floor.geojson.json';
-    default:
-      return null;
-  }
-}
-
-Future<void> _loadIndoorFloor(String assetPath) async {
-  try {
-    final repo = IndoorMapRepository();
-    final geo = await repo.loadGeoJsonAsset(assetPath);
-
-    final polys = _geoJsonToPolygons(geo);
-    final labels = await _createRoomLabels(geo);
-
-    if (!mounted) return;
-    setState(() {
-      _showIndoor = true;
-      _selectedIndoorFloorAsset = assetPath;
-      _indoorPolygons = polys;
-      _indoorGeoJson = geo;
-      _roomLabelMarkers = labels;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to load indoor floor: $e')),
-    );
-  }
-}
-
-Future<void> _loadIndoorMapForSelectedBuilding() async {
-  final b = _selectedBuildingPoly;
-  if (b == null) return;
-
-  // If the current building doesn’t support indoor, block it
-  final floors = _getAvailableFloorsForBuilding(b.code);
-  if (floors.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Indoor map currently only available for Hall, MB, VE, VL, and CC'),
-      ),
-    );
-    return;
-  }
-
-  // Keep available floors in sync
-  if (!mounted) return;
-  setState(() {
-    _availableFloorsForSelectedBuilding = floors;
-
-    // If current selected floor isn't available, snap to first
-    if (!floors.contains(_selectedIndoorFloor)) {
-      _selectedIndoorFloor = floors.first;
+    switch (code.toUpperCase()) {
+      case 'HALL':
+        return [1]; // change later if you add more floors
+      case 'MB':
+        return [1];
+      case 'VE':
+        return [1];
+      case 'VL':
+        return [1];
+      case 'CC':
+        return [1];
+      default:
+        return [];
     }
-  });
+  }
 
-  final assetPath = _getIndoorAssetPath(b.code, _selectedIndoorFloor);
-  if (assetPath == null) return;
+  String? _getIndoorAssetPath(String buildingCode, int floor) {
+    final code = buildingCode.toUpperCase();
+    switch (code) {
+      case 'HALL':
+        return 'assets/indoor_maps/geojson/Hall/h$floor.geojson.json';
+      case 'MB':
+        return 'assets/indoor_maps/geojson/MB/mb$floor.geojson.json';
+      case 'VE':
+        return 'assets/indoor_maps/geojson/VE/ve$floor.geojson.json';
+      case 'VL':
+        return 'assets/indoor_maps/geojson/VL/vl$floor.geojson.json';
+      case 'CC':
+        return 'assets/indoor_maps/geojson/CC/cc$floor.geojson.json';
+      default:
+        return null;
+    }
+  }
 
-  setState(() {
-    _isLoadingRouteData = false; // just to avoid accidental UI confusion (optional)
-  });
+  Future<void> _loadIndoorFloor(String assetPath) async {
+    try {
+      final repo = IndoorMapRepository();
+      final geo = await repo.loadGeoJsonAsset(assetPath);
 
-  try {
-    final repo = IndoorMapRepository();
-    final geo = await repo.loadGeoJsonAsset(assetPath);
+      final polys = _geoJsonToPolygons(geo);
+      final labels = await _createRoomLabels(geo);
 
-    final polys = _geoJsonToPolygons(geo);
-    final labels = await _createRoomLabels(geo);
+      if (!mounted) return;
+      setState(() {
+        _showIndoor = true;
+        _selectedIndoorFloorAsset = assetPath;
+        _indoorPolygons = polys;
+        _indoorGeoJson = geo;
+        _roomLabelMarkers = labels;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load indoor floor: $e')),
+      );
+    }
+  }
 
+  Future<void> _loadIndoorMapForSelectedBuilding() async {
+    final b = _selectedBuildingPoly;
+    if (b == null) return;
+
+    // If the current building doesn’t support indoor, block it
+    final floors = _getAvailableFloorsForBuilding(b.code);
+    if (floors.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Indoor map currently only available for Hall, MB, VE, VL, and CC',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Keep available floors in sync
     if (!mounted) return;
     setState(() {
-      _showIndoor = true;
-      _indoorPolygons = polys;
-      _indoorGeoJson = geo;
-      _roomLabelMarkers = labels;
+      _availableFloorsForSelectedBuilding = floors;
+
+      // If current selected floor isn't available, snap to first
+      if (!floors.contains(_selectedIndoorFloor)) {
+        _selectedIndoorFloor = floors.first;
+      }
     });
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to load indoor map: $e')),
-    );
+
+    final assetPath = _getIndoorAssetPath(b.code, _selectedIndoorFloor);
+    if (assetPath == null) return;
+
+    setState(() {
+      _isLoadingRouteData =
+          false; // just to avoid accidental UI confusion (optional)
+    });
+
+    try {
+      final repo = IndoorMapRepository();
+      final geo = await repo.loadGeoJsonAsset(assetPath);
+
+      final polys = _geoJsonToPolygons(geo);
+      final labels = await _createRoomLabels(geo);
+
+      if (!mounted) return;
+      setState(() {
+        _showIndoor = true;
+        _indoorPolygons = polys;
+        _indoorGeoJson = geo;
+        _roomLabelMarkers = labels;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load indoor map: $e')));
+    }
   }
-}
 
   Future<void> _toggleIndoorMap() async {
-  // If indoor is ON -> turn it OFF
-  if (_showIndoor) {
+    // If indoor is ON -> turn it OFF
+    if (_showIndoor) {
+      setState(() {
+        _showIndoor = false;
+        _indoorBuildingCode = null;
+        _selectedIndoorFloorAsset = null;
+        _indoorFloors = [];
+        _indoorPolygons = {};
+        _indoorGeoJson = null;
+        _roomLabelMarkers = {};
+      });
+      return;
+    }
+
+    // If indoor is OFF -> we need a selected building to open indoor
+    final b = _selectedBuildingPoly;
+    if (b == null) return;
+
+    final floors = _floorsForBuilding(b.code);
+    if (floors.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indoor map not available for this building'),
+        ),
+      );
+      return;
+    }
+
+    // Save indoor building + options, default to first floor
     setState(() {
-      _showIndoor = false;
-      _indoorBuildingCode = null;
-      _selectedIndoorFloorAsset = null;
-      _indoorFloors = [];
-      _indoorPolygons = {};
-      _indoorGeoJson = null;
-      _roomLabelMarkers = {};
+      _indoorBuildingCode = b.code;
+      _indoorFloors = floors;
     });
-    return;
+
+    await _loadIndoorFloor(floors.first.assetPath);
   }
-
-  // If indoor is OFF -> we need a selected building to open indoor
-  final b = _selectedBuildingPoly;
-  if (b == null) return;
-
-  final floors = _floorsForBuilding(b.code);
-  if (floors.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Indoor map not available for this building'),
-      ),
-    );
-    return;
-  }
-
-  // Save indoor building + options, default to first floor
-  setState(() {
-    _indoorBuildingCode = b.code;
-    _indoorFloors = floors;
-  });
-
-  await _loadIndoorFloor(floors.first.assetPath);
-}
 
   Future<void> _goToMyLocation() async {
     final controller = _mapController;
@@ -638,6 +644,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _selectedBuildingCenter = center;
       _anchorOffset = null;
       _cameraMoving = true;
+      _destinationRoomMarker = null;
       _showIndoor = false;
       _indoorBuildingCode = null;
       _selectedIndoorFloorAsset = null;
@@ -646,7 +653,9 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _indoorGeoJson = null;
       _roomLabelMarkers = {};
 
-      _availableFloorsForSelectedBuilding = _getAvailableFloorsForBuilding(b.code);
+      _availableFloorsForSelectedBuilding = _getAvailableFloorsForBuilding(
+        b.code,
+      );
       _selectedIndoorFloor = _availableFloorsForSelectedBuilding.isNotEmpty
           ? _availableFloorsForSelectedBuilding.first
           : 1;
@@ -687,6 +696,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _routeSegmentsByMode.clear();
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
+      _destinationRoomMarker = null;
       if (clearSearch) {
         _searchController.clear();
       }
@@ -1062,6 +1072,12 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _searchController.clear();
+
+      //reset indoor map and building selection state
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _destinationRoomMarker = null;
     });
   }
 
@@ -1928,8 +1944,24 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
 
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
+    // Add current location marker
+    if (_currentLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_location'),
+          position: _currentLocation!,
+          icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+          zIndex: 999,
+        ),
+      );
+    }
 
-    // Note: selected non-Concordia marker intentionally omitted to avoid red pin reappearing
+    // Add destination room marker only when indoor map is shown
+    if (_destinationRoomMarker != null && _showIndoor) {
+      markers.add(_destinationRoomMarker!);
+    }
 
     // Add markers for route preview mode
     if (_showRoutePreview) {
@@ -2045,6 +2077,57 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _cameraMoving = false;
       _searchController.clear();
     });
+  }
+
+  Future<void> _onDestinationRoomSubmitted(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    print('[DEBUG] Destination room submitted: $roomCode in $buildingCode');
+
+    try {
+      final repo = IndoorMapRepository();
+      final roomLocation = await repo.getRoomLocation(buildingCode, roomCode);
+
+      if (roomLocation == null) {
+        print('[ERROR] Could not find location for room $roomCode');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Room location not found'),
+            backgroundColor: Color(0xFFE53935),
+          ),
+        );
+        return;
+      }
+
+      print('[DEBUG] Room location found: $roomLocation');
+
+      // Create marker at room location
+      final marker = Marker(
+        markerId: const MarkerId('destination_room'),
+        position: roomLocation,
+        infoWindow: InfoWindow(title: 'Room $roomCode'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      );
+
+      // Update state with the new marker
+      if (!mounted) return;
+      setState(() {
+        _destinationRoomMarker = marker;
+      });
+
+      print('[DEBUG] Destination room marker placed at $roomLocation');
+    } catch (e) {
+      print('[ERROR] Error processing destination room: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: const Color(0xFFE53935),
+        ),
+      );
+    }
   }
 
   @override
@@ -2168,86 +2251,88 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
               ),
             ),
           if (!_showRoutePreview && !_isNavigating)
-  Positioned(
-    top: 65,
-    left: 20,
-    right: 20,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MapSearchBar(
-          key: const Key('destination_search_bar'),
-          campusLabel: campusLabel,
-          controller: _searchController,
-          onSubmitted: _onSearchSubmitted,
-          suggestions: _searchSuggestions,
-          onSuggestionSelected: _onSuggestionSelected,
-          onFocus: _hideBuildingPopup,
-        ),
-        if (_showIndoor && _indoorFloors.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: PointerInterceptor(
-              child: IntrinsicWidth(
-                child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B1D3B),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+            Positioned(
+              top: 65,
+              left: 20,
+              right: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MapSearchBar(
+                    key: const Key('destination_search_bar'),
+                    campusLabel: campusLabel,
+                    controller: _searchController,
+                    onSubmitted: _onSearchSubmitted,
+                    suggestions: _searchSuggestions,
+                    onSuggestionSelected: _onSuggestionSelected,
+                    onFocus: _hideBuildingPopup,
                   ),
-                  child: Center(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedIndoorFloorAsset ??
-                            _indoorFloors.first.assetPath,
-                        isDense: true,
-                        dropdownColor: const Color(0xFF8B1D3B),
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: _indoorFloors
-                            .map(
-                              (f) => DropdownMenuItem<String>(
-                                value: f.assetPath,
-                                child: Text(
-                                  f.label,
-                                  style:
-                                      const TextStyle(color: Colors.white),
+                  if (_showIndoor && _indoorFloors.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: PointerInterceptor(
+                        child: IntrinsicWidth(
+                          child: Container(
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B1D3B),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value:
+                                      _selectedIndoorFloorAsset ??
+                                      _indoorFloors.first.assetPath,
+                                  isDense: true,
+                                  dropdownColor: const Color(0xFF8B1D3B),
+                                  icon: const Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.white,
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  items: _indoorFloors
+                                      .map(
+                                        (f) => DropdownMenuItem<String>(
+                                          value: f.assetPath,
+                                          child: Text(
+                                            f.label,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (asset) async {
+                                    if (asset == null) return;
+                                    await _loadIndoorFloor(asset);
+                                  },
                                 ),
                               ),
-                            )
-                            .toList(),
-                        onChanged: (asset) async {
-                          if (asset == null) return;
-                          await _loadIndoorFloor(asset);
-                        },
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  ],
+                ],
               ),
             ),
-          ),
-        ],
-      ],
-    ),
-  ),
           if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
               popupLeft != null &&
               popupTop != null)
