@@ -99,7 +99,7 @@ class _IndoorFloorOption {
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _startRoomController = TextEditingController();
+  final TextEditingController _originRoomController = TextEditingController();
   final TextEditingController _destinationRoomController =
       TextEditingController();
   bool _cameraMoving = false;
@@ -146,6 +146,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, String?> _routeArrivalTimes = {};
   final Map<String, List<LatLng>> _routePointsByMode = {};
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
+  String? _routeOriginBuildingCode;
+  String? _routeDestinationBuildingCode;
 
   final Map<String, List<NavigationStep>> _routeStepsByMode = {};
   // --- Navigation camera follow state ---
@@ -700,6 +702,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       if (clearSearch) {
         _searchController.clear();
       }
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _destinationRoomMarker = null;
+      _routeOriginBuildingCode = null;
+      _routeDestinationBuildingCode = null;
+      _originRoomController.clear();
+      _destinationRoomController.clear();
     });
   }
 
@@ -736,6 +746,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeOriginText = currentLocationTag;
       _routeDestinationText =
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
+      _routeOriginBuildingCode = null; // current location has no building code
+      _routeDestinationBuildingCode = _selectedBuildingPoly?.code;
     });
 
     // Fetch the initial route
@@ -1078,6 +1090,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedBuildingCenter = null;
       _anchorOffset = null;
       _destinationRoomMarker = null;
+      _originRoomController.clear();
+      _destinationRoomController.clear();
+      _routeOriginBuildingCode = null;
+      _routeDestinationBuildingCode = null;
     });
   }
 
@@ -2434,6 +2450,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 onDestinationSelected: _onRouteDestinationSelected,
                 originSuggestions: _routeOriginSuggestions,
                 destinationSuggestions: _routeDestinationSuggestions,
+                originBuildingCode: _routeOriginBuildingCode,
+                destinationBuildingCode: _routeDestinationBuildingCode,
+                originRoomController: _originRoomController,
+                destinationRoomController: _destinationRoomController,
+                onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
               ),
             ),
 
@@ -2685,6 +2706,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _mapController?.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
+    _originRoomController.dispose();
+    _destinationRoomController.dispose();
     super.dispose();
   }
 }

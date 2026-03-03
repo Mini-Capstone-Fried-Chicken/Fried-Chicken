@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/search_suggestion.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import '../../services/indoor_maps/indoor_map_repository.dart';
 
 enum RouteTravelMode { driving, walking, bicycling, transit }
 
@@ -42,6 +44,14 @@ class RoutePreviewPanel extends StatefulWidget {
   final Function(SearchSuggestion) onDestinationSelected;
   final List<SearchSuggestion> originSuggestions;
   final List<SearchSuggestion> destinationSuggestions;
+  final String? originBuildingCode;
+  final String? destinationBuildingCode;
+  final TextEditingController originRoomController;
+  final TextEditingController destinationRoomController;
+  final Function(String buildingCode, String roomCode)? onStartValid;
+  final Function(String buildingCode, String roomCode)? onDestinationValid;
+  final Function(String buildingCode, String roomCode)?
+  onDestinationRoomSubmitted;
 
   const RoutePreviewPanel({
     super.key,
@@ -55,6 +65,13 @@ class RoutePreviewPanel extends StatefulWidget {
     required this.onDestinationSelected,
     required this.originSuggestions,
     required this.destinationSuggestions,
+    this.originBuildingCode,
+    this.destinationBuildingCode,
+    required this.originRoomController,
+    required this.destinationRoomController,
+    this.onStartValid,
+    this.onDestinationValid,
+    this.onDestinationRoomSubmitted,
   });
 
   @override
@@ -68,6 +85,26 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   final FocusNode _destinationFocus = FocusNode();
   bool _showOriginSuggestions = false;
   bool _showDestinationSuggestions = false;
+  final _indoorRepository = IndoorMapRepository();
+  bool _startRoomIsValid = false;
+  bool _destinationRoomIsValid = false;
+
+  bool get _isOriginConcordiaBuilding =>
+      widget.originBuildingCode != null &&
+      widget.originBuildingCode!.isNotEmpty;
+
+  bool get _isDestinationConcordiaBuilding =>
+      widget.destinationBuildingCode != null &&
+      widget.destinationBuildingCode!.isNotEmpty;
+
+  // Called when origin or destination room field changes
+  void _onRoomFieldChanged() {
+    if (mounted) {
+      setState(() {
+        // Trigger rebuild when room fields update
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -100,6 +137,41 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
             widget.destinationSuggestions.isNotEmpty;
       });
     });
+    widget.originRoomController.addListener(_onRoomFieldChanged);
+    widget.destinationRoomController.addListener(_onRoomFieldChanged);
+    _validateRoomFieldsOnInit();
+  }
+
+  Future<void> _validateRoomFieldsOnInit() async {
+    if (widget.originRoomController.text.isNotEmpty &&
+        widget.originBuildingCode != null) {
+      final isValid = await _indoorRepository.roomExists(
+        widget.originBuildingCode!,
+        widget.originRoomController.text,
+      );
+      if (mounted) setState(() => _startRoomIsValid = isValid);
+      if (isValid) {
+        widget.onStartValid?.call(
+          widget.originBuildingCode!,
+          widget.originRoomController.text,
+        );
+      }
+    }
+
+    if (widget.destinationRoomController.text.isNotEmpty &&
+        widget.destinationBuildingCode != null) {
+      final isValid = await _indoorRepository.roomExists(
+        widget.destinationBuildingCode!,
+        widget.destinationRoomController.text,
+      );
+      if (mounted) setState(() => _destinationRoomIsValid = isValid);
+      if (isValid) {
+        widget.onDestinationValid?.call(
+          widget.destinationBuildingCode!,
+          widget.destinationRoomController.text,
+        );
+      }
+    }
   }
 
   @override
@@ -129,6 +201,10 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
             widget.destinationSuggestions.isNotEmpty;
       });
     }
+    if (oldWidget.originBuildingCode != widget.originBuildingCode ||
+        oldWidget.destinationBuildingCode != widget.destinationBuildingCode) {
+      _validateRoomFieldsOnInit();
+    }
   }
 
   @override
@@ -137,15 +213,27 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
     _destinationController.dispose();
     _originFocus.dispose();
     _destinationFocus.dispose();
+    widget.originRoomController.removeListener(_onRoomFieldChanged);
+    widget.destinationRoomController.removeListener(_onRoomFieldChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
+    // Debug prints
+    print("=== RoutePreviewPanel Build ===");
+    print("Origin building code: ${widget.originBuildingCode}");
+    print("Destination building code: ${widget.destinationBuildingCode}");
+    print(
+      "Destination room controller text: '${widget.destinationRoomController.text}'",
+    );
+    print("Origin room controller text: '${widget.originRoomController.text}'");
+    print("=============================");
 
     return Center(
-      child: SingleChildScrollView(
+      child: SizedBox(
+        width: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -270,6 +358,48 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                           ],
                         ),
                       ),
+
+                      if (_isOriginConcordiaBuilding)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: RoomFieldsSection(
+                            buildingCode: widget.originBuildingCode,
+                            originRoomController: widget.originRoomController,
+                            destinationRoomController:
+                                widget.destinationRoomController,
+                            showOriginRoom: true,
+                            showDestinationRoom: false,
+                            enabled: _isOriginConcordiaBuilding,
+                            onDestinationValid: (building, room) {
+                              // handle indoor navigation logic if needed
+                            },
+                          ),
+                        ),
+
+                      if (_isDestinationConcordiaBuilding)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: RoomFieldsSection(
+                            buildingCode: widget.destinationBuildingCode,
+                            originRoomController: widget.originRoomController,
+                            destinationRoomController:
+                                widget.destinationRoomController,
+                            initialDestinationValid: _destinationRoomIsValid,
+                            initialStartValid: _startRoomIsValid,
+                            onDestinationValid: (building, room) {},
+                            showOriginRoom: false,
+                            showDestinationRoom: true,
+                            enabled: _isDestinationConcordiaBuilding,
+                            onDestinationRoomSubmitted:
+                                widget.onDestinationRoomSubmitted,
+                          ),
+                        ),
                     ],
                   ),
                 ),

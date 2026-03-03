@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../data/search_suggestion.dart';
-import '../../services/indoor_maps/indoor_map_repository.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 
 const Color burgundy = Color(0xFF76263D);
-const Color disabledGrey = Color(0xFFB0B0B0);
-const Color validGreen = Color(0xFF4CAF50);
-const Color invalidRed = Color(0xFFE53935);
 
 class MapSearchBar extends StatefulWidget {
   final String campusLabel;
@@ -16,12 +13,10 @@ class MapSearchBar extends StatefulWidget {
   final Function(SearchSuggestion)? onSuggestionSelected;
   final VoidCallback? onFocus;
   final String? selectedBuildingCode;
-  final TextEditingController? startRoomController;
-  final TextEditingController? destinationRoomController;
-  final Function(String, String)?
-  onDestinationRoomSubmitted; // building code, room code
-  final bool
-  showRoomFields; // New parameter to show room fields in route preview
+  final TextEditingController originRoomController;
+  final TextEditingController destinationRoomController;
+  final Function(String, String)? onDestinationRoomSubmitted;
+  final bool showRoomFields;
 
   const MapSearchBar({
     super.key,
@@ -32,8 +27,8 @@ class MapSearchBar extends StatefulWidget {
     this.onSuggestionSelected,
     this.onFocus,
     this.selectedBuildingCode,
-    this.startRoomController,
-    this.destinationRoomController,
+    required this.originRoomController,
+    required this.destinationRoomController,
     this.onDestinationRoomSubmitted,
     this.showRoomFields = false,
   });
@@ -46,11 +41,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
   late FocusNode _focusNode;
   bool _showSuggestions = false;
 
-  bool _startRoomIsValid = false;
-  bool _destinationRoomIsValid = false;
-
-  final _indoorRepository = IndoorMapRepository();
-
   bool get _hasSuggestions => widget.suggestions?.isNotEmpty ?? false;
 
   bool get _isConcordiaBuilding =>
@@ -62,42 +52,27 @@ class _MapSearchBarState extends State<MapSearchBar> {
     super.initState();
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChange);
-
-    // Add listeners for room validation
-    widget.startRoomController?.addListener(_validateStartRoom);
-    widget.destinationRoomController?.addListener(_validateDestinationRoom);
+    widget.originRoomController.addListener(_onRoomFieldChanged);
+    widget.destinationRoomController.addListener(_onRoomFieldChanged);
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
-    widget.startRoomController?.removeListener(_validateStartRoom);
-    widget.destinationRoomController?.removeListener(_validateDestinationRoom);
     _focusNode.dispose();
+    widget.originRoomController.removeListener(_onRoomFieldChanged);
+    widget.destinationRoomController.removeListener(_onRoomFieldChanged);
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(covariant MapSearchBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.suggestions != widget.suggestions) {
-      _updateSuggestionsVisibility();
-    }
-    // Clear validation when building changes
-    if (oldWidget.selectedBuildingCode != widget.selectedBuildingCode) {
-      if (!_isConcordiaBuilding) {
-        widget.startRoomController?.clear();
-        widget.destinationRoomController?.clear();
-        setState(() {
-          _startRoomIsValid = false;
-          _destinationRoomIsValid = false;
-        });
-      }
-    }
+  void _onRoomFieldChanged() {
+    /// Force rebuild if room text changes externally
+    if (mounted) setState(() {});
   }
 
   void _updateSuggestionsVisibility() {
     final shouldShow = _focusNode.hasFocus && _hasSuggestions;
+
     if (_showSuggestions == shouldShow) return;
 
     setState(() {
@@ -109,7 +84,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
     if (_focusNode.hasFocus) {
       widget.onFocus?.call();
     }
-
     _updateSuggestionsVisibility();
   }
 
@@ -122,58 +96,15 @@ class _MapSearchBarState extends State<MapSearchBar> {
     });
   }
 
-  Future<void> _validateStartRoom() async {
-    if (!_isConcordiaBuilding) return;
-
-    final roomCode = widget.startRoomController?.text ?? '';
-    if (roomCode.isEmpty) {
-      setState(() => _startRoomIsValid = false);
-      return;
-    }
-
-    final isValid = await _indoorRepository.roomExists(
-      widget.selectedBuildingCode!,
-      roomCode,
-    );
-
-    if (mounted) {
-      setState(() => _startRoomIsValid = isValid);
-    }
-  }
-
-  Future<void> _validateDestinationRoom() async {
-    if (!_isConcordiaBuilding) return;
-
-    final roomCode = widget.destinationRoomController?.text ?? '';
-    if (roomCode.isEmpty) {
-      setState(() => _destinationRoomIsValid = false);
-      return;
-    }
-
-    final isValid = await _indoorRepository.roomExists(
-      widget.selectedBuildingCode!,
-      roomCode,
-    );
-
-    if (mounted) {
-      setState(() => _destinationRoomIsValid = isValid);
-    }
-
-    if (isValid) {
-      widget.onDestinationRoomSubmitted?.call(
-        widget.selectedBuildingCode!,
-        roomCode,
-      );
-    }
-  }
-
-  Color _getRoomFieldBorderColor(bool isValid, bool hasInput) {
-    if (!hasInput) return Colors.grey[400]!;
-    return isValid ? validGreen : invalidRed;
-  }
-
   @override
   Widget build(BuildContext context) {
+    print(
+      "[DEBUG MapSearchBar] destinationRoomController text: '${widget.destinationRoomController.text}'",
+    );
+    print("[DEBUG MapSearchBar] showRoomFields: ${widget.showRoomFields}");
+    print(
+      "[DEBUG MapSearchBar] selectedBuildingCode: ${widget.selectedBuildingCode}",
+    );
     final String hint = widget.campusLabel.trim().isEmpty
         ? "Search anywhere"
         : "Search anywhere near ${widget.campusLabel}";
@@ -186,300 +117,72 @@ class _MapSearchBarState extends State<MapSearchBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Main search bar with building selection and room fields
-          Opacity(
-            opacity: 0.95,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(8),
-                color: burgundy,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Main search field
-                    TextField(
-                      controller: widget.controller,
-                      focusNode: _focusNode,
-                      enabled: true,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: hint,
-                        hintStyle: const TextStyle(color: Colors.white70),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.white,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                        ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(8),
+              color: burgundy,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /// Main search field
+                  TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      hintStyle: const TextStyle(color: Colors.white70),
+                      prefixIcon: const Icon(Icons.search, color: Colors.white),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onSubmitted: widget.onSubmitted,
+                    onChanged: (_) => _updateSuggestionsVisibility(),
+                  ),
+
+                  // Only show room fields if a Concordia building is selected
+                  if (_isConcordiaBuilding)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      onSubmitted: widget.onSubmitted,
-                      onChanged: (_) {
-                        _updateSuggestionsVisibility();
-                      },
+                      child: RoomFieldsSection(
+                        buildingCode: widget.selectedBuildingCode,
+                        originRoomController: widget.originRoomController,
+                        destinationRoomController:
+                            widget.destinationRoomController,
+                        showOriginRoom: false,
+                        showDestinationRoom: true,
+                        onDestinationRoomSubmitted:
+                            widget.onDestinationRoomSubmitted,
+                      ),
                     ),
 
-                    // Divider
-                    if (_isConcordiaBuilding ||
-                        widget.selectedBuildingCode != null)
-                      const Divider(color: Colors.white24, height: 1),
-
-                    // Selected building display and room fields
-                    if (_isConcordiaBuilding || widget.showRoomFields)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Selected building label
-                            Text(
-                              'Selected: ${widget.selectedBuildingCode}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Origin and Destination room fields
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: widget.startRoomController,
-                                    enabled: true,
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                    ),
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 18,
-                                        color: Colors.grey,
-                                      ),
-                                      hintText: 'Origin room',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey[700],
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey[200],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: _getRoomFieldBorderColor(
-                                            _startRoomIsValid,
-                                            (widget.startRoomController?.text ??
-                                                    '')
-                                                .isNotEmpty,
-                                          ),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: _getRoomFieldBorderColor(
-                                            _startRoomIsValid,
-                                            (widget.startRoomController?.text ??
-                                                    '')
-                                                .isNotEmpty,
-                                          ),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      isDense: true,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller:
-                                        widget.destinationRoomController,
-                                    enabled: true,
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                    ),
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 18,
-                                        color: Colors.grey,
-                                      ),
-                                      hintText: 'Destination room',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey[700],
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey[200],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: _getRoomFieldBorderColor(
-                                            _destinationRoomIsValid,
-                                            (widget
-                                                        .destinationRoomController
-                                                        ?.text ??
-                                                    '')
-                                                .isNotEmpty,
-                                          ),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: _getRoomFieldBorderColor(
-                                            _destinationRoomIsValid,
-                                            (widget
-                                                        .destinationRoomController
-                                                        ?.text ??
-                                                    '')
-                                                .isNotEmpty,
-                                          ),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      isDense: true,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                    ),
-                                    onSubmitted: (_) {
-                                      if (_destinationRoomIsValid) {
-                                        widget.onDestinationRoomSubmitted?.call(
-                                          widget.selectedBuildingCode!,
-                                          widget
-                                                  .destinationRoomController
-                                                  ?.text ??
-                                              '',
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                  // Show disabled fields if no building selected
+                  if (!_isConcordiaBuilding)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-
-                    // Disabled N/A fields (when no building selected)
-                    if (!_isConcordiaBuilding)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Building not selected label
-                            const Text(
-                              'No building selected',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Disabled room fields
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    enabled: false,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 18,
-                                        color: Colors.grey,
-                                      ),
-                                      hintText: 'Not Applicable',
-                                      hintStyle: const TextStyle(
-                                        color: Colors.white70,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey[600],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      isDense: true,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    enabled: false,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 18,
-                                        color: Colors.grey,
-                                      ),
-                                      hintText: 'Not Applicable',
-                                      hintStyle: const TextStyle(
-                                        color: Colors.white70,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey[600],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      isDense: true,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      child: RoomFieldsSection(
+                        buildingCode: null,
+                        originRoomController: widget.originRoomController,
+                        destinationRoomController:
+                            widget.destinationRoomController,
+                        showOriginRoom: false,
+                        showDestinationRoom: false,
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
 
+          /// Suggestions dropdown
           if (_showSuggestions && _hasSuggestions)
             PointerInterceptor(
               child: Material(
@@ -499,8 +202,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     itemCount: widget.suggestions!.length,
                     itemBuilder: (context, index) {
                       final suggestion = widget.suggestions![index];
+
                       return ListTile(
-                        key: Key('suggestion_${suggestion.name}'),
                         leading: Icon(
                           suggestion.isConcordiaBuilding
                               ? Icons.school
@@ -524,7 +227,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
                             : null,
                         dense: true,
                         onTap: () => _selectSuggestion(suggestion),
-                        hoverColor: burgundy.withOpacity(0.1),
                       );
                     },
                   ),

@@ -8,6 +8,8 @@ void main() {
   group('RoutePreviewPanel Widget Tests', () {
     late List<SearchSuggestion> originSuggestions;
     late List<SearchSuggestion> destinationSuggestions;
+    late TextEditingController originRoomController;
+    late TextEditingController destinationRoomController;
 
     setUp(() {
       originSuggestions = [
@@ -23,10 +25,18 @@ void main() {
           placeId: 'test_id',
         ),
       ];
+      originRoomController = TextEditingController();
+      destinationRoomController = TextEditingController();
     });
 
-    testWidgets('RoutePreviewPanel displays with initial text',
-        (WidgetTester tester) async {
+    tearDown(() {
+      originRoomController.dispose();
+      destinationRoomController.dispose();
+    });
+
+    testWidgets('RoutePreviewPanel displays with initial text', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -41,6 +51,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -50,8 +62,9 @@ void main() {
       expect(find.text('Hall Building - HALL'), findsOneWidget);
     });
 
-    testWidgets('RoutePreviewPanel shows my_location and place icons',
-        (WidgetTester tester) async {
+    testWidgets('RoutePreviewPanel shows my_location and place icons', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -66,6 +79,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -75,8 +90,9 @@ void main() {
       expect(find.byIcon(Icons.place), findsOneWidget);
     });
 
-    testWidgets('Close button calls onClose callback',
-        (WidgetTester tester) async {
+    testWidgets('Close button calls onClose callback', (
+      WidgetTester tester,
+    ) async {
       var closeCalled = false;
 
       await tester.pumpWidget(
@@ -93,6 +109,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -104,8 +122,9 @@ void main() {
       expect(closeCalled, isTrue);
     });
 
-    testWidgets('Switch button calls onSwitch callback',
-        (WidgetTester tester) async {
+    testWidgets('Switch button calls onSwitch callback', (
+      WidgetTester tester,
+    ) async {
       var switchCalled = false;
 
       await tester.pumpWidget(
@@ -122,6 +141,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -133,8 +154,9 @@ void main() {
       expect(switchCalled, isTrue);
     });
 
-    testWidgets('Typing in origin field calls onOriginChanged',
-        (WidgetTester tester) async {
+    testWidgets('Typing in origin field calls onOriginChanged', (
+      WidgetTester tester,
+    ) async {
       String changedText = '';
 
       await tester.pumpWidget(
@@ -151,6 +173,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -165,8 +189,9 @@ void main() {
       expect(changedText, 'Hall Building');
     });
 
-    testWidgets('Typing in destination field calls onDestinationChanged',
-        (WidgetTester tester) async {
+    testWidgets('Typing in destination field calls onDestinationChanged', (
+      WidgetTester tester,
+    ) async {
       String changedText = '';
 
       await tester.pumpWidget(
@@ -183,6 +208,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -197,8 +224,9 @@ void main() {
       expect(changedText, 'EV Building');
     });
 
-    testWidgets('Origin suggestions appear when origin field is focused',
-        (WidgetTester tester) async {
+    testWidgets('Origin suggestions appear when origin field is focused', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -213,6 +241,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: originSuggestions,
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -228,39 +258,44 @@ void main() {
       expect(find.text(originSuggestions[1].name), findsOneWidget);
     });
 
-    testWidgets('Destination suggestions appear when destination field is focused',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: destinationSuggestions,
+    testWidgets(
+      'Destination suggestions appear when destination field is focused',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: destinationSuggestions,
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Tap on destination field to focus
-      final destField = find.widgetWithText(TextField, 'Choose destination');
-      await tester.tap(destField);
-      await tester.pumpAndSettle();
+        // Tap on destination field to focus
+        final destField = find.widgetWithText(TextField, 'Choose destination');
+        await tester.tap(destField);
+        await tester.pumpAndSettle();
 
-      // Verify suggestions appear
-      expect(find.text(destinationSuggestions[0].name), findsOneWidget);
-      expect(find.text('Test Place'), findsOneWidget);
-    });
+        // Verify suggestions appear
+        expect(find.text(destinationSuggestions[0].name), findsOneWidget);
+        expect(find.text('Test Place'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Selecting origin suggestion calls onOriginSelected',
-        (WidgetTester tester) async {
+    testWidgets('Selecting origin suggestion calls onOriginSelected', (
+      WidgetTester tester,
+    ) async {
       SearchSuggestion? selectedSuggestion;
 
       await tester.pumpWidget(
@@ -277,6 +312,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: originSuggestions,
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -295,76 +332,86 @@ void main() {
       expect(selectedSuggestion?.name, originSuggestions[0].name);
     });
 
-    testWidgets('Selecting destination suggestion calls onDestinationSelected',
-        (WidgetTester tester) async {
-      SearchSuggestion? selectedSuggestion;
+    testWidgets(
+      'Selecting destination suggestion calls onDestinationSelected',
+      (WidgetTester tester) async {
+        SearchSuggestion? selectedSuggestion;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (suggestion) => selectedSuggestion = suggestion,
-              originSuggestions: const [],
-              destinationSuggestions: destinationSuggestions,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (suggestion) =>
+                    selectedSuggestion = suggestion,
+                originSuggestions: const [],
+                destinationSuggestions: destinationSuggestions,
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Focus destination field
-      final destField = find.widgetWithText(TextField, 'Choose destination');
-      await tester.tap(destField);
-      await tester.pumpAndSettle();
+        // Focus destination field
+        final destField = find.widgetWithText(TextField, 'Choose destination');
+        await tester.tap(destField);
+        await tester.pumpAndSettle();
 
-      // Tap on first suggestion
-      await tester.tap(find.text(destinationSuggestions[0].name));
-      await tester.pumpAndSettle();
+        // Tap on first suggestion
+        await tester.tap(find.text(destinationSuggestions[0].name));
+        await tester.pumpAndSettle();
 
-      expect(selectedSuggestion, isNotNull);
-      expect(selectedSuggestion?.name, destinationSuggestions[0].name);
-    });
+        expect(selectedSuggestion, isNotNull);
+        expect(selectedSuggestion?.name, destinationSuggestions[0].name);
+      },
+    );
 
-    testWidgets('Suggestions show correct icons for Concordia vs non-Concordia',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: destinationSuggestions,
+    testWidgets(
+      'Suggestions show correct icons for Concordia vs non-Concordia',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: destinationSuggestions,
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Focus destination field to show suggestions
-      final destField = find.widgetWithText(TextField, 'Choose destination');
-      await tester.tap(destField);
-      await tester.pumpAndSettle();
+        // Focus destination field to show suggestions
+        final destField = find.widgetWithText(TextField, 'Choose destination');
+        await tester.tap(destField);
+        await tester.pumpAndSettle();
 
-      // Check for school icon (Concordia building)
-      expect(find.byIcon(Icons.school), findsOneWidget);
-      // Check for place icon (non-Concordia place)
-      expect(find.byIcon(Icons.place), findsWidgets);
-    });
+        // Check for school icon (Concordia building)
+        expect(find.byIcon(Icons.school), findsOneWidget);
+        // Check for place icon (non-Concordia place)
+        expect(find.byIcon(Icons.place), findsWidgets);
+      },
+    );
 
-    testWidgets('RoutePreviewPanel updates text when props change',
-        (WidgetTester tester) async {
+    testWidgets('RoutePreviewPanel updates text when props change', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -379,6 +426,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -402,6 +451,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -413,8 +464,9 @@ void main() {
       expect(find.text('Destination 2'), findsOneWidget);
     });
 
-    testWidgets('RoutePreviewPanel shows hint texts when fields are empty',
-        (WidgetTester tester) async {
+    testWidgets('RoutePreviewPanel shows hint texts when fields are empty', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -429,6 +481,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -438,8 +492,9 @@ void main() {
       expect(find.text('Choose destination'), findsOneWidget);
     });
 
-    testWidgets('Suggestions list has constrained height',
-        (WidgetTester tester) async {
+    testWidgets('Suggestions list has constrained height', (
+      WidgetTester tester,
+    ) async {
       // Create many suggestions
       final manySuggestions = List.generate(
         20,
@@ -462,6 +517,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: manySuggestions,
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -473,18 +530,18 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find the suggestions container
-      final container = find.ancestor(
-        of: find.byType(ListView),
-        matching: find.byType(Container),
-      ).first;
+      final container = find
+          .ancestor(of: find.byType(ListView), matching: find.byType(Container))
+          .first;
 
       final containerWidget = tester.widget<Container>(container);
       final constraints = containerWidget.constraints as BoxConstraints;
       expect(constraints.maxHeight, 250);
     });
 
-    testWidgets('Selecting suggestion hides suggestions list',
-        (WidgetTester tester) async {
+    testWidgets('Selecting suggestion hides suggestions list', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -499,6 +556,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: originSuggestions,
               destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
@@ -520,8 +579,9 @@ void main() {
       expect(find.byType(ListView), findsNothing);
     });
 
-    testWidgets('Suggestions display subtitles correctly',
-        (WidgetTester tester) async {
+    testWidgets('Suggestions display subtitles correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -536,6 +596,8 @@ void main() {
               onDestinationSelected: (_) {},
               originSuggestions: const [],
               destinationSuggestions: destinationSuggestions,
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
             ),
           ),
         ),
