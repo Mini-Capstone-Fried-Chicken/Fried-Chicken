@@ -25,9 +25,15 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -41,49 +47,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCGyz5Z6uLqqBDVBJnVUeZ4l23fJ6iXE6s',
-    appId: '1:513179995905:web:18211cd2e4047c764801b4',
-    messagingSenderId: '513179995905',
-    projectId: 'friedchicken-b3a11',
-    authDomain: 'friedchicken-b3a11.firebaseapp.com',
-    storageBucket: 'friedchicken-b3a11.firebasestorage.app',
-    measurementId: 'G-DN83T0H5E9',
+    apiKey: 'AIzaSyASOWgUhY9TyeUW6g3jwowGgHuN549T6zs',
+    appId: '1:749522791928:web:65c54adac191cd7dd2fa0d',
+    messagingSenderId: '749522791928',
+    projectId: 'campus-fried-chicken',
+    authDomain: 'campus-fried-chicken.firebaseapp.com',
+    storageBucket: 'campus-fried-chicken.firebasestorage.app',
   );
 
-  // OLD API KEYS (only web working rn)
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCT_le11Nu9HgExLm-FkYc_rb752yqzpNw',
-    appId: '1:693887777183:android:0dc4addadb741ef7a45500',
-    messagingSenderId: '693887777183',
-    projectId: 'campus-11a11',
-    storageBucket: 'campus-11a11.firebasestorage.app',
+    apiKey: 'AIzaSyA1ADpfOlMu15S3gYzOrPJeeQVmQadBMFU',
+    appId: '1:749522791928:android:b27afbc21b7ee80bd2fa0d',
+    messagingSenderId: '749522791928',
+    projectId: 'campus-fried-chicken',
+    storageBucket: 'campus-fried-chicken.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDcTrJtf1LmmLJuDDmCbXIHlCwPzx2PSEw',
-    appId: '1:693887777183:ios:03fcdacd97c14042a45500',
-    messagingSenderId: '693887777183',
-    projectId: 'campus-11a11',
-    storageBucket: 'campus-11a11.firebasestorage.app',
+    apiKey: 'AIzaSyCtbs2jJPQjaMD9YSMT6oXkjg4YiB8mHIg',
+    appId: '1:749522791928:ios:e17dd9cc1a626b5fd2fa0d',
+    messagingSenderId: '749522791928',
+    projectId: 'campus-fried-chicken',
+    storageBucket: 'campus-fried-chicken.firebasestorage.app',
     iosBundleId: 'com.example.campusApp',
-  );
-
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDcTrJtf1LmmLJuDDmCbXIHlCwPzx2PSEw',
-    appId: '1:693887777183:ios:03fcdacd97c14042a45500',
-    messagingSenderId: '693887777183',
-    projectId: 'campus-11a11',
-    storageBucket: 'campus-11a11.firebasestorage.app',
-    iosBundleId: 'com.example.campusApp',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCKbY7I3cvhYpIhRBZKGgfCvYgZZmPBv1Y',
-    appId: '1:693887777183:web:2e1ff09bc80f207ea45500',
-    messagingSenderId: '693887777183',
-    projectId: 'campus-11a11',
-    authDomain: 'campus-11a11.firebaseapp.com',
-    storageBucket: 'campus-11a11.firebasestorage.app',
-    measurementId: 'G-05CX7G046C',
   );
 }
