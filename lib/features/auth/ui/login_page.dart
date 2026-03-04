@@ -1,6 +1,5 @@
 import "package:campus_app/app/app_shell.dart";
 import "package:campus_app/shared/widgets/app_widgets.dart";
-import "package:cloud_firestore/cloud_firestore.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 
@@ -132,8 +131,6 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
-  final String internet_error_message = "Connection timeout. Please check your internet.";
-
 
   @override
   void dispose() {
@@ -164,6 +161,25 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
+  String _getFirebaseErrorMessage(String code) {
+    switch (code) {
+      case 'weak-password':
+        return 'Password is too weak. Please use at least 6 characters.';
+      case 'email-already-in-use':
+        return 'This email is already registered.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
+      default:
+        return 'An error occurred. Please try again.';
+    }
+  }
+
   Future<void> _handleAuth() async {
     final email = emailController.text.trim().toLowerCase();
     final password = passwordController.text;
@@ -180,8 +196,8 @@ class _SignInPageState extends State<SignInPage> {
       return;
     }
 
-    if (password.length < 3) {
-      _showMessage("Password must be at least 3 characters.");
+    if (!isLogin && password.length < 6) {
+      _showMessage("Password must be at least 6 characters.");
       return;
     }
 
@@ -192,77 +208,19 @@ class _SignInPageState extends State<SignInPage> {
 
     setState(() => isLoading = true);
     try {
-      final usersRef = FirebaseFirestore.instance.collection("users");
-
       if (isLogin) {
-        final query = await usersRef
-            .where("email", isEqualTo: email)
-            .where("password", isEqualTo: password)
-            .limit(1)
-            .get()
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw Exception(
-                  internet_error_message,
-                );
-              },
-            );
-
-        if (query.docs.isEmpty) {
-          setState(() => isLoading = false);
-          _showMessage("Invalid email or password.");
-          return;
-        }
-
-        await FirebaseAuth.instance.signInAnonymously().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            throw Exception("Authentication timeout.");
-          },
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
         );
       } else {
-        final existing = await usersRef
-            .where("email", isEqualTo: email)
-            .limit(1)
-            .get()
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw Exception(
-                  internet_error_message,
-                );
-              },
-            );
-
-        if (existing.docs.isNotEmpty) {
-          setState(() => isLoading = false);
-          _showMessage("That email is already in use.");
-          return;
-        }
-
-        await usersRef
-            .add({
-              "name": name,
-              "email": email,
-              "password": password,
-              "createdAt": FieldValue.serverTimestamp(),
-            })
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw Exception(
-                  internet_error_message,
-                );
-              },
-            );
-
-        await FirebaseAuth.instance.signInAnonymously().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            throw Exception("Authentication timeout.");
-          },
+        // Create new user with Firebase Authentication
+        final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
         );
+
+        await userCredential.user?.updateDisplayName(name);
       }
 
       if (!mounted) return;
@@ -270,10 +228,10 @@ class _SignInPageState extends State<SignInPage> {
         context,
         MaterialPageRoute(builder: (_) => const AppShell(isLoggedIn: true)),
       );
-    } on Exception catch (e) {
-      _showMessage(e.toString().replaceAll("Exception: ", ""));
+    } on FirebaseAuthException catch (e) {
+      _showMessage(_getFirebaseErrorMessage(e.code));
     } catch (e) {
-      _showMessage("Error: ${e.toString()}");
+      _showMessage("An unexpected error occurred. Please try again.");
     } finally {
       if (mounted) {
         setState(() => isLoading = false);

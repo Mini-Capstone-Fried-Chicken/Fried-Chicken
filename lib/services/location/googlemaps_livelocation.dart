@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -77,12 +78,12 @@ class OutdoorMapPage extends StatefulWidget {
   const OutdoorMapPage({
     super.key,
     required this.initialCampus,
-    required this.isLoggedIn,
     this.debugSelectedBuilding,
     this.debugAnchorOffset,
     this.debugDisableMap = false,
     this.debugDisableLocation = false,
     this.debugLinkOverride,
+    required this.isLoggedIn,
   });
 
   @override
@@ -1734,20 +1735,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
 
-    // Add current location marker
-    if (_currentLocation != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('current_location'),
-          position: _currentLocation!,
-          icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
-          anchor: const Offset(0.5, 0.5),
-          flat: true,
-          zIndex: 999,
-        ),
-      );
-    }
-
     // Note: selected non-Concordia marker intentionally omitted to avoid red pin reappearing
 
     // Add markers for route preview mode
@@ -1850,6 +1837,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     _lastCameraTarget = targetLocation;
 
+    _lastCameraTarget = targetLocation;
+
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(targetLocation, 16),
     );
@@ -1870,7 +1859,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         ? concordiaLoyola
         : concordiaSGW;
 
-    final Campus labelCampus = _selectedCampus;
+    final Campus labelCampus = _selectedCampus != Campus.none
+        ? _selectedCampus
+        : _currentCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
         ? 'SGW'
@@ -1919,6 +1910,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         children: [
           if (widget.debugDisableMap)
             const SizedBox.expand()
+          else if (widget.debugDisableMap)
+            const SizedBox.expand()
           else
             GoogleMap(
               initialCameraPosition: CameraPosition(
@@ -1933,6 +1926,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onMapCreated: (controller) {
                 _mapController = controller;
               },
+
+              // onCameraMove: (pos) {
+              //_lastCameraTarget = pos.target;
+              // },
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
                 if (_selectedBuildingCenter != null) {
@@ -1946,6 +1943,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 });
               },
               onCameraIdle: () {
+                _syncToggleWithCameraCenter();
+
                 _syncToggleWithCameraCenter();
 
                 if (_selectedBuildingCenter == null) return;
@@ -1998,6 +1997,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               top: popupTop,
               child: PointerInterceptor(
                 child: BuildingInfoPopup(
+                  // Show full name + code
                   title:
                       '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
                   description:

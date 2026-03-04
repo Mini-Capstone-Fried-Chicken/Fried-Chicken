@@ -1,5 +1,5 @@
 import "package:campus_app/shared/widgets/app_widgets.dart";
-import "package:cloud_firestore/cloud_firestore.dart";
+import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 
 import "login_page.dart";
@@ -31,22 +31,13 @@ class ForgotPassword extends StatefulWidget {
 }
 
 class _ForgotPasswordState extends State<ForgotPassword> {
-  final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController newPasswordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
-
   bool isLoading = false;
-  bool isVerified = false;
-  String? verifiedDocId;
+  bool emailSent = false;
 
   @override
   void dispose() {
-    nameController.dispose();
     emailController.dispose();
-    newPasswordController.dispose();
-    confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -62,14 +53,19 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     );
   }
 
-  Future<void> _verifyUser() async {
-    final name = nameController.text.trim();
-    final email = emailController.text.trim().toLowerCase();
-
-    if (name.isEmpty) {
-      _showMessage("Please enter your name.");
-      return;
+  String _getFirebaseErrorMessage(String code) {
+    switch (code) {
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'user-not-found':
+        return 'No account found with this email.';
+      default:
+        return 'An error occurred. Please try again.';
     }
+  }
+
+  Future<void> _sendPasswordResetEmail() async {
+    final email = emailController.text.trim().toLowerCase();
 
     if (email.isEmpty || !email.contains("@")) {
       _showMessage("Please enter a valid email address.");
@@ -78,59 +74,17 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
     setState(() => isLoading = true);
     try {
-      final query = await FirebaseFirestore.instance
-          .collection("users")
-          .where("email", isEqualTo: email)
-          .where("name", isEqualTo: name)
-          .limit(1)
-          .get();
-
-      if (query.docs.isEmpty) {
-        _showMessage("No account found with that name and email.");
-        return;
-      }
-
-      setState(() {
-        isVerified = true;
-        verifiedDocId = query.docs.first.id;
-      });
-    } catch (_) {
-      _showMessage("Something went wrong. Please try again.");
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _resetPassword() async {
-    final newPassword = newPasswordController.text;
-    final confirmPassword = confirmPasswordController.text;
-
-    if (newPassword.length < 6) {
-      _showMessage("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (newPassword != confirmPassword) {
-      _showMessage("Passwords do not match.");
-      return;
-    }
-
-    setState(() => isLoading = true);
-    try {
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(verifiedDocId)
-          .update({"password": newPassword});
-
-      _showMessage("Password updated successfully!", isError: false);
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SignInPage()),
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      
+      setState(() => emailSent = true);
+      _showMessage(
+        "Password reset link sent! Check your email.",
+        isError: false,
       );
-    } catch (_) {
-      _showMessage("Something went wrong. Please try again.");
+    } on FirebaseAuthException catch (e) {
+      _showMessage(_getFirebaseErrorMessage(e.code));
+    } catch (e) {
+      _showMessage("An unexpected error occurred. Please try again.");
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -150,10 +104,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Center(
+                    const Center(
                       child: Text(
-                        isVerified ? "Set New Password" : "Forgot Password?",
-                        style: const TextStyle(
+                        "Forgot Password?",
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 30,
                           color: Color(0xFF76263D),
@@ -175,22 +129,15 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   children: <Widget>[
                     Center(
                       child: Text(
-                        isVerified
-                            ? "Enter your new password below."
-                            : "Enter your name and email to verify your account.",
+                        emailSent
+                            ? "If an email is associated with an account, a password reset link has been sent. You can close this page and return to login."
+                            : "Enter your email address and we'll send you a link to reset your password.",
+                        textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 15),
                       ),
                     ),
                     const SizedBox(height: 40),
-                    if (!isVerified) ...[
-                      const Text("Name", style: TextStyle(fontSize: 15)),
-                      const SizedBox(height: 10),
-                      UserField(
-                        label: "Your name",
-                        controller: nameController,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 20),
+                    if (!emailSent) ...[
                       const Text("Email address", style: TextStyle(fontSize: 15)),
                       const SizedBox(height: 10),
                       UserField(
@@ -198,38 +145,27 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.email],
                       ),
                       const SizedBox(height: 30),
                       AppButton(
-                        text: "Verify",
-                        onPressed: _verifyUser,
+                        text: "Send Reset Link",
+                        onPressed: _sendPasswordResetEmail,
                         isLoading: isLoading,
                         enabled: !isLoading,
                       ),
                     ] else ...[
-                      const Text("New Password", style: TextStyle(fontSize: 15)),
-                      const SizedBox(height: 10),
-                      UserField(
-                        label: "New password",
-                        obscureText: true,
-                        controller: newPasswordController,
-                        textInputAction: TextInputAction.next,
-                      ),
                       const SizedBox(height: 20),
-                      const Text("Confirm Password", style: TextStyle(fontSize: 15)),
-                      const SizedBox(height: 10),
-                      UserField(
-                        label: "Confirm password",
-                        obscureText: true,
-                        controller: confirmPasswordController,
-                        textInputAction: TextInputAction.done,
-                      ),
-                      const SizedBox(height: 30),
                       AppButton(
-                        text: "Reset Password",
-                        onPressed: _resetPassword,
-                        isLoading: isLoading,
-                        enabled: !isLoading,
+                        text: "Back to Login",
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SignInPage()),
+                          );
+                        },
+                        isLoading: false,
+                        enabled: true,
                       ),
                     ],
                   ],

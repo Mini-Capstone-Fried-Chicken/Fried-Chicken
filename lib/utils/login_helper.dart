@@ -16,8 +16,8 @@ class ValidationUtils {
 
   /// Validates password length
   static String? validatePassword(String password) {
-    if (password.length < 3) {
-      return 'Password must be at least 3 characters.';
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters.';
     }
 
     return null; // No error

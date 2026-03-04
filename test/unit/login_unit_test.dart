@@ -33,16 +33,16 @@ void main() {
   });
 
   group('ValidationUtils.validatePassword', () {
-    test('returns error for password less than 3 characters', () {
+    test('returns error for password less than 6 characters', () {
       expect(
         ValidationUtils.validatePassword('12'),
-        equals('Password must be at least 3 characters.'),
+        equals('Password must be at least 6 characters.'),
       );
     });
 
-    test('returns null for password with 3+ characters', () {
+    test('returns null for password with 6+ characters', () {
       expect(
-        ValidationUtils.validatePassword('123'),
+        ValidationUtils.validatePassword('123456'),
         isNull,
       );
     });
