@@ -5,32 +5,36 @@ const Color validGreen = Color(0xFF4CAF50);
 const Color invalidRed = Color(0xFFE53935);
 
 class RoomFieldsSection extends StatefulWidget {
-  final String? buildingCode;
+  final String? originBuildingCode;
+  final String? destinationBuildingCode;
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
+  final bool originEnabled;
+  final bool destinationEnabled;
+
+  final bool initialOriginValid;
+  final bool initialDestinationValid;
+  final IndoorMapRepository? indoorRepository;
+
+  final Function(String buildingCode, String roomCode)? onOriginValid;
   final Function(String buildingCode, String roomCode)? onDestinationValid;
-  final Function(String buildingCode, String roomCode)? onStartValid;
   final Function(String buildingCode, String roomCode)?
   onDestinationRoomSubmitted;
-  final bool? initialDestinationValid;
-  final bool? initialStartValid;
-  final bool showOriginRoom;
-  final bool showDestinationRoom;
-  final bool enabled;
 
   const RoomFieldsSection({
     super.key,
-    required this.buildingCode,
+    required this.originBuildingCode,
+    required this.destinationBuildingCode,
     required this.originRoomController,
     required this.destinationRoomController,
+    required this.originEnabled,
+    required this.destinationEnabled,
+    this.initialOriginValid = false,
+    this.initialDestinationValid = false,
+    this.onOriginValid,
     this.onDestinationValid,
-    this.onStartValid,
     this.onDestinationRoomSubmitted,
-    this.initialDestinationValid,
-    this.initialStartValid,
-    this.showDestinationRoom = false,
-    this.showOriginRoom = false,
-    this.enabled = true,
+    this.indoorRepository,
   });
 
   @override
@@ -38,221 +42,223 @@ class RoomFieldsSection extends StatefulWidget {
 }
 
 class _RoomFieldsSectionState extends State<RoomFieldsSection> {
-  bool _startRoomIsValid = false;
-  bool _destinationRoomIsValid = false;
-
-  final _indoorRepository = IndoorMapRepository();
+  late bool _originValid;
+  late bool _destinationValid;
+  late IndoorMapRepository _indoorRepository;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with passed validation state if available
-    _startRoomIsValid = widget.initialStartValid ?? false;
-    _destinationRoomIsValid = widget.initialDestinationValid ?? false;
-    // Listen to destination room controller changes
-    widget.destinationRoomController.addListener(_onDestinationRoomChanged);
-  }
+    _originValid = widget.initialOriginValid;
+    _destinationValid = widget.initialDestinationValid;
+    _indoorRepository = widget.indoorRepository ?? IndoorMapRepository();
 
-  void _onDestinationRoomChanged() {
-    final text = widget.destinationRoomController.text;
-
-    // If the field is now empty, clear the validation and marker
-    if (text.isEmpty) {
-      setState(() {
-        _destinationRoomIsValid = false;
-      });
-      // Call the callback with empty values to clear the marker
-      widget.onDestinationRoomSubmitted?.call('', '');
-    }
-  }
-
-  bool get _hasBuilding =>
-      widget.buildingCode != null && widget.buildingCode!.isNotEmpty;
-
-  /// Checks room validity when user presses Enter
-  Future<void> _checkStartRoom(String roomCode) async {
-    if (!_hasBuilding || roomCode.isEmpty) return;
-
-    final isValid = await _indoorRepository.roomExists(
-      widget.buildingCode!,
-      roomCode,
-    );
-
-    if (mounted) {
-      setState(() => _startRoomIsValid = isValid);
-    }
-
-    if (isValid) {
-      widget.onStartValid?.call(widget.buildingCode!, roomCode);
-    } else {
-      // Clear if invalid
-      widget.originRoomController.clear();
-    }
-  }
-
-  Future<void> _checkDestinationRoom(String roomCode) async {
-    print('[DEBUG RoomFieldsSection] _checkDestinationRoom called');
-    print('[DEBUG RoomFieldsSection] roomCode: $roomCode');
-    print('[DEBUG RoomFieldsSection] buildingCode: ${widget.buildingCode}');
-    print('[DEBUG RoomFieldsSection] _hasBuilding: $_hasBuilding');
-    if (!_hasBuilding || roomCode.isEmpty) {
-      print('[DEBUG RoomFieldsSection] Early return');
-      return;
-    }
-
-    final isValid = await _indoorRepository.roomExists(
-      widget.buildingCode!,
-      roomCode,
-    );
-
-    print('[DEBUG RoomFieldsSection] Room validation result: $isValid');
-
-    if (mounted) {
-      setState(() => _destinationRoomIsValid = isValid);
-    }
-
-    if (isValid) {
-      print('[DEBUG RoomFieldsSection] Room is valid, calling callbacks');
-      print('[DEBUG RoomFieldsSection] Calling onDestinationValid');
-      widget.onDestinationValid?.call(widget.buildingCode!, roomCode);
-      print('[DEBUG RoomFieldsSection] Calling onDestinationRoomSubmitted');
-      widget.onDestinationRoomSubmitted?.call(widget.buildingCode!, roomCode);
-      print('[DEBUG RoomFieldsSection] Callbacks called successfully');
-    } else {
-      // Clear if invalid
-      print('[DEBUG RoomFieldsSection] Room is invalid');
-      widget.destinationRoomController.clear();
-      widget.onDestinationRoomSubmitted?.call('', '');
-    }
-  }
-
-  Color _getBorderColor(bool isValid, bool hasInput) {
-    if (!hasInput) return Colors.grey[400]!;
-    return isValid ? validGreen : invalidRed;
-  }
-
-  Widget _buildSuffixIcon(bool isValid, bool hasInput) {
-    if (!hasInput) return const SizedBox.shrink();
-    return Icon(
-      isValid ? Icons.check_circle : Icons.cancel,
-      color: isValid ? validGreen : invalidRed,
-      size: 20,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.originRoomController.text.isNotEmpty && widget.originEnabled) {
+        _validateOriginRoom(widget.originRoomController.text);
+      }
+      if (widget.destinationRoomController.text.isNotEmpty &&
+          widget.destinationEnabled) {
+        _validateDestinationRoom(widget.destinationRoomController.text);
+      }
+    });
   }
 
   @override
   void didUpdateWidget(RoomFieldsSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialDestinationValid != widget.initialDestinationValid &&
-        widget.initialDestinationValid != null) {
-      setState(() {
-        _destinationRoomIsValid = widget.initialDestinationValid!;
-      });
+
+    if (oldWidget.originBuildingCode != widget.originBuildingCode) {
+      _originValid = false;
     }
-    if (oldWidget.initialStartValid != widget.initialStartValid &&
-        widget.initialStartValid != null) {
-      setState(() {
-        _startRoomIsValid = widget.initialStartValid!;
-      });
+
+    if (oldWidget.destinationBuildingCode != widget.destinationBuildingCode) {
+      _destinationValid = false;
+    }
+
+    if (!oldWidget.originEnabled &&
+        widget.originEnabled &&
+        widget.originRoomController.text.isNotEmpty) {
+      _validateOriginRoom(widget.originRoomController.text);
+    }
+
+    if (!oldWidget.destinationEnabled &&
+        widget.destinationEnabled &&
+        widget.destinationRoomController.text.isNotEmpty) {
+      _validateDestinationRoom(widget.destinationRoomController.text);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Future<void> _validateRoom({
+    required String? buildingCode,
+    required bool enabled,
+    required String room,
+    required void Function(bool isValid) setValidState,
+    void Function(String building, String room)? onValid,
+    bool triggerSubmit = false,
+  }) async {
+    if (!enabled || buildingCode == null || room.isEmpty) {
+      setState(() => setValidState(false));
+      return;
+    }
+
+    try {
+      final isValid = await _indoorRepository.roomExists(buildingCode, room);
+      if (!mounted) return;
+      setState(() => setValidState(isValid));
+      if (!isValid) {
+        return;
+      }
+      onValid?.call(buildingCode, room);
+      if (triggerSubmit) {
+        print(
+          '[DEBUG] Calling onDestinationRoomSubmitted: $buildingCode, $room',
+        );
+        widget.onDestinationRoomSubmitted?.call(buildingCode, room);
+      }
+    } catch (e) {
+      print('[ERROR] Validation error: $e');
+      if (mounted) {
+        setState(() => setValidState(false));
+      }
+    }
+  }
+
+  Future<void> _validateOriginRoom(String room) {
+    return _validateRoom(
+      buildingCode: widget.originBuildingCode,
+      enabled: widget.originEnabled,
+      room: room,
+      setValidState: (val) => _originValid = val,
+      onValid: widget.onOriginValid,
+    );
+  }
+
+  Future<void> _validateDestinationRoom(String room) {
+    return _validateRoom(
+      buildingCode: widget.destinationBuildingCode,
+      enabled: widget.destinationEnabled,
+      room: room,
+      setValidState: (val) => _destinationValid = val,
+      onValid: widget.onDestinationValid,
+      triggerSubmit: true,
+    );
+  }
+
+  Color _getBorderColor(bool isValid, bool hasInput) {
+    if (!hasInput) return Colors.grey;
+    return isValid ? validGreen : invalidRed;
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required bool enabled,
+    required String label,
+    required bool isValid,
+    required Future<void> Function(String) onChanged,
+  }) {
+    final hasInput = controller.text.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Divider line above the fields
-        Container(height: 1.5, color: const Color.fromARGB(175, 179, 133, 133)),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            // Origin room
-            Expanded(
-              child: _RoomTextField(
-                controller: widget.originRoomController,
-                hint: "Origin room",
-                borderColor: _getBorderColor(
-                  _startRoomIsValid,
-                  widget.originRoomController.text.isNotEmpty,
-                ),
-                suffixIcon: _buildSuffixIcon(
-                  _startRoomIsValid,
-                  widget.originRoomController.text.isNotEmpty,
-                ),
-                onSubmitted: _checkStartRoom,
-                enabled: widget.showOriginRoom,
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          onChanged: (val) async => onChanged(val),
+          onSubmitted: (val) async {
+            if (val.isEmpty || !enabled) return;
+            if (!enabled) {
+              controller.clear();
+              return;
+            }
+            await onChanged(val);
+            final currentValid = controller == widget.originRoomController
+                ? _originValid
+                : _destinationValid;
+
+            if (!currentValid) {
+              controller.clear();
+            }
+          },
+          style: TextStyle(color: enabled ? Colors.black87 : Colors.grey[700]),
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+            hintText: enabled ? 'Room #' : 'N/A',
+            filled: true,
+            fillColor: enabled ? Colors.white : Colors.grey[300],
+            suffixIcon: hasInput
+                ? Icon(
+                    isValid ? Icons.check_circle : Icons.cancel,
+                    color: isValid ? validGreen : invalidRed,
+                    size: 20,
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: _getBorderColor(isValid, hasInput),
+                width: 2,
               ),
             ),
-            const SizedBox(width: 8),
-            // Destination room
-            Expanded(
-              child: _RoomTextField(
-                controller: widget.destinationRoomController,
-                hint: "Destination room",
-                borderColor: _getBorderColor(
-                  _destinationRoomIsValid,
-                  widget.destinationRoomController.text.isNotEmpty,
-                ),
-                suffixIcon: _buildSuffixIcon(
-                  _destinationRoomIsValid,
-                  widget.destinationRoomController.text.isNotEmpty,
-                ),
-                onSubmitted: _checkDestinationRoom,
-                enabled: widget.showDestinationRoom,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: _getBorderColor(isValid, hasInput),
+                width: 2,
               ),
             ),
-          ],
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: _getBorderColor(isValid, hasInput),
+                width: 2,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            isDense: true,
+          ),
         ),
       ],
     );
   }
-}
-
-class _RoomTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final Color borderColor;
-  final Function(String) onSubmitted;
-  final Widget? suffixIcon;
-  final bool enabled;
-
-  const _RoomTextField({
-    required this.controller,
-    required this.hint,
-    required this.borderColor,
-    required this.onSubmitted,
-    this.suffixIcon,
-    this.enabled = true,
-  });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      onSubmitted: enabled ? onSubmitted : (_) {},
-      enabled: enabled,
-      style: const TextStyle(color: Colors.black87, fontSize: 14),
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
-        hintText: enabled ? hint : "Not Applicable",
-        filled: true,
-        fillColor: enabled ? Colors.grey[200] : Colors.grey[400],
-        suffixIcon: suffixIcon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: borderColor, width: 2),
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTextField(
+            controller: widget.originRoomController,
+            enabled: widget.originEnabled,
+            label: 'Origin Room',
+            isValid: _originValid,
+            onChanged: _validateOriginRoom,
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: borderColor, width: 2),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildTextField(
+            controller: widget.destinationRoomController,
+            enabled: widget.destinationEnabled,
+            label: 'Destination Room',
+            isValid: _destinationValid,
+            onChanged: _validateDestinationRoom,
+          ),
         ),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
-      ),
+      ],
     );
   }
 }

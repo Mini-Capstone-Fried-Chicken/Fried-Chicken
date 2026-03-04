@@ -1430,9 +1430,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     print(
       '[DEBUG] Origin selected: ${suggestion.name}, isConcordia: ${suggestion.isConcordiaBuilding}, placeId: ${suggestion.placeId}',
     );
-
     LatLng? newOrigin;
     String displayText = suggestion.name;
+    String? buildingCode;
 
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       print('[DEBUG] Handling Concordia building');
@@ -1441,6 +1441,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       );
       newOrigin = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
+      buildingCode = suggestion.buildingName!.code;
       print('[DEBUG] Concordia building origin: $newOrigin');
     } else if (suggestion.placeId != null) {
       // Fetch place details for non-Concordia locations
@@ -1454,6 +1455,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         print('[DEBUG] Place details result: $placeDetails');
         if (placeDetails != null) {
           newOrigin = placeDetails.location;
+          buildingCode = null;
           print('[DEBUG] Non-Concordia origin location: $newOrigin');
         } else {
           print(
@@ -1468,10 +1470,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     if (newOrigin != null) {
       print('[DEBUG] Updating route origin state');
+      print('[DEBUG] New origin building code: $buildingCode');
       setState(() {
         _routeOrigin = newOrigin;
         _routeOriginText = displayText;
         _routeOriginSuggestions = [];
+        _routeOriginBuildingCode = buildingCode;
+        _originRoomController.clear();
       });
       print('[DEBUG] Calling _fetchRoute with new origin: $newOrigin');
       await _fetchRoutesAndDurations();
@@ -1483,6 +1488,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Future<void> _onRouteDestinationSelected(SearchSuggestion suggestion) async {
     LatLng? newDestination;
     String displayText = suggestion.name;
+    String? buildingCode;
 
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       final building = BuildingSearchService.searchBuilding(
@@ -1490,6 +1496,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       );
       newDestination = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
+      buildingCode = suggestion.buildingName!.code;
     } else if (suggestion.placeId != null) {
       // Fetch place details for non-Concordia locations
       try {
@@ -1498,6 +1505,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         );
         if (placeDetails != null) {
           newDestination = placeDetails.location;
+          buildingCode = null;
         }
       } catch (e) {
         print('Error fetching place details: $e');
@@ -1506,10 +1514,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
 
     if (newDestination != null) {
+      print('[DEBUG] Updating route destination state');
+      print('[DEBUG] New destination building code: $buildingCode');
       setState(() {
         _routeDestination = newDestination;
         _routeDestinationText = displayText;
         _routeDestinationSuggestions = [];
+        _routeDestinationBuildingCode = buildingCode;
+        _destinationRoomController.clear();
       });
       await _fetchRoutesAndDurations();
     }
@@ -1811,6 +1823,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     // Listen to search input changes
     _searchController.addListener(_onSearchChanged);
+    // Clear destination room marker when room input changes
+    _destinationRoomController.addListener(() {
+      setState(() {
+        _destinationRoomMarker = null;
+      });
+    });
   }
 
   void _onSearchChanged() {

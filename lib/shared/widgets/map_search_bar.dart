@@ -98,13 +98,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    print(
-      "[DEBUG MapSearchBar] destinationRoomController text: '${widget.destinationRoomController.text}'",
-    );
-    print("[DEBUG MapSearchBar] showRoomFields: ${widget.showRoomFields}");
-    print(
-      "[DEBUG MapSearchBar] selectedBuildingCode: ${widget.selectedBuildingCode}",
-    );
     final String hint = widget.campusLabel.trim().isEmpty
         ? "Search anywhere"
         : "Search anywhere near ${widget.campusLabel}";
@@ -141,8 +134,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     onSubmitted: widget.onSubmitted,
                     onChanged: (_) => _updateSuggestionsVisibility(),
                   ),
-
-                  // Only show room fields if a Concordia building is selected
                   if (_isConcordiaBuilding)
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -150,31 +141,15 @@ class _MapSearchBarState extends State<MapSearchBar> {
                         vertical: 8,
                       ),
                       child: RoomFieldsSection(
-                        buildingCode: widget.selectedBuildingCode,
+                        originBuildingCode: null,
+                        destinationBuildingCode: widget.selectedBuildingCode,
                         originRoomController: widget.originRoomController,
                         destinationRoomController:
                             widget.destinationRoomController,
-                        showOriginRoom: false,
-                        showDestinationRoom: true,
+                        originEnabled: false,
+                        destinationEnabled: _isConcordiaBuilding,
                         onDestinationRoomSubmitted:
                             widget.onDestinationRoomSubmitted,
-                      ),
-                    ),
-
-                  // Show disabled fields if no building selected
-                  if (!_isConcordiaBuilding)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: RoomFieldsSection(
-                        buildingCode: null,
-                        originRoomController: widget.originRoomController,
-                        destinationRoomController:
-                            widget.destinationRoomController,
-                        showOriginRoom: false,
-                        showDestinationRoom: false,
                       ),
                     ),
                 ],

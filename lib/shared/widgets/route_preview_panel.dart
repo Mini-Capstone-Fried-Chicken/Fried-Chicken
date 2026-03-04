@@ -52,6 +52,7 @@ class RoutePreviewPanel extends StatefulWidget {
   final Function(String buildingCode, String roomCode)? onDestinationValid;
   final Function(String buildingCode, String roomCode)?
   onDestinationRoomSubmitted;
+  final IndoorMapRepository? indoorRepository;
 
   const RoutePreviewPanel({
     super.key,
@@ -72,6 +73,7 @@ class RoutePreviewPanel extends StatefulWidget {
     this.onStartValid,
     this.onDestinationValid,
     this.onDestinationRoomSubmitted,
+    this.indoorRepository,
   });
 
   @override
@@ -85,9 +87,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   final FocusNode _destinationFocus = FocusNode();
   bool _showOriginSuggestions = false;
   bool _showDestinationSuggestions = false;
-  final _indoorRepository = IndoorMapRepository();
-  bool _startRoomIsValid = false;
-  bool _destinationRoomIsValid = false;
 
   bool get _isOriginConcordiaBuilding =>
       widget.originBuildingCode != null &&
@@ -97,12 +96,9 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
       widget.destinationBuildingCode != null &&
       widget.destinationBuildingCode!.isNotEmpty;
 
-  // Called when origin or destination room field changes
   void _onRoomFieldChanged() {
     if (mounted) {
-      setState(() {
-        // Trigger rebuild when room fields update
-      });
+      setState(() {});
     }
   }
 
@@ -114,7 +110,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
       text: widget.destinationText,
     );
 
-    // Listen to text changes
     _originController.addListener(() {
       widget.onOriginChanged(_originController.text);
     });
@@ -139,39 +134,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
     });
     widget.originRoomController.addListener(_onRoomFieldChanged);
     widget.destinationRoomController.addListener(_onRoomFieldChanged);
-    _validateRoomFieldsOnInit();
-  }
-
-  Future<void> _validateRoomFieldsOnInit() async {
-    if (widget.originRoomController.text.isNotEmpty &&
-        widget.originBuildingCode != null) {
-      final isValid = await _indoorRepository.roomExists(
-        widget.originBuildingCode!,
-        widget.originRoomController.text,
-      );
-      if (mounted) setState(() => _startRoomIsValid = isValid);
-      if (isValid) {
-        widget.onStartValid?.call(
-          widget.originBuildingCode!,
-          widget.originRoomController.text,
-        );
-      }
-    }
-
-    if (widget.destinationRoomController.text.isNotEmpty &&
-        widget.destinationBuildingCode != null) {
-      final isValid = await _indoorRepository.roomExists(
-        widget.destinationBuildingCode!,
-        widget.destinationRoomController.text,
-      );
-      if (mounted) setState(() => _destinationRoomIsValid = isValid);
-      if (isValid) {
-        widget.onDestinationValid?.call(
-          widget.destinationBuildingCode!,
-          widget.destinationRoomController.text,
-        );
-      }
-    }
   }
 
   @override
@@ -201,10 +163,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
             widget.destinationSuggestions.isNotEmpty;
       });
     }
-    if (oldWidget.originBuildingCode != widget.originBuildingCode ||
-        oldWidget.destinationBuildingCode != widget.destinationBuildingCode) {
-      _validateRoomFieldsOnInit();
-    }
   }
 
   @override
@@ -221,16 +179,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
-    // Debug prints
-    print("=== RoutePreviewPanel Build ===");
-    print("Origin building code: ${widget.originBuildingCode}");
-    print("Destination building code: ${widget.destinationBuildingCode}");
-    print(
-      "Destination room controller text: '${widget.destinationRoomController.text}'",
-    );
-    print("Origin room controller text: '${widget.originRoomController.text}'");
-    print("=============================");
-
     return Center(
       child: SizedBox(
         width: 340,
@@ -358,46 +306,27 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                           ],
                         ),
                       ),
-
-                      if (_isOriginConcordiaBuilding)
+                      if (_isOriginConcordiaBuilding ||
+                          _isDestinationConcordiaBuilding)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,
                           ),
                           child: RoomFieldsSection(
-                            buildingCode: widget.originBuildingCode,
+                            originBuildingCode: widget.originBuildingCode,
+                            destinationBuildingCode:
+                                widget.destinationBuildingCode,
                             originRoomController: widget.originRoomController,
                             destinationRoomController:
                                 widget.destinationRoomController,
-                            showOriginRoom: true,
-                            showDestinationRoom: false,
-                            enabled: _isOriginConcordiaBuilding,
-                            onDestinationValid: (building, room) {
-                              // handle indoor navigation logic if needed
-                            },
-                          ),
-                        ),
-
-                      if (_isDestinationConcordiaBuilding)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          child: RoomFieldsSection(
-                            buildingCode: widget.destinationBuildingCode,
-                            originRoomController: widget.originRoomController,
-                            destinationRoomController:
-                                widget.destinationRoomController,
-                            initialDestinationValid: _destinationRoomIsValid,
-                            initialStartValid: _startRoomIsValid,
-                            onDestinationValid: (building, room) {},
-                            showOriginRoom: false,
-                            showDestinationRoom: true,
-                            enabled: _isDestinationConcordiaBuilding,
+                            originEnabled: _isOriginConcordiaBuilding,
+                            destinationEnabled: _isDestinationConcordiaBuilding,
+                            onOriginValid: widget.onStartValid,
+                            onDestinationValid: widget.onDestinationValid,
                             onDestinationRoomSubmitted:
                                 widget.onDestinationRoomSubmitted,
+                            indoorRepository: widget.indoorRepository,
                           ),
                         ),
                     ],
@@ -569,7 +498,7 @@ class RouteTravelModeBar extends StatelessWidget {
                 ),
               ),
 
-              // Steps button (you already added this earlier)
+              // Steps button
               TextButton(
                 onPressed: onShowSteps,
                 style: TextButton.styleFrom(

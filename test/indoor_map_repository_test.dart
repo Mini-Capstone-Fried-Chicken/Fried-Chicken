@@ -3,6 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
 
+class TestIndoorMapRepository extends IndoorMapRepository {
+  final List<String> mockedPaths;
+  TestIndoorMapRepository(this.mockedPaths);
+  @override
+  List<String> getAssetPathsForBuilding(String buildingCode) {
+    return mockedPaths;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -386,6 +395,205 @@ void main() {
 
         expect(coords[0][0], closeTo(-73.57884914394536, 1e-14));
         expect(coords[0][1], closeTo(45.49683537599080, 1e-14));
+      });
+    });
+    group('Additional coverage for remaining methods', () {
+      test(
+        'getAssetPathsForBuilding returns correct paths and unknown empty',
+        () {
+          final hall = repository.getAssetPathsForBuilding('hall');
+          expect(hall.length, 4);
+          final mb = repository.getAssetPathsForBuilding('MB');
+          expect(mb.length, 1);
+          final unknown = repository.getAssetPathsForBuilding('XYZ');
+          expect(unknown, isEmpty);
+        },
+      );
+
+      test('getRoomCodesForBuilding extracts valid room codes', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'properties': {'ref': '101'},
+            },
+            {
+              'type': 'Feature',
+              'properties': {'ref': '102'},
+            },
+            {
+              'type': 'Feature',
+              'properties': {'ref': ''},
+            },
+            {'type': 'Feature', 'properties': null},
+          ],
+        };
+        const path = 'assets/test_rooms.json';
+        setMockAsset(path, jsonEncode(geoJson));
+
+        final repo = TestIndoorMapRepository([path]);
+        final rooms = await repo.getRoomCodesForBuilding('ANY');
+
+        expect(rooms, containsAll(['101', '102']));
+        expect(rooms.length, 2);
+      });
+
+      test('getRoomCodesForBuilding handles null features', () async {
+        final geoJson = {'type': 'FeatureCollection'};
+
+        const path = 'assets/null_features.json';
+        setMockAsset(path, jsonEncode(geoJson));
+
+        final repo = TestIndoorMapRepository([path]);
+        final rooms = await repo.getRoomCodesForBuilding('ANY');
+
+        expect(rooms, isEmpty);
+      });
+
+      test('getRoomCodesForBuilding skips malformed features safely', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            'invalid_feature',
+            {
+              'type': 'Feature',
+              'properties': {'ref': '200'},
+            },
+          ],
+        };
+
+        const path = 'assets/malformed.json';
+        setMockAsset(path, jsonEncode(geoJson));
+        final repo = TestIndoorMapRepository([path]);
+        final rooms = await repo.getRoomCodesForBuilding('ANY');
+        expect(rooms, contains('200'));
+      });
+
+      test('roomExists returns true and false correctly', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'properties': {'ref': 'A1'},
+            },
+          ],
+        };
+
+        const path = 'assets/exists.json';
+        setMockAsset(path, jsonEncode(geoJson));
+        final repo = TestIndoorMapRepository([path]);
+        expect(await repo.roomExists('ANY', 'A1'), isTrue);
+        expect(await repo.roomExists('ANY', 'B2'), isFalse);
+      });
+
+      test('getRoomLocation returns centroid for polygon', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'properties': {'ref': 'R1'},
+              'geometry': {
+                'type': 'Polygon',
+                'coordinates': [
+                  [
+                    [0.0, 0.0],
+                    [0.0, 2.0],
+                    [2.0, 0.0],
+                    [2.0, 2.0],
+                  ],
+                ],
+              },
+            },
+          ],
+        };
+        const path = 'assets/location.json';
+        setMockAsset(path, jsonEncode(geoJson));
+        final repo = TestIndoorMapRepository([path]);
+        final location = await repo.getRoomLocation('ANY', 'R1');
+        expect(location, isNotNull);
+        expect(location!.latitude, closeTo(1.0, 0.001));
+        expect(location.longitude, closeTo(1.0, 0.001));
+      });
+
+      test('getRoomLocation skips null geometry', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'properties': {'ref': 'R1'},
+              'geometry': null,
+            },
+          ],
+        };
+        const path = 'assets/null_geom.json';
+        setMockAsset(path, jsonEncode(geoJson));
+        final repo = TestIndoorMapRepository([path]);
+        final result = await repo.getRoomLocation('ANY', 'R1');
+        expect(result, isNull);
+      });
+
+      test('getRoomLocation ignores non-Polygon geometry', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'properties': {'ref': 'R1'},
+              'geometry': {
+                'type': 'Point',
+                'coordinates': [1.0, 2.0],
+              },
+            },
+          ],
+        };
+
+        const path = 'assets/non_polygon.json';
+        setMockAsset(path, jsonEncode(geoJson));
+
+        final repo = TestIndoorMapRepository([path]);
+
+        final result = await repo.getRoomLocation('ANY', 'R1');
+        expect(result, isNull);
+      });
+
+      test('getRoomLocation returns null if no asset paths', () async {
+        final repo = TestIndoorMapRepository([]);
+        final result = await repo.getRoomLocation('NONE', 'R1');
+        expect(result, isNull);
+      });
+      test('repository outer catch handling', () async {
+        final repo = TestIndoorMapRepository(['assets/invalid.json']);
+
+        setMockAsset('assets/invalid.json', 'INVALID_JSON');
+
+        final rooms = await repo.getRoomCodesForBuilding('ANY');
+
+        expect(rooms, isEmpty);
+      });
+      test('handles malformed polygon coordinate structure', () async {
+        final geoJson = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'properties': {'ref': 'R1'},
+              'geometry': {
+                'type': 'Polygon',
+                'coordinates': [
+                  [[]],
+                ],
+              },
+            },
+          ],
+        };
+        const path = 'assets/malformed_polygon2.json';
+        setMockAsset(path, jsonEncode(geoJson));
+        final repo = TestIndoorMapRepository([path]);
+        final result = await repo.getRoomLocation('ANY', 'R1');
+        expect(result, isNull);
       });
     });
   });

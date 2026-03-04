@@ -3,6 +3,38 @@ import 'package:campus_app/data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/route_preview_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+class FakeIndoorMapRepository extends IndoorMapRepository {
+  Map<String, List<String>> validRooms = {};
+
+  FakeIndoorMapRepository({Map<String, List<String>>? initialRooms}) {
+    if (initialRooms != null) validRooms = initialRooms;
+  }
+
+  @override
+  Future<List<String>> getRoomCodesForBuilding(String buildingCode) async =>
+      validRooms[buildingCode.toUpperCase()] ?? [];
+
+  @override
+  Future<LatLng?> getRoomLocation(String buildingCode, String roomCode) async {
+    // Stub location for tests
+    return const LatLng(0, 0);
+  }
+
+  @override
+  Future<bool> roomExists(String buildingCode, String roomCode) async {
+    final rooms = validRooms[buildingCode.toUpperCase()] ?? [];
+    return rooms.contains(roomCode.toUpperCase());
+  }
+
+  @override
+  List<String> getAssetPathsForBuilding(String buildingCode) => [];
+
+  @override
+  Future<Map<String, dynamic>> loadGeoJsonAsset(String assetPath) async => {};
+}
 
 void main() {
   group('RoutePreviewPanel Widget Tests', () {
@@ -10,6 +42,7 @@ void main() {
     late List<SearchSuggestion> destinationSuggestions;
     late TextEditingController originRoomController;
     late TextEditingController destinationRoomController;
+    late FakeIndoorMapRepository indoorRepository;
 
     setUp(() {
       originSuggestions = [
@@ -27,6 +60,14 @@ void main() {
       ];
       originRoomController = TextEditingController();
       destinationRoomController = TextEditingController();
+      indoorRepository = FakeIndoorMapRepository(
+        initialRooms: {
+          'HALL': ['101', '102'],
+          'VE': ['201', '202'],
+        },
+      );
+      originRoomController.clear();
+      destinationRoomController.clear();
     });
 
     tearDown(() {
@@ -611,6 +652,217 @@ void main() {
       // Verify subtitles are displayed
       expect(find.text(destinationSuggestions[0].subtitle!), findsOneWidget);
       expect(find.text('Test Address'), findsOneWidget);
+    });
+    testWidgets('Invalid origin room clears input and does not call callback', (
+      tester,
+    ) async {
+      bool originValidCalled = false;
+      final indoorRepo = FakeIndoorMapRepository(
+        initialRooms: {
+          'ORIGIN': ['101', '102'],
+          'DEST': ['201', '202'],
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RoutePreviewPanel(
+              originText: '',
+              destinationText: '',
+              onClose: () {},
+              onSwitch: () {},
+              onOriginChanged: (_) {},
+              onDestinationChanged: (_) {},
+              onOriginSelected: (_) {},
+              onDestinationSelected: (_) {},
+              originSuggestions: const [],
+              destinationSuggestions: const [],
+              originBuildingCode: 'ORIGIN',
+              destinationBuildingCode: 'DEST',
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+              onStartValid: (_, __) => originValidCalled = true,
+              indoorRepository: indoorRepo,
+            ),
+          ),
+        ),
+      );
+      final originRoomField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.controller == originRoomController,
+      );
+
+      expect(originRoomField, findsOneWidget);
+
+      // Tap, enter text, and submit
+      await tester.tap(originRoomField);
+      await tester.enterText(originRoomField, '999');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(originRoomController.text, '');
+      expect(originValidCalled, isFalse);
+    });
+
+    testWidgets('Valid origin room keeps input and calls callback', (
+      tester,
+    ) async {
+      bool originValidCalled = false;
+      final indoorRepo = FakeIndoorMapRepository(
+        initialRooms: {
+          'ORIGIN': ['101'],
+          'DEST': ['201'],
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RoutePreviewPanel(
+              originText: '',
+              destinationText: '',
+              onClose: () {},
+              onSwitch: () {},
+              onOriginChanged: (_) {},
+              onDestinationChanged: (_) {},
+              onOriginSelected: (_) {},
+              onDestinationSelected: (_) {},
+              originSuggestions: const [],
+              destinationSuggestions: const [],
+              originBuildingCode: 'ORIGIN',
+              destinationBuildingCode: 'DEST',
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+              onStartValid: (_, __) => originValidCalled = true,
+              indoorRepository: indoorRepo,
+            ),
+          ),
+        ),
+      );
+
+      final originRoomField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.controller == originRoomController,
+      );
+
+      await tester.tap(originRoomField);
+      await tester.enterText(originRoomField, '101');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(originRoomController.text, '101');
+      expect(originValidCalled, isTrue);
+    });
+
+    testWidgets(
+      'Invalid destination room clears input and does not call callbacks',
+      (tester) async {
+        bool destinationValidCalled = false;
+        bool destinationSubmittedCalled = false;
+        final indoorRepo = FakeIndoorMapRepository(
+          initialRooms: {
+            'ORIGIN': ['101'],
+            'DEST': ['201', '202'],
+          },
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originBuildingCode: 'ORIGIN',
+                destinationBuildingCode: 'DEST',
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+                onDestinationValid: (_, __) => destinationValidCalled = true,
+                onDestinationRoomSubmitted: (_, __) =>
+                    destinationSubmittedCalled = true,
+                indoorRepository: indoorRepo,
+              ),
+            ),
+          ),
+        );
+
+        final destRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.controller == destinationRoomController,
+        );
+
+        await tester.tap(destRoomField);
+        await tester.enterText(destRoomField, '999');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+
+        expect(destinationRoomController.text, '');
+        expect(destinationValidCalled, isFalse);
+        expect(destinationSubmittedCalled, isFalse);
+      },
+    );
+    testWidgets('Valid destination room keeps input and calls callbacks', (
+      tester,
+    ) async {
+      bool destinationValidCalled = false;
+      bool destinationSubmittedCalled = false;
+      final indoorRepo = FakeIndoorMapRepository(
+        initialRooms: {
+          'ORIGIN': ['101'],
+          'DEST': ['201'],
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RoutePreviewPanel(
+              originText: '',
+              destinationText: '',
+              onClose: () {},
+              onSwitch: () {},
+              onOriginChanged: (_) {},
+              onDestinationChanged: (_) {},
+              onOriginSelected: (_) {},
+              onDestinationSelected: (_) {},
+              originSuggestions: const [],
+              destinationSuggestions: const [],
+              originBuildingCode: 'ORIGIN',
+              destinationBuildingCode: 'DEST',
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+              onDestinationValid: (_, __) => destinationValidCalled = true,
+              onDestinationRoomSubmitted: (_, __) =>
+                  destinationSubmittedCalled = true,
+              indoorRepository: indoorRepo,
+            ),
+          ),
+        ),
+      );
+
+      final destRoomField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.controller == destinationRoomController,
+      );
+
+      await tester.tap(destRoomField);
+      await tester.enterText(destRoomField, '201');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(destinationRoomController.text, '201');
+      expect(destinationValidCalled, isTrue);
+      expect(destinationSubmittedCalled, isTrue);
     });
   });
 }
