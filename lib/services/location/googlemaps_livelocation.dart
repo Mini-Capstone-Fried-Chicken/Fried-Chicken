@@ -22,7 +22,9 @@ import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
-import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../indoor_maps/indoor_floor_config.dart';
+import '../indoor_maps/indoor_geojson_renderer.dart';
+import '../indoor_maps/indoor_map_repository.dart';
 import '../../utils/geo.dart';
 
 // concordia campus coordinates
@@ -91,16 +93,6 @@ class OutdoorMapPage extends StatefulWidget {
   State<OutdoorMapPage> createState() => _OutdoorMapPageState();
 }
 
-class _IndoorFloorOption {
-  final String label;
-  final String assetPath;
-
-  const _IndoorFloorOption({
-    required this.label,
-    required this.assetPath,
-  });
-  }
-
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _cameraMoving = false;
@@ -110,14 +102,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // Indoor overlay state
   Set<Polygon> _indoorPolygons = {};
   bool _showIndoor = false;
-  int _selectedIndoorFloor = 1;
-  List<int> _availableFloorsForSelectedBuilding = const [1];
+  List<IndoorFloorOption> _indoorFloors = const [];
+  String? _selectedIndoorFloorAsset;
 
   // --- Indoor floors state ---
   String? _indoorBuildingCode; // building currently shown in indoor mode
-  String? _selectedIndoorFloorAsset; // which floor file is loaded
-  List<_IndoorFloorOption> _indoorFloors = []; // dropdown options
-
   GoogleMapController? _mapController;
 
   LatLng? _currentLocation;
@@ -194,77 +183,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _lastCameraTarget;
 
-  List<_IndoorFloorOption> _floorsForBuilding(String code) {
-  switch (code.toUpperCase()) {
-    case 'HALL':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h2.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '8',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h8.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '9',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h9.geojson.json',
-        ),
-      ];
-
-    case 'MB':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/MB/mb1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
-        ),
-      ];
-
-    case 'VE':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/VE/ve1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/VE/ve2.geojson.json',
-        ),
-      ];
-
-    case 'VL':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/VL/vl1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/VL/vl2.geojson.json',
-        ),
-      ];
-
-    case 'CC':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/CC/cc1.geojson.json',
-        ),
-      ];
-
-    default:
-      return const [];
-  }
-}
-
   Campus _campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
       p.latitude,
@@ -315,48 +233,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-  List<int> _getAvailableFloorsForBuilding(String code) {
-  switch (code.toUpperCase()) {
-    case 'HALL':
-      return [1]; // change later if you add more floors
-    case 'MB':
-      return [1];
-    case 'VE':
-      return [1];
-    case 'VL':
-      return [1];
-    case 'CC':
-      return [1];
-    default:
-      return [];
-  }
-}
-
-String? _getIndoorAssetPath(String buildingCode, int floor) {
-  final code = buildingCode.toUpperCase();
-  switch (code) {
-    case 'HALL':
-      return 'assets/indoor_maps/geojson/Hall/h$floor.geojson.json';
-    case 'MB':
-      return 'assets/indoor_maps/geojson/MB/mb$floor.geojson.json';
-    case 'VE':
-      return 'assets/indoor_maps/geojson/VE/ve$floor.geojson.json';
-    case 'VL':
-      return 'assets/indoor_maps/geojson/VL/vl$floor.geojson.json';
-    case 'CC':
-      return 'assets/indoor_maps/geojson/CC/cc$floor.geojson.json';
-    default:
-      return null;
-  }
-}
-
 Future<void> _loadIndoorFloor(String assetPath) async {
   try {
     final repo = IndoorMapRepository();
     final geo = await repo.loadGeoJsonAsset(assetPath);
 
-    final polys = _geoJsonToPolygons(geo);
-    final labels = await _createRoomLabels(geo);
+    final polys = IndoorGeoJsonRenderer.geoJsonToPolygons(geo);
+    final labels = await IndoorGeoJsonRenderer.createRoomLabels(geo);
 
     if (!mounted) return;
     setState(() {
@@ -374,70 +257,13 @@ Future<void> _loadIndoorFloor(String assetPath) async {
   }
 }
 
-Future<void> _loadIndoorMapForSelectedBuilding() async {
-  final b = _selectedBuildingPoly;
-  if (b == null) return;
-
-  // If the current building doesn’t support indoor, block it
-  final floors = _getAvailableFloorsForBuilding(b.code);
-  if (floors.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Indoor map currently only available for Hall, MB, VE, VL, and CC'),
-      ),
-    );
-    return;
-  }
-
-  // Keep available floors in sync
-  if (!mounted) return;
-  setState(() {
-    _availableFloorsForSelectedBuilding = floors;
-
-    // If current selected floor isn't available, snap to first
-    if (!floors.contains(_selectedIndoorFloor)) {
-      _selectedIndoorFloor = floors.first;
-    }
-  });
-
-  final assetPath = _getIndoorAssetPath(b.code, _selectedIndoorFloor);
-  if (assetPath == null) return;
-
-  setState(() {
-    _isLoadingRouteData = false; // just to avoid accidental UI confusion (optional)
-  });
-
-  try {
-    final repo = IndoorMapRepository();
-    final geo = await repo.loadGeoJsonAsset(assetPath);
-
-    final polys = _geoJsonToPolygons(geo);
-    final labels = await _createRoomLabels(geo);
-
-    if (!mounted) return;
-    setState(() {
-      _showIndoor = true;
-      _indoorPolygons = polys;
-      _indoorGeoJson = geo;
-      _roomLabelMarkers = labels;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to load indoor map: $e')),
-    );
-  }
-}
-
-  Future<void> _toggleIndoorMap() async {
-  // If indoor is ON -> turn it OFF
+Future<void> _toggleIndoorMap() async {
+  // turn OFF
   if (_showIndoor) {
     setState(() {
       _showIndoor = false;
-      _indoorBuildingCode = null;
+      _indoorFloors = const [];
       _selectedIndoorFloorAsset = null;
-      _indoorFloors = [];
       _indoorPolygons = {};
       _indoorGeoJson = null;
       _roomLabelMarkers = {};
@@ -445,25 +271,22 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     return;
   }
 
-  // If indoor is OFF -> we need a selected building to open indoor
+  // turn ON (needs selected building)
   final b = _selectedBuildingPoly;
   if (b == null) return;
 
-  final floors = _floorsForBuilding(b.code);
+  final floors = IndoorFloorConfig.floorsForBuilding(b.code);
   if (floors.isEmpty) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Indoor map not available for this building'),
-      ),
+      const SnackBar(content: Text('No indoor maps available for this building')),
     );
     return;
   }
 
-  // Save indoor building + options, default to first floor
   setState(() {
-    _indoorBuildingCode = b.code;
     _indoorFloors = floors;
+    _selectedIndoorFloorAsset = floors.first.assetPath;
   });
 
   await _loadIndoorFloor(floors.first.assetPath);
@@ -572,11 +395,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _indoorPolygons = {};
       _indoorGeoJson = null;
       _roomLabelMarkers = {};
-
-      _availableFloorsForSelectedBuilding = _getAvailableFloorsForBuilding(b.code);
-      _selectedIndoorFloor = _availableFloorsForSelectedBuilding.isNotEmpty
-          ? _availableFloorsForSelectedBuilding.first
-          : 1;
     });
 
     if (controller == null) return;
