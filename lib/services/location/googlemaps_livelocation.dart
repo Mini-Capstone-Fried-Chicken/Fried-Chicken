@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -23,9 +20,9 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../indoor_maps/indoor_floor_config.dart';
-import '../indoor_maps/indoor_geojson_renderer.dart';
-import '../indoor_maps/indoor_map_repository.dart';
 import '../../utils/geo.dart';
+import '../../shared/widgets/indoor_floor_dropdown.dart';
+import '../indoor_maps/indoor_map_controller.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -104,9 +101,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _showIndoor = false;
   List<IndoorFloorOption> _indoorFloors = const [];
   String? _selectedIndoorFloorAsset;
+  final IndoorMapController _indoorController = IndoorMapController();
 
   // --- Indoor floors state ---
-  String? _indoorBuildingCode; // building currently shown in indoor mode
   GoogleMapController? _mapController;
 
   LatLng? _currentLocation;
@@ -183,6 +180,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _lastCameraTarget;
 
+  void _clearIndoorState() {
+    _showIndoor = false;
+    _indoorFloors = const [];
+    _selectedIndoorFloorAsset = null;
+    _indoorPolygons = {};
+    _indoorGeoJson = null;
+    _roomLabelMarkers = {};
+  }
+
   Campus _campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
       p.latitude,
@@ -235,19 +241,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
 Future<void> _loadIndoorFloor(String assetPath) async {
   try {
-    final repo = IndoorMapRepository();
-    final geo = await repo.loadGeoJsonAsset(assetPath);
-
-    final polys = IndoorGeoJsonRenderer.geoJsonToPolygons(geo);
-    final labels = await IndoorGeoJsonRenderer.createRoomLabels(geo);
-
+    final result = await _indoorController.loadFloor(assetPath);
     if (!mounted) return;
     setState(() {
       _showIndoor = true;
       _selectedIndoorFloorAsset = assetPath;
-      _indoorPolygons = polys;
-      _indoorGeoJson = geo;
-      _roomLabelMarkers = labels;
+      _indoorPolygons = result.polygons;
+      _indoorGeoJson = result.geoJson;
+      _roomLabelMarkers = result.labels;
     });
   } catch (e) {
     if (!mounted) return;
@@ -261,12 +262,7 @@ Future<void> _toggleIndoorMap() async {
   // turn OFF
   if (_showIndoor) {
     setState(() {
-      _showIndoor = false;
-      _indoorFloors = const [];
-      _selectedIndoorFloorAsset = null;
-      _indoorPolygons = {};
-      _indoorGeoJson = null;
-      _roomLabelMarkers = {};
+        _clearIndoorState();
     });
     return;
   }
@@ -388,12 +384,7 @@ Future<void> _toggleIndoorMap() async {
       _selectedBuildingCenter = center;
       _anchorOffset = null;
       _cameraMoving = true;
-      _showIndoor = false;
-      _indoorBuildingCode = null;
-      _selectedIndoorFloorAsset = null;
-      _indoorFloors = [];
-      _indoorPolygons = {};
-      _indoorGeoJson = null;
+      _clearIndoorState();
       _roomLabelMarkers = {};
     });
 
@@ -1756,9 +1747,6 @@ Future<void> _toggleIndoorMap() async {
     }
 
     _lastCameraTarget = targetLocation;
-
-    _lastCameraTarget = targetLocation;
-
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(targetLocation, 16),
     );
@@ -1830,8 +1818,6 @@ Future<void> _toggleIndoorMap() async {
         children: [
           if (widget.debugDisableMap)
             const SizedBox.expand()
-          else if (widget.debugDisableMap)
-            const SizedBox.expand()
           else
             GoogleMap(
               initialCameraPosition: CameraPosition(
@@ -1864,9 +1850,6 @@ Future<void> _toggleIndoorMap() async {
               },
               onCameraIdle: () {
                 _syncToggleWithCameraCenter();
-
-                _syncToggleWithCameraCenter();
-
                 if (_selectedBuildingCenter == null) return;
                 setState(() {
                   _cameraMoving = false;
@@ -1913,62 +1896,13 @@ Future<void> _toggleIndoorMap() async {
         ),
         if (_showIndoor && _indoorFloors.isNotEmpty) ...[
           const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: PointerInterceptor(
-              child: IntrinsicWidth(
-                child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B1D3B),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedIndoorFloorAsset ??
-                            _indoorFloors.first.assetPath,
-                        isDense: true,
-                        dropdownColor: const Color(0xFF8B1D3B),
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: _indoorFloors
-                            .map(
-                              (f) => DropdownMenuItem<String>(
-                                value: f.assetPath,
-                                child: Text(
-                                  f.label,
-                                  style:
-                                      const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (asset) async {
-                          if (asset == null) return;
-                          await _loadIndoorFloor(asset);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          IndoorFloorDropdown(
+            visible: _showIndoor,
+            floors: _indoorFloors,
+            selectedAssetPath: _selectedIndoorFloorAsset,
+            onChanged: (asset) async {
+              await _loadIndoorFloor(asset);
+            },
           ),
         ],
       ],
@@ -2124,7 +2058,7 @@ Future<void> _toggleIndoorMap() async {
       ),
     );
   }
-  
+
   static const String _indoorMapStyle = '''
   [
     {
