@@ -2125,13 +2125,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
       if (roomLocation == null) {
         print('[ERROR] Could not find location for room $roomCode');
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Room location not found'),
-            backgroundColor: Color(0xFFE53935),
-          ),
-        );
         return;
       }
 
@@ -2289,84 +2282,104 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               top: 65,
               left: 20,
               right: 20,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MapSearchBar(
-                    key: const Key('destination_search_bar'),
-                    campusLabel: campusLabel,
-                    controller: _searchController,
-                    onSubmitted: _onSearchSubmitted,
-                    suggestions: _searchSuggestions,
-                    onSuggestionSelected: _onSuggestionSelected,
-                    onFocus: _hideBuildingPopup,
-                  ),
-                  if (_showIndoor && _indoorFloors.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: PointerInterceptor(
-                        child: IntrinsicWidth(
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8B1D3B),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.25),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
+              child: Builder(
+                builder: (context) {
+                  // ✅ DEBUG: Check selected building code
+                  print(
+                    '[DEBUG] MapSearchBar - selectedBuildingCode: ${_selectedBuildingPoly?.code}',
+                  );
+                  print('[DEBUG] MapSearchBar - showIndoor: $_showIndoor');
+                  print(
+                    '[DEBUG] MapSearchBar - indoorFloors: ${_indoorFloors.length}',
+                  );
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MapSearchBar(
+                        key: const Key('destination_search_bar'),
+                        campusLabel: campusLabel,
+                        controller: _searchController,
+                        onSubmitted: _onSearchSubmitted,
+                        suggestions: _searchSuggestions,
+                        onSuggestionSelected: _onSuggestionSelected,
+                        onFocus: _hideBuildingPopup,
+                        selectedBuildingCode: _selectedBuildingPoly?.code,
+                        originRoomController: _originRoomController,
+                        destinationRoomController: _destinationRoomController,
+                        onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+                      ),
+                      if (_showIndoor && _indoorFloors.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: PointerInterceptor(
+                            child: IntrinsicWidth(
+                              child: Container(
+                                height: 40,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value:
-                                      _selectedIndoorFloorAsset ??
-                                      _indoorFloors.first.assetPath,
-                                  isDense: true,
-                                  dropdownColor: const Color(0xFF8B1D3B),
-                                  icon: const Icon(
-                                    Icons.keyboard_arrow_down,
-                                    color: Colors.white,
-                                  ),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  items: _indoorFloors
-                                      .map(
-                                        (f) => DropdownMenuItem<String>(
-                                          value: f.assetPath,
-                                          child: Text(
-                                            f.label,
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8B1D3B),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.25),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value:
+                                          _selectedIndoorFloorAsset ??
+                                          _indoorFloors.first.assetPath,
+                                      isDense: true,
+                                      dropdownColor: const Color(0xFF8B1D3B),
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: Colors.white,
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      items: _indoorFloors
+                                          .map(
+                                            (f) => DropdownMenuItem<String>(
+                                              value: f.assetPath,
+                                              child: Text(
+                                                f.label,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (asset) async {
-                                    if (asset == null) return;
-                                    await _loadIndoorFloor(asset);
-                                  },
+                                          )
+                                          .toList(),
+                                      onChanged: (asset) async {
+                                        if (asset == null) return;
+                                        await _loadIndoorFloor(asset);
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ],
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
+
           if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
               popupLeft != null &&
               popupTop != null)
