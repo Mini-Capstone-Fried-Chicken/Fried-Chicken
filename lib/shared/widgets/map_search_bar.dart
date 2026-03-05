@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -16,6 +17,10 @@ class MapSearchBar extends StatefulWidget {
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
   final Function(String, String)? onDestinationRoomSubmitted;
+  final Function(String, String)? onOriginRoomSubmitted;
+  final Function(String buildingCode)? isConcordiaBuilding;
+  final LatLng? userLocation;
+  final String? currentBuildingCode;
   final bool showRoomFields;
 
   const MapSearchBar({
@@ -27,9 +32,13 @@ class MapSearchBar extends StatefulWidget {
     this.onSuggestionSelected,
     this.onFocus,
     this.selectedBuildingCode,
+    this.isConcordiaBuilding,
     required this.originRoomController,
     required this.destinationRoomController,
+    this.onOriginRoomSubmitted,
     this.onDestinationRoomSubmitted,
+    this.userLocation,
+    this.currentBuildingCode,
     this.showRoomFields = false,
   });
 
@@ -46,6 +55,15 @@ class _MapSearchBarState extends State<MapSearchBar> {
   bool get _isConcordiaBuilding =>
       widget.selectedBuildingCode != null &&
       widget.selectedBuildingCode!.isNotEmpty;
+
+  bool get _isUserInConcordiaBuilding {
+    if (widget.currentBuildingCode == null ||
+        widget.currentBuildingCode!.isEmpty) {
+      return false;
+    }
+    return widget.isConcordiaBuilding?.call(widget.currentBuildingCode!) ??
+        false;
+  }
 
   @override
   void initState() {
@@ -134,20 +152,21 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     onSubmitted: widget.onSubmitted,
                     onChanged: (_) => _updateSuggestionsVisibility(),
                   ),
-                  if (_isConcordiaBuilding)
+                  if (_isUserInConcordiaBuilding || _isConcordiaBuilding)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
                       ),
                       child: RoomFieldsSection(
-                        originBuildingCode: null,
+                        originBuildingCode: widget.currentBuildingCode,
                         destinationBuildingCode: widget.selectedBuildingCode,
                         originRoomController: widget.originRoomController,
                         destinationRoomController:
                             widget.destinationRoomController,
-                        originEnabled: false,
+                        originEnabled: _isUserInConcordiaBuilding,
                         destinationEnabled: _isConcordiaBuilding,
+                        onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
                         onDestinationRoomSubmitted:
                             widget.onDestinationRoomSubmitted,
                       ),

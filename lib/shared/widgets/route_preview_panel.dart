@@ -45,13 +45,16 @@ class RoutePreviewPanel extends StatefulWidget {
   final List<SearchSuggestion> originSuggestions;
   final List<SearchSuggestion> destinationSuggestions;
   final String? originBuildingCode;
+  final String? currentBuildingCode;
   final String? destinationBuildingCode;
+  final Function(String buildingCode)? isConcordiaBuilding;
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
   final Function(String buildingCode, String roomCode)? onStartValid;
   final Function(String buildingCode, String roomCode)? onDestinationValid;
   final Function(String buildingCode, String roomCode)?
   onDestinationRoomSubmitted;
+  final Function(String, String)? onOriginRoomSubmitted;
   final IndoorMapRepository? indoorRepository;
 
   const RoutePreviewPanel({
@@ -68,11 +71,14 @@ class RoutePreviewPanel extends StatefulWidget {
     required this.destinationSuggestions,
     this.originBuildingCode,
     this.destinationBuildingCode,
+    this.currentBuildingCode,
     required this.originRoomController,
     required this.destinationRoomController,
     this.onStartValid,
     this.onDestinationValid,
+    this.isConcordiaBuilding,
     this.onDestinationRoomSubmitted,
+    this.onOriginRoomSubmitted,
     this.indoorRepository,
   });
 
@@ -88,13 +94,23 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   bool _showOriginSuggestions = false;
   bool _showDestinationSuggestions = false;
 
-  bool get _isOriginConcordiaBuilding =>
-      widget.originBuildingCode != null &&
-      widget.originBuildingCode!.isNotEmpty;
+  bool get _isOriginConcordiaBuilding {
+    if (widget.originBuildingCode == null ||
+        widget.originBuildingCode!.isEmpty) {
+      return false;
+    }
+    return widget.isConcordiaBuilding?.call(widget.originBuildingCode!) ??
+        false;
+  }
 
-  bool get _isDestinationConcordiaBuilding =>
-      widget.destinationBuildingCode != null &&
-      widget.destinationBuildingCode!.isNotEmpty;
+  bool get _isDestinationConcordiaBuilding {
+    if (widget.destinationBuildingCode == null ||
+        widget.destinationBuildingCode!.isEmpty) {
+      return false;
+    }
+    return widget.isConcordiaBuilding?.call(widget.destinationBuildingCode!) ??
+        false;
+  }
 
   void _onRoomFieldChanged() {
     if (mounted) {
@@ -324,6 +340,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                             destinationEnabled: _isDestinationConcordiaBuilding,
                             onOriginValid: widget.onStartValid,
                             onDestinationValid: widget.onDestinationValid,
+                            onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
                             onDestinationRoomSubmitted:
                                 widget.onDestinationRoomSubmitted,
                             indoorRepository: widget.indoorRepository,

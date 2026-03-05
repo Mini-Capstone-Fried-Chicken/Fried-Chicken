@@ -133,6 +133,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   // Room location marker
   Marker? _destinationRoomMarker;
+  String? _currentBuildingCode;
 
   // Route preview mode
   bool _showRoutePreview = false;
@@ -736,6 +737,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       return;
     }
 
+    final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
     // Enter route preview mode
     setState(() {
       _selectedBuildingCenter = null; // Close building popup
@@ -746,8 +749,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeOriginText = currentLocationTag;
       _routeDestinationText =
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
-      _routeOriginBuildingCode = null; // current location has no building code
+      _routeOriginBuildingCode =
+          currentBuildingCode; // current location has no building code
       _routeDestinationBuildingCode = _selectedBuildingPoly?.code;
+      print(
+        '[DEBUG] Route building codes: origin=$_routeOriginBuildingCode, destination=$_routeDestinationBuildingCode',
+      );
     });
 
     // Fetch the initial route
@@ -1819,12 +1826,37 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         : concordiaSGW;
 
     _createBlueDotIcon();
-    _startLocationUpdates();
+    _determineUserLocationAndBuilding().then((_) {
+      _startLocationUpdates();
+    });
 
     // Listen to search input changes
     _searchController.addListener(_onSearchChanged);
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
+    _determineUserLocationAndBuilding();
+  }
+
+  Future<void> _determineUserLocationAndBuilding() async {
+    // Get user's current location
+    final position = await Geolocator.getCurrentPosition();
+    _currentLocation = LatLng(position.latitude, position.longitude);
+
+    // Check which building polygon contains the user
+    final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
+
+    setState(() {
+      _currentBuildingCode = buildingAtLocation?.code;
+    });
+  }
+
+  BuildingPolygon? _findBuildingAtLocation(LatLng location) {
+    for (final building in buildingPolygons) {
+      if (_isPointInPolygon(location, building.points)) {
+        return building;
+      }
+    }
+    return null;
   }
 
   void _onDestinationRoomTextChanged() {
@@ -1962,11 +1994,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             '[DEBUG] Location update: ${position.latitude}, ${position.longitude}',
           );
 
+          final buildingAtLocation = _findBuildingAtLocation(newLatLng);
+
           if (!mounted) return;
           setState(() {
             _currentLocation = newLatLng;
             _currentCampus = detectCampus(newLatLng);
             _currentBuildingPoly = detectBuildingPoly(newLatLng);
+            _currentBuildingCode = buildingAtLocation?.code;
           });
 
           if (_isNavigating) {
@@ -2115,6 +2150,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _cameraMoving = false;
       _searchController.clear();
     });
+  }
+
+  Future<void> _onOriginRoomSubmitted(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
   }
 
   Future<void> _onDestinationRoomSubmitted(
@@ -2284,15 +2326,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               right: 20,
               child: Builder(
                 builder: (context) {
-                  // ✅ DEBUG: Check selected building code
-                  print(
-                    '[DEBUG] MapSearchBar - selectedBuildingCode: ${_selectedBuildingPoly?.code}',
-                  );
-                  print('[DEBUG] MapSearchBar - showIndoor: $_showIndoor');
-                  print(
-                    '[DEBUG] MapSearchBar - indoorFloors: ${_indoorFloors.length}',
-                  );
-
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2306,9 +2339,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                         onSuggestionSelected: _onSuggestionSelected,
                         onFocus: _hideBuildingPopup,
                         selectedBuildingCode: _selectedBuildingPoly?.code,
+                        currentBuildingCode: _currentBuildingCode,
+                        userLocation: _currentLocation,
                         originRoomController: _originRoomController,
                         destinationRoomController: _destinationRoomController,
                         onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+                        onOriginRoomSubmitted: _onOriginRoomSubmitted,
+                        isConcordiaBuilding: (buildingCode) {
+                          return buildingPolygons.any(
+                            (building) =>
+                                building.code?.toUpperCase() ==
+                                buildingCode.toUpperCase(),
+                          );
+                        },
                       ),
                       if (_showIndoor && _indoorFloors.isNotEmpty) ...[
                         const SizedBox(height: 10),
@@ -2485,7 +2528,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 destinationBuildingCode: _routeDestinationBuildingCode,
                 originRoomController: _originRoomController,
                 destinationRoomController: _destinationRoomController,
+                onOriginRoomSubmitted: _onOriginRoomSubmitted,
                 onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+                isConcordiaBuilding: (buildingCode) {
+                  return buildingPolygons.any(
+                    (building) =>
+                        building.code?.toUpperCase() ==
+                        buildingCode.toUpperCase(),
+                  );
+                },
               ),
             ),
 

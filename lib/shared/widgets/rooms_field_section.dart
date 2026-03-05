@@ -20,6 +20,7 @@ class RoomFieldsSection extends StatefulWidget {
   final Function(String buildingCode, String roomCode)? onDestinationValid;
   final Function(String buildingCode, String roomCode)?
   onDestinationRoomSubmitted;
+  final Function(String buildingCode, String roomCode)? onOriginRoomSubmitted;
 
   const RoomFieldsSection({
     super.key,
@@ -33,6 +34,7 @@ class RoomFieldsSection extends StatefulWidget {
     this.initialDestinationValid = false,
     this.onOriginValid,
     this.onDestinationValid,
+    this.onOriginRoomSubmitted,
     this.onDestinationRoomSubmitted,
     this.indoorRepository,
   });
