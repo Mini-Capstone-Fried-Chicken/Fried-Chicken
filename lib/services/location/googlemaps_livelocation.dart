@@ -23,6 +23,7 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../../utils/geo.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -503,80 +504,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     }
   }
 
-  LatLng _polygonCenter(List<LatLng> pts) {
-    if (pts.length < 3) return pts.first;
-
-    // First try: simple average
-    double lat = 0;
-    double lng = 0;
-    for (final p in pts) {
-      lat += p.latitude;
-      lng += p.longitude;
-    }
-    final avg = LatLng(lat / pts.length, lng / pts.length);
-
-    // Check if the average point is inside the polygon
-    if (_isPointInPolygon(avg, pts)) return avg;
-
-    // Fallback: try midpoint of the longest diagonal
-    double maxDist = 0;
-    LatLng best = avg;
-    for (int i = 0; i < pts.length; i++) {
-      for (int j = i + 1; j < pts.length; j++) {
-        final mid = LatLng(
-          (pts[i].latitude + pts[j].latitude) / 2,
-          (pts[i].longitude + pts[j].longitude) / 2,
-        );
-        final dist =
-            (pts[i].latitude - pts[j].latitude) *
-                (pts[i].latitude - pts[j].latitude) +
-            (pts[i].longitude - pts[j].longitude) *
-                (pts[i].longitude - pts[j].longitude);
-        if (dist > maxDist && _isPointInPolygon(mid, pts)) {
-          maxDist = dist;
-          best = mid;
-        }
-      }
-    }
-
-    return best;
-  }
-
-  /// Ray-casting algorithm to check if a point is inside a polygon
-  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
-    bool inside = false;
-    int j = polygon.length - 1;
-
-    for (int i = 0; i < polygon.length; i++) {
-      final xi = polygon[i].latitude;
-      final yi = polygon[i].longitude;
-      final xj = polygon[j].latitude;
-      final yj = polygon[j].longitude;
-
-      if (((yi > point.longitude) != (yj > point.longitude)) &&
-          (point.latitude <
-              (xj - xi) * (point.longitude - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-      j = i;
-    }
-
-    return inside;
-  }
-
-  /// Calculates the approximate area of a polygon in square degrees
-  double _polygonArea(List<LatLng> pts) {
-    double area = 0;
-    int j = pts.length - 1;
-    for (int i = 0; i < pts.length; i++) {
-      area +=
-          (pts[j].longitude + pts[i].longitude) *
-          (pts[j].latitude - pts[i].latitude);
-      j = i;
-    }
-    return area.abs() / 2;
-  }
-
   void _schedulePopupUpdate() {
     _popupDebounce?.cancel();
     _popupDebounce = Timer(
@@ -607,7 +534,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
 
   // ignore: unused_element
   void _selectBuildingWithoutMap(BuildingPolygon b) {
-    final center = _polygonCenter(b.points);
+    final center = polygonCenter(b.points);
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
 
     _searchController.value = TextEditingValue(
@@ -624,7 +551,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   }
 
   void _onBuildingTapped(BuildingPolygon b) {
-    final center = _polygonCenter(b.points);
+    final center = polygonCenter(b.points);
     final controller = _mapController;
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
 
@@ -863,7 +790,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     });
 
     if (!animateCamera || _mapController == null) return;
-    final bounds = _calculateBounds(selectedPoints);
+    final bounds = calculateBounds(selectedPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
@@ -911,7 +838,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       return;
     }
 
-    final bounds = _calculateBounds(allPoints);
+    final bounds = calculateBounds(allPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
@@ -1095,7 +1022,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       return Colors.blue;
     }
 
-    final lineColor = _parseHexColor(segment.transitLineColorHex);
+    final lineColor = parseHexColor(segment.transitLineColorHex);
     if (lineColor != null) {
       return lineColor;
     }
@@ -1274,7 +1201,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     );
   }
 
-  Color? _parseHexColor(String? hex) {
+  Color? parseHexColor(String? hex) {
     if (hex == null || hex.trim().isEmpty) {
       return null;
     }
@@ -1481,25 +1408,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       });
       await _fetchRoutesAndDurations();
     }
-  }
-
-  LatLngBounds _calculateBounds(List<LatLng> points) {
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final point in points) {
-      minLat = minLat < point.latitude ? minLat : point.latitude;
-      maxLat = maxLat > point.latitude ? maxLat : point.latitude;
-      minLng = minLng < point.longitude ? minLng : point.longitude;
-      maxLng = maxLng > point.longitude ? maxLng : point.longitude;
-    }
-
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
   }
 
   void _hideBuildingPopup() {
@@ -2535,10 +2443,10 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       if (points.length < 3) continue;
 
       // Skip very small polygons where text won't fit
-      final area = _polygonArea(points);
+      final area = polygonArea(points);
       if (area < 1e-10) continue;
 
-      final center = _polygonCenter(points);
+      final center = polygonCenter(points);
       final ref = props['ref'].toString();
 
       // Choose font size based on polygon area
