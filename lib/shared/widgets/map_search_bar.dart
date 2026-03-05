@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../data/search_suggestion.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -11,6 +13,15 @@ class MapSearchBar extends StatefulWidget {
   final List<SearchSuggestion>? suggestions;
   final Function(SearchSuggestion)? onSuggestionSelected;
   final VoidCallback? onFocus;
+  final String? selectedBuildingCode;
+  final TextEditingController originRoomController;
+  final TextEditingController destinationRoomController;
+  final Function(String, String)? onDestinationRoomSubmitted;
+  final Function(String, String)? onOriginRoomSubmitted;
+  final Function(String buildingCode)? isConcordiaBuilding;
+  final LatLng? userLocation;
+  final String? currentBuildingCode;
+  final bool showRoomFields;
 
   const MapSearchBar({
     super.key,
@@ -20,6 +31,15 @@ class MapSearchBar extends StatefulWidget {
     this.suggestions,
     this.onSuggestionSelected,
     this.onFocus,
+    this.selectedBuildingCode,
+    this.isConcordiaBuilding,
+    required this.originRoomController,
+    required this.destinationRoomController,
+    this.onOriginRoomSubmitted,
+    this.onDestinationRoomSubmitted,
+    this.userLocation,
+    this.currentBuildingCode,
+    this.showRoomFields = false,
   });
 
   @override
@@ -32,30 +52,45 @@ class _MapSearchBarState extends State<MapSearchBar> {
 
   bool get _hasSuggestions => widget.suggestions?.isNotEmpty ?? false;
 
+  bool get _isConcordiaBuilding =>
+      widget.selectedBuildingCode != null &&
+      widget.selectedBuildingCode!.isNotEmpty;
+
+  bool get _isUserInConcordiaBuilding {
+    if (widget.currentBuildingCode == null ||
+        widget.currentBuildingCode!.isEmpty) {
+      return false;
+    }
+    return widget.isConcordiaBuilding?.call(widget.currentBuildingCode!) ??
+        false;
+  }
+
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChange);
+    widget.originRoomController.addListener(_onRoomFieldChanged);
+    widget.destinationRoomController.addListener(_onRoomFieldChanged);
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
+    widget.originRoomController.removeListener(_onRoomFieldChanged);
+    widget.destinationRoomController.removeListener(_onRoomFieldChanged);
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(covariant MapSearchBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.suggestions != widget.suggestions) {
-      _updateSuggestionsVisibility();
-    }
+  void _onRoomFieldChanged() {
+    /// Force rebuild if room text changes externally
+    if (mounted) setState(() {});
   }
 
   void _updateSuggestionsVisibility() {
     final shouldShow = _focusNode.hasFocus && _hasSuggestions;
+
     if (_showSuggestions == shouldShow) return;
 
     setState(() {
@@ -67,7 +102,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
     if (_focusNode.hasFocus) {
       widget.onFocus?.call();
     }
-
     _updateSuggestionsVisibility();
   }
 
@@ -94,34 +128,55 @@ class _MapSearchBarState extends State<MapSearchBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Opacity(
-            opacity: 0.95,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(8),
-                color: burgundy,
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: _focusNode,
-                  enabled: true,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: const TextStyle(color: Colors.white70),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(8),
+              color: burgundy,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /// Main search field
+                  TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      hintStyle: const TextStyle(color: Colors.white70),
+                      prefixIcon: const Icon(Icons.search, color: Colors.white),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onSubmitted: widget.onSubmitted,
+                    onChanged: (_) => _updateSuggestionsVisibility(),
                   ),
-                  onSubmitted: widget.onSubmitted,
-                  onChanged: (_) {
-                    _updateSuggestionsVisibility();
-                  },
-                ),
+                  if (_isUserInConcordiaBuilding || _isConcordiaBuilding)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: RoomFieldsSection(
+                        originBuildingCode: widget.currentBuildingCode,
+                        destinationBuildingCode: widget.selectedBuildingCode,
+                        originRoomController: widget.originRoomController,
+                        destinationRoomController:
+                            widget.destinationRoomController,
+                        originEnabled: _isUserInConcordiaBuilding,
+                        destinationEnabled: _isConcordiaBuilding,
+                        onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
+                        onDestinationRoomSubmitted:
+                            widget.onDestinationRoomSubmitted,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
+
+          /// Suggestions dropdown
           if (_showSuggestions && _hasSuggestions)
             PointerInterceptor(
               child: Material(
@@ -141,8 +196,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     itemCount: widget.suggestions!.length,
                     itemBuilder: (context, index) {
                       final suggestion = widget.suggestions![index];
+
                       return ListTile(
-                        key: Key('suggestion_${suggestion.name}'),
                         leading: Icon(
                           suggestion.isConcordiaBuilding
                               ? Icons.school
@@ -166,7 +221,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
                             : null,
                         dense: true,
                         onTap: () => _selectSuggestion(suggestion),
-                        hoverColor: burgundy.withOpacity(0.1),
                       );
                     },
                   ),

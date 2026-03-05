@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/search_suggestion.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import '../../services/indoor_maps/indoor_map_repository.dart';
 
 enum RouteTravelMode { driving, walking, bicycling, transit }
 
@@ -42,6 +44,18 @@ class RoutePreviewPanel extends StatefulWidget {
   final Function(SearchSuggestion) onDestinationSelected;
   final List<SearchSuggestion> originSuggestions;
   final List<SearchSuggestion> destinationSuggestions;
+  final String? originBuildingCode;
+  final String? currentBuildingCode;
+  final String? destinationBuildingCode;
+  final Function(String buildingCode)? isConcordiaBuilding;
+  final TextEditingController originRoomController;
+  final TextEditingController destinationRoomController;
+  final Function(String buildingCode, String roomCode)? onStartValid;
+  final Function(String buildingCode, String roomCode)? onDestinationValid;
+  final Function(String buildingCode, String roomCode)?
+  onDestinationRoomSubmitted;
+  final Function(String, String)? onOriginRoomSubmitted;
+  final IndoorMapRepository? indoorRepository;
 
   const RoutePreviewPanel({
     super.key,
@@ -55,6 +69,17 @@ class RoutePreviewPanel extends StatefulWidget {
     required this.onDestinationSelected,
     required this.originSuggestions,
     required this.destinationSuggestions,
+    this.originBuildingCode,
+    this.destinationBuildingCode,
+    this.currentBuildingCode,
+    required this.originRoomController,
+    required this.destinationRoomController,
+    this.onStartValid,
+    this.onDestinationValid,
+    this.isConcordiaBuilding,
+    this.onDestinationRoomSubmitted,
+    this.onOriginRoomSubmitted,
+    this.indoorRepository,
   });
 
   @override
@@ -69,6 +94,30 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   bool _showOriginSuggestions = false;
   bool _showDestinationSuggestions = false;
 
+  bool get _isOriginConcordiaBuilding {
+    if (widget.originBuildingCode == null ||
+        widget.originBuildingCode!.isEmpty) {
+      return false;
+    }
+    return widget.isConcordiaBuilding?.call(widget.originBuildingCode!) ??
+        false;
+  }
+
+  bool get _isDestinationConcordiaBuilding {
+    if (widget.destinationBuildingCode == null ||
+        widget.destinationBuildingCode!.isEmpty) {
+      return false;
+    }
+    return widget.isConcordiaBuilding?.call(widget.destinationBuildingCode!) ??
+        false;
+  }
+
+  void _onRoomFieldChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +126,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
       text: widget.destinationText,
     );
 
-    // Listen to text changes
     _originController.addListener(() {
       widget.onOriginChanged(_originController.text);
     });
@@ -100,6 +148,8 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
             widget.destinationSuggestions.isNotEmpty;
       });
     });
+    widget.originRoomController.addListener(_onRoomFieldChanged);
+    widget.destinationRoomController.addListener(_onRoomFieldChanged);
   }
 
   @override
@@ -137,15 +187,17 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
     _destinationController.dispose();
     _originFocus.dispose();
     _destinationFocus.dispose();
+    widget.originRoomController.removeListener(_onRoomFieldChanged);
+    widget.destinationRoomController.removeListener(_onRoomFieldChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
-
     return Center(
-      child: SingleChildScrollView(
+      child: SizedBox(
+        width: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -270,6 +322,30 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                           ],
                         ),
                       ),
+                      if (_isOriginConcordiaBuilding ||
+                          _isDestinationConcordiaBuilding)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: RoomFieldsSection(
+                            originBuildingCode: widget.originBuildingCode,
+                            destinationBuildingCode:
+                                widget.destinationBuildingCode,
+                            originRoomController: widget.originRoomController,
+                            destinationRoomController:
+                                widget.destinationRoomController,
+                            originEnabled: _isOriginConcordiaBuilding,
+                            destinationEnabled: _isDestinationConcordiaBuilding,
+                            onOriginValid: widget.onStartValid,
+                            onDestinationValid: widget.onDestinationValid,
+                            onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
+                            onDestinationRoomSubmitted:
+                                widget.onDestinationRoomSubmitted,
+                            indoorRepository: widget.indoorRepository,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -439,7 +515,7 @@ class RouteTravelModeBar extends StatelessWidget {
                 ),
               ),
 
-              // Steps button (you already added this earlier)
+              // Steps button
               TextButton(
                 onPressed: onShowSteps,
                 style: TextButton.styleFrom(

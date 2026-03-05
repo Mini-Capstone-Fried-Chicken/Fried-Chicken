@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Shows suggestions when focused and suggestions exist',
-      (WidgetTester tester) async {
+  testWidgets('Shows suggestions when focused and suggestions exist', (
+    WidgetTester tester,
+  ) async {
     final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
     final suggestions = <BuildingName>[
       concordiaBuildingNames.first,
       concordiaBuildingNames[1],
@@ -18,7 +21,11 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: suggestions.map((b) => SearchSuggestion.fromConcordiaBuilding(b)).toList(),
+            suggestions: suggestions
+                .map((b) => SearchSuggestion.fromConcordiaBuilding(b))
+                .toList(),
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
           ),
         ),
       ),
@@ -31,9 +38,12 @@ void main() {
     expect(find.text(suggestions[1].name), findsOneWidget);
   });
 
-  testWidgets('Selecting a suggestion updates text and calls callback',
-      (WidgetTester tester) async {
+  testWidgets('Selecting a suggestion updates text and calls callback', (
+    WidgetTester tester,
+  ) async {
     final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
     final selected = <BuildingName>[];
     final suggestion = concordiaBuildingNames.first;
 
@@ -42,8 +52,12 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: [suggestion].map((s) => SearchSuggestion.fromConcordiaBuilding(s)).toList(),
+            suggestions: [
+              suggestion,
+            ].map((s) => SearchSuggestion.fromConcordiaBuilding(s)).toList(),
             onSuggestionSelected: (value) => selected.add(value.buildingName!),
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
           ),
         ),
       ),
@@ -60,9 +74,12 @@ void main() {
     expect(find.widgetWithText(ListTile, suggestion.name), findsNothing);
   });
 
-  testWidgets('onFocus fires when search field gains focus',
-      (WidgetTester tester) async {
+  testWidgets('onFocus fires when search field gains focus', (
+    WidgetTester tester,
+  ) async {
     final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
     var focusCalled = false;
 
     await tester.pumpWidget(
@@ -70,8 +87,14 @@ void main() {
         home: Scaffold(
           body: MapSearchBar(
             controller: controller,
-            suggestions: [SearchSuggestion.fromConcordiaBuilding(concordiaBuildingNames.first)],
+            suggestions: [
+              SearchSuggestion.fromConcordiaBuilding(
+                concordiaBuildingNames.first,
+              ),
+            ],
             onFocus: () => focusCalled = true,
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
           ),
         ),
       ),
@@ -85,6 +108,8 @@ void main() {
 
   testWidgets('Tapping outside hides suggestions', (WidgetTester tester) async {
     final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
     final suggestion = concordiaBuildingNames.first;
 
     await tester.pumpWidget(
@@ -93,6 +118,8 @@ void main() {
           body: MapSearchBar(
             controller: controller,
             suggestions: [SearchSuggestion.fromConcordiaBuilding(suggestion)],
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
           ),
         ),
       ),
