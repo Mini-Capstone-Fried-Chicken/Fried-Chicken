@@ -683,11 +683,15 @@ void main() {
               originRoomController: originRoomController,
               destinationRoomController: destinationRoomController,
               onStartValid: (_, __) => originValidCalled = true,
+              isConcordiaBuilding:
+                  (buildingCode) => // ✅ ADD THIS
+                      buildingCode == 'ORIGIN' || buildingCode == 'DEST',
               indoorRepository: indoorRepo,
             ),
           ),
         ),
       );
+
       final originRoomField = find.byWidgetPredicate(
         (widget) =>
             widget is TextField && widget.controller == originRoomController,
@@ -695,7 +699,6 @@ void main() {
 
       expect(originRoomField, findsOneWidget);
 
-      // Tap, enter text, and submit
       await tester.tap(originRoomField);
       await tester.enterText(originRoomField, '999');
       await tester.testTextInput.receiveAction(TextInputAction.done);
@@ -735,6 +738,8 @@ void main() {
               originRoomController: originRoomController,
               destinationRoomController: destinationRoomController,
               onStartValid: (_, __) => originValidCalled = true,
+              isConcordiaBuilding: (buildingCode) =>
+                  buildingCode == 'ORIGIN' || buildingCode == 'DEST',
               indoorRepository: indoorRepo,
             ),
           ),
@@ -788,6 +793,8 @@ void main() {
                 onDestinationValid: (_, __) => destinationValidCalled = true,
                 onDestinationRoomSubmitted: (_, __) =>
                     destinationSubmittedCalled = true,
+                isConcordiaBuilding: (buildingCode) =>
+                    buildingCode == 'ORIGIN' || buildingCode == 'DEST',
                 indoorRepository: indoorRepo,
               ),
             ),
@@ -810,6 +817,7 @@ void main() {
         expect(destinationSubmittedCalled, isFalse);
       },
     );
+
     testWidgets('Valid destination room keeps input and calls callbacks', (
       tester,
     ) async {
@@ -843,6 +851,8 @@ void main() {
               onDestinationValid: (_, __) => destinationValidCalled = true,
               onDestinationRoomSubmitted: (_, __) =>
                   destinationSubmittedCalled = true,
+              isConcordiaBuilding: (buildingCode) =>
+                  buildingCode == 'ORIGIN' || buildingCode == 'DEST',
               indoorRepository: indoorRepo,
             ),
           ),
