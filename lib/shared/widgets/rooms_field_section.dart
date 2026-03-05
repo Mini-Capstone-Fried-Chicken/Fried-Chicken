@@ -141,7 +141,7 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
       room: room,
       setValidState: (val) => _destinationValid = val,
       onValid: widget.onDestinationValid,
-      triggerSubmit: true,
+      triggerSubmit: false,
     );
   }
 
@@ -177,17 +177,19 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
           onChanged: (val) async => onChanged(val),
           onSubmitted: (val) async {
             if (val.isEmpty || !enabled) return;
-            if (!enabled) {
-              controller.clear();
-              return;
-            }
-            await onChanged(val);
-            final currentValid = controller == widget.originRoomController
-                ? _originValid
-                : _destinationValid;
 
-            if (!currentValid) {
+            if (!isValid) {
               controller.clear();
+            }
+
+            if (controller == widget.destinationRoomController &&
+                widget.onDestinationRoomSubmitted != null &&
+                widget.destinationBuildingCode != null &&
+                _destinationValid) {
+              widget.onDestinationRoomSubmitted!(
+                widget.destinationBuildingCode!,
+                val,
+              );
             }
           },
           style: TextStyle(color: enabled ? Colors.black87 : Colors.grey[700]),

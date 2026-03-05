@@ -1824,10 +1824,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     // Listen to search input changes
     _searchController.addListener(_onSearchChanged);
     // Clear destination room marker when room input changes
-    _destinationRoomController.addListener(() {
-      setState(() {
-        _destinationRoomMarker = null;
-      });
+    _destinationRoomController.addListener(_onDestinationRoomTextChanged);
+  }
+
+  void _onDestinationRoomTextChanged() {
+    if (_destinationRoomMarker == null) return;
+
+    setState(() {
+      _destinationRoomMarker = null;
     });
   }
 
@@ -2127,9 +2131,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         print('[ERROR] Could not find location for room $roomCode');
         return;
       }
-
       print('[DEBUG] Room location found: $roomLocation');
-
       // Create marker at room location
       final marker = Marker(
         markerId: const MarkerId('destination_room'),
@@ -2247,8 +2249,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 });
               },
               onCameraIdle: () {
-                _syncToggleWithCameraCenter();
-
                 _syncToggleWithCameraCenter();
 
                 if (_selectedBuildingCenter == null) return;
