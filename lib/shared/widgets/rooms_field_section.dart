@@ -152,6 +152,61 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
     return isValid ? validGreen : invalidRed;
   }
 
+  Future<void> _handleOriginRoomSubmit(String val) async {
+    if (val.isEmpty || !widget.originEnabled) return;
+
+    await _validateOriginRoom(val);
+
+    if (!_originValid) {
+      widget.originRoomController.clear();
+      return;
+    }
+
+    if (widget.onOriginRoomSubmitted != null &&
+        widget.originBuildingCode != null) {
+      widget.onOriginRoomSubmitted!(widget.originBuildingCode!, val);
+    }
+  }
+
+  Future<void> _handleDestinationRoomSubmit(String val) async {
+    if (val.isEmpty || !widget.destinationEnabled) return;
+
+    await _validateDestinationRoom(val);
+
+    if (!_destinationValid) {
+      widget.destinationRoomController.clear();
+      return;
+    }
+
+    if (widget.onDestinationRoomSubmitted != null &&
+        widget.destinationBuildingCode != null) {
+      widget.onDestinationRoomSubmitted!(widget.destinationBuildingCode!, val);
+    }
+  }
+
+  Future<void> _handleTextFieldSubmit({
+    required String val,
+    required TextEditingController controller,
+  }) async {
+    final isOrigin = controller == widget.originRoomController;
+
+    if (isOrigin) {
+      await _handleOriginRoomSubmit(val);
+    } else {
+      await _handleDestinationRoomSubmit(val);
+    }
+  }
+
+  InputBorder _buildOutlineInputBorder(bool isValid, bool hasInput) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: _getBorderColor(isValid, hasInput),
+        width: 2,
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required bool enabled,
@@ -160,6 +215,7 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
     required Future<void> Function(String) onChanged,
   }) {
     final hasInput = controller.text.isNotEmpty;
+    final suffixIcon = _buildSuffixIcon(hasInput, isValid);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,70 +233,18 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
           controller: controller,
           enabled: enabled,
           onChanged: (val) async => onChanged(val),
-          onSubmitted: (val) async {
-            if (val.isEmpty || !enabled) return;
-
-            await onChanged(val);
-
-            final isDestination =
-                controller == widget.destinationRoomController;
-
-            final isOrigin = controller == widget.originRoomController;
-
-            if (isOrigin && !_originValid) {
-              controller.clear();
-              return;
-            }
-
-            if (isDestination) {
-              if (!_destinationValid) {
-                controller.clear();
-                return;
-              }
-
-              if (widget.onDestinationRoomSubmitted != null &&
-                  widget.destinationBuildingCode != null) {
-                widget.onDestinationRoomSubmitted!(
-                  widget.destinationBuildingCode!,
-                  val,
-                );
-              }
-            }
-          },
+          onSubmitted: (val) async =>
+              _handleTextFieldSubmit(val: val, controller: controller),
           style: TextStyle(color: enabled ? Colors.black87 : Colors.grey[700]),
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
             hintText: enabled ? 'Room #' : 'N/A',
             filled: true,
             fillColor: enabled ? Colors.white : Colors.grey[300],
-            suffixIcon: hasInput
-                ? Icon(
-                    isValid ? Icons.check_circle : Icons.cancel,
-                    color: isValid ? validGreen : invalidRed,
-                    size: 20,
-                  )
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(
-                color: _getBorderColor(isValid, hasInput),
-                width: 2,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(
-                color: _getBorderColor(isValid, hasInput),
-                width: 2,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(
-                color: _getBorderColor(isValid, hasInput),
-                width: 2,
-              ),
-            ),
+            suffixIcon: suffixIcon,
+            border: _buildOutlineInputBorder(isValid, hasInput),
+            enabledBorder: _buildOutlineInputBorder(isValid, hasInput),
+            focusedBorder: _buildOutlineInputBorder(isValid, hasInput),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 12,
@@ -249,6 +253,16 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget? _buildSuffixIcon(bool hasInput, bool isValid) {
+    if (!hasInput) return null;
+
+    return Icon(
+      isValid ? Icons.check_circle : Icons.cancel,
+      color: isValid ? validGreen : invalidRed,
+      size: 20,
     );
   }
 
