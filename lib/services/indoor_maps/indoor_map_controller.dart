@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-
 import 'indoor_floor_config.dart';
 import 'indoor_geojson_renderer.dart';
 import 'indoor_map_repository.dart';

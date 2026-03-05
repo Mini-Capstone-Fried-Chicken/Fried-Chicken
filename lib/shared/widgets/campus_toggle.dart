@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../../services/location/googlemaps_livelocation.dart';
+import 'package:campus_app/models/campus.dart';
 
 class CampusToggle extends StatelessWidget {
   final Campus currentCampus;

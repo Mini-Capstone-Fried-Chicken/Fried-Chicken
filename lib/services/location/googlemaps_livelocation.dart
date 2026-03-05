@@ -23,6 +23,12 @@ import '../indoor_maps/indoor_floor_config.dart';
 import '../../utils/geo.dart';
 import '../../shared/widgets/indoor_floor_dropdown.dart';
 import '../indoor_maps/indoor_map_controller.dart';
+import '../../shared/widgets/outdoor/outdoor_top_search.dart';
+import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
+import 'package:campus_app/models/campus.dart';
+import '../../shared/widgets/outdoor/outdoor_map_view.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -32,9 +38,6 @@ const String currentLocationTag = "Current location";
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
-
-enum Campus { sgw, loyola, none }
-
 // knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
@@ -1761,303 +1764,167 @@ Future<void> _toggleIndoorMap() async {
     });
   }
 
+  Offset? _computePopupPosition(BuildContext context) {
+  final screen = MediaQuery.of(context).size;
+  final topPad = MediaQuery.of(context).padding.top;
+
+  final anchor = widget.debugAnchorOffset ?? _anchorOffset;
+  if (anchor == null || _cameraMoving) return null;
+
+  final ax = anchor.dx;
+  final ay = anchor.dy;
+
+  final inView = ax >= 0 &&
+      ax <= screen.width &&
+      ay >= topPad &&
+      ay <= screen.height;
+  if (!inView) return null;
+
+  double left = ax - (_popupW / 2);
+  double top = ay - (_popupH / 2);
+
+  const margin = 8.0;
+  final minLeft = margin;
+  final maxLeft = screen.width - _popupW - margin;
+  final minTop = topPad + margin;
+  final maxTop = screen.height - _popupH - margin;
+
+  if (left < minLeft) left = minLeft;
+  if (left > maxLeft) left = maxLeft;
+  if (top < minTop) top = minTop;
+  if (top > maxTop) top = maxTop;
+
+  return Offset(left, top);
+}
+
   @override
-  Widget build(BuildContext context) {
-    final LatLng initialTarget = widget.initialCampus == Campus.loyola
-        ? concordiaLoyola
-        : concordiaSGW;
+Widget build(BuildContext context) {
+  final initialTarget =
+      widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
-    final Campus labelCampus = _selectedCampus != Campus.none
-        ? _selectedCampus
-        : _currentCampus;
+  final labelCampus = _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
 
-    final String campusLabel = labelCampus == Campus.sgw
-        ? 'SGW'
-        : labelCampus == Campus.loyola
-        ? 'Loyola'
-        : '';
+  final campusLabel = labelCampus == Campus.sgw
+      ? 'SGW'
+      : labelCampus == Campus.loyola
+          ? 'Loyola'
+          : '';
 
-    final screen = MediaQuery.of(context).size;
-    final topPad = MediaQuery.of(context).padding.top;
+  // --- building + popup positioning (keep this logic here because it depends on map camera & device metrics)
+  final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
+  final popupPos = _computePopupPosition(context); // <- small method shown below
 
-    double? popupLeft;
-    double? popupTop;
-
-    // Use debug anchor offset if provided (for testing)
-    final anchorToUse = widget.debugAnchorOffset ?? _anchorOffset;
-
-    if (anchorToUse != null && !_cameraMoving) {
-      final ax = anchorToUse.dx;
-      final ay = anchorToUse.dy;
-
-      final inView =
-          ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
-
-      if (inView) {
-        double left = ax - (_popupW / 2);
-        double top = ay - (_popupH / 2);
-
-        const margin = 8.0;
-        final minLeft = margin;
-        final maxLeft = screen.width - _popupW - margin;
-        final minTop = topPad + margin;
-        final maxTop = screen.height - _popupH - margin;
-
-        if (left < minLeft) left = minLeft;
-        if (left > maxLeft) left = maxLeft;
-        if (top < minTop) top = minTop;
-        if (top > maxTop) top = maxTop;
-
-        popupLeft = left;
-        popupTop = top;
-      }
-    }
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          if (widget.debugDisableMap)
-            const SizedBox.expand()
-          else
-            GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: initialTarget,
-                zoom: 16,
-              ),
-              myLocationEnabled: false,
-              myLocationButtonEnabled: false,
-              style: _showIndoor
-                  ? _indoorMapStyle
-                  : null, // Hide POIs when indoor map is showing
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-
-              // onCameraMove: (pos) {
-              //_lastCameraTarget = pos.target;
-              // },
-              onCameraMove: (pos) {
-                _lastCameraTarget = pos.target;
-                if (_selectedBuildingCenter != null) {
-                  _schedulePopupUpdate();
-                }
-              },
-              onCameraMoveStarted: () {
-                if (_selectedBuildingCenter == null) return;
-                setState(() {
-                  _cameraMoving = true;
-                });
-              },
-              onCameraIdle: () {
-                _syncToggleWithCameraCenter();
-                if (_selectedBuildingCenter == null) return;
-                setState(() {
-                  _cameraMoving = false;
-                });
-                _updatePopupOffset();
-              },
-              markers: {..._createMarkers(), ..._roomLabelMarkers},
-              circles: _createCircles(),
-              polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
-              polylines: _routePolylines,
-            ),
-
-          if (_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: NavigationNextStepHeader(
-                  modeLabel: _selectedTravelMode.label,
-                  nextStep: _getCurrentNavStep(),
-                  onStop: _stopNavigation,
-                  onShowSteps: _openStepsForSelectedMode,
-                ),
-              ),
-            ),
-          if (!_showRoutePreview && !_isNavigating)
-  Positioned(
-    top: 65,
-    left: 20,
-    right: 20,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+  return Scaffold(
+    body: Stack(
       children: [
-        MapSearchBar(
-          key: const Key('destination_search_bar'),
-          campusLabel: campusLabel,
-          controller: _searchController,
-          onSubmitted: _onSearchSubmitted,
-          suggestions: _searchSuggestions,
-          onSuggestionSelected: _onSuggestionSelected,
-          onFocus: _hideBuildingPopup,
-        ),
-        if (_showIndoor && _indoorFloors.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          IndoorFloorDropdown(
-            visible: _showIndoor,
+        // 1) Map
+        if (widget.debugDisableMap)
+          const SizedBox.expand()
+        else
+          OutdoorMapView(
+            initialTarget: initialTarget,
+            showIndoorStyle: _showIndoor,
+            indoorMapStyle: _indoorMapStyle,
+            onMapCreated: (c) => _mapController = c,
+            onCameraMove: (pos) {
+              _lastCameraTarget = pos.target;
+              if (_selectedBuildingCenter != null) _schedulePopupUpdate();
+            },
+            onCameraMoveStarted: () {
+              if (_selectedBuildingCenter == null) return;
+              setState(() => _cameraMoving = true);
+            },
+            onCameraIdle: () {
+              _syncToggleWithCameraCenter();
+              if (_selectedBuildingCenter == null) return;
+              setState(() => _cameraMoving = false);
+              _updatePopupOffset();
+            },
+            markers: {..._createMarkers(), ..._roomLabelMarkers},
+            circles: _createCircles(),
+            polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
+            polylines: _routePolylines,
+          ),
+
+        // 2) Navigation header
+        if (_isNavigating)
+          Positioned(
+            top: 80,
+            left: 0,
+            right: 0,
+            child: PointerInterceptor(
+              child: NavigationNextStepHeader(
+                modeLabel: _selectedTravelMode.label,
+                nextStep: _getCurrentNavStep(),
+                onStop: _stopNavigation,
+                onShowSteps: _openStepsForSelectedMode,
+              ),
+            ),
+          ),
+
+        // 3) Top search (only when not in route preview + not navigating)
+        if (!_showRoutePreview && !_isNavigating)
+          OutdoorTopSearch(
+            campusLabel: campusLabel,
+            controller: _searchController,
+            onSubmitted: _onSearchSubmitted,
+            suggestions: _searchSuggestions,
+            onSuggestionSelected: _onSuggestionSelected,
+            onFocus: _hideBuildingPopup,
+            showIndoor: _showIndoor,
             floors: _indoorFloors,
             selectedAssetPath: _selectedIndoorFloorAsset,
-            onChanged: (asset) async {
-              await _loadIndoorFloor(asset);
-            },
+            onFloorChanged: _loadIndoorFloor,
           ),
-        ],
+
+        // 4) Building popup
+        if (selectedBuilding != null && popupPos != null)
+          OutdoorBuildingPopup(
+            building: selectedBuilding,
+            position: popupPos,
+            buildingInfoByCode: buildingInfoByCode,
+            debugLinkOverride: widget.debugLinkOverride,
+            onClose: _closePopup,
+            onIndoorMap: _toggleIndoorMap,
+            onGetDirections: _getDirections,
+            onOpenLink: _openLink,
+            isLoggedIn: widget.isLoggedIn,
+          ),
+
+        // 5) Bottom left controls (FABs)
+        OutdoorBottomControls(
+          currentLocation: _currentLocation,
+          currentCampus: _currentCampus,
+          onGoToMyLocation: _goToMyLocation,
+          onCenterOnUser: () {
+            final loc = _currentLocation;
+            if (loc == null) return;
+            _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
+          },
+        ),
+
+        // 6) Bottom bar (route bar OR campus toggle)
+        OutdoorBottomBar(
+          showRoutePreview: _showRoutePreview,
+          isNavigating: _isNavigating,
+          selectedCampus: _selectedCampus,
+          onCampusChanged: _switchCampus,
+          selectedTravelMode: _selectedTravelMode,
+          onTravelModeSelected: _onTravelModeSelected,
+          routeDurations: _routeDurations,
+          routeDistances: _routeDistances,
+          routeArrivalTimes: _routeArrivalTimes,
+          isLoadingRouteData: _isLoadingRouteData,
+          onCloseRoutePreview: _closeRoutePreview,
+          onStartNavigation: _startNavigation,
+          onShowSteps: _openStepsForSelectedMode,
+          transitDetails: _buildTransitDetailItems(),
+        ),
+        ..._createBuildingGestureDetectors(),
       ],
     ),
-  ),
-          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
-              popupLeft != null &&
-              popupTop != null)
-            Positioned(
-              left: popupLeft,
-              top: popupTop,
-              child: PointerInterceptor(
-                child: BuildingInfoPopup(
-                  // Show full name + code
-                  title:
-                      '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
-                  description:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.description ??
-                      'No description available.',
-                  accessibility:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.accessibility ??
-                      false,
-                  facilities:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.facilities ??
-                      const [],
-                  onMore: () {
-                    final link =
-                        widget.debugLinkOverride ??
-                        (buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                        _selectedBuildingPoly)!
-                                    .code]
-                                ?.link ??
-                            '');
-                    _openLink(link);
-                  },
-                  onClose: _closePopup,
-                  isLoggedIn: widget.isLoggedIn,
-                  onIndoorMap: _toggleIndoorMap,
-                  onGetDirections: _getDirections,
-                ),
-              ),
-            ),
-
-          Positioned(
-            bottom: 70,
-            left: 20,
-            child: PointerInterceptor(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'location_button',
-                    mini: true,
-                    onPressed: () {
-                      final loc = _currentLocation;
-                      if (loc == null) return;
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(loc, 17),
-                      );
-                    },
-                    child: const Icon(Icons.my_location),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.extended(
-                    heroTag: 'campus_button',
-                    onPressed: _goToMyLocation,
-                    icon: const Icon(Icons.school),
-                    label: Text(
-                      _currentCampus == Campus.sgw
-                          ? 'SGW Campus'
-                          : _currentCampus == Campus.loyola
-                          ? 'Loyola Campus'
-                          : 'Off Campus',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Route Preview Panel
-          if (_showRoutePreview && !_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: RoutePreviewPanel(
-                originText: _routeOriginText,
-                destinationText: _routeDestinationText,
-                onClose: _closeRoutePreview,
-                onSwitch: _switchOriginDestination,
-                onOriginChanged: _onRouteOriginChanged,
-                onDestinationChanged: _onRouteDestinationChanged,
-                onOriginSelected: _onRouteOriginSelected,
-                onDestinationSelected: _onRouteDestinationSelected,
-                originSuggestions: _routeOriginSuggestions,
-                destinationSuggestions: _routeDestinationSuggestions,
-              ),
-            ),
-
-          if (_showRoutePreview)
-            Positioned(
-              bottom: 25,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: Center(
-                  child: RouteTravelModeBar(
-                    selectedTravelMode: _selectedTravelMode,
-                    onTravelModeSelected: _onTravelModeSelected,
-                    modeDurations: _routeDurations,
-                    isLoadingDurations: _isLoadingRouteData,
-                    onClose: _closeRoutePreview,
-                    onStart: _startNavigation,
-                    isNavigating: _isNavigating,
-                    onShowSteps: _openStepsForSelectedMode,
-                    transitDetails: _buildTransitDetailItems(),
-                    modeDistances: _routeDistances,
-                    modeArrivalTimes: _routeArrivalTimes,
-                  ),
-                ),
-              ),
-            ),
-
-          if (!_showRoutePreview)
-            Positioned(
-              bottom: 25,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 280,
-                  child: CampusToggle(
-                    currentCampus: _selectedCampus,
-                    onCampusChanged: _switchCampus,
-                  ),
-                ),
-              ),
-            ),
-
-          // Invisible gesture detectors for building polygons (for testing)
-          ..._createBuildingGestureDetectors(),
-        ],
-      ),
-    );
-  }
+  );
+}
 
   static const String _indoorMapStyle = '''
   [

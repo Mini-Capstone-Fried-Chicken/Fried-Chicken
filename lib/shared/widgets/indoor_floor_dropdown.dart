@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-
 import '../../services/indoor_maps/indoor_floor_config.dart';
 
 class IndoorFloorDropdown extends StatelessWidget {
