@@ -11,7 +11,10 @@ const Map<String, List<String>> _buildingAssetPaths = {
     'assets/indoor_maps/geojson/Hall/h8.geojson.json',
     'assets/indoor_maps/geojson/Hall/h9.geojson.json',
   ],
-  'MB': ['assets/indoor_maps/geojson/MB/mb1.geojson.json'],
+  'MB': [
+    'assets/indoor_maps/geojson/MB/mb1.geojson.json',
+    'assets/indoor_maps/geojson/MB/mbS2.geojson.json',
+  ],
   'VE': [
     'assets/indoor_maps/geojson/VE/ve1.geojson.json',
     'assets/indoor_maps/geojson/VE/ve2.geojson.json',

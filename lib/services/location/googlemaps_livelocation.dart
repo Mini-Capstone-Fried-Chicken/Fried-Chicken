@@ -228,7 +228,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           ),
           _IndoorFloorOption(
             label: '2',
-            assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
+            assetPath: 'assets/indoor_maps/geojson/MB/mbS2.geojson.json',
           ),
         ];
 
