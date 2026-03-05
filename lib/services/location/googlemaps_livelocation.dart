@@ -95,6 +95,9 @@ class OutdoorMapPage extends StatefulWidget {
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _originRoomController = TextEditingController();
+  final TextEditingController _destinationRoomController =
+      TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
@@ -121,6 +124,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Set<Polyline> _routePolylines = {};
 
+  // Room location marker
+  Marker? _destinationRoomMarker;
+  String? _currentBuildingCode;
+
   // Route preview mode
   bool _showRoutePreview = false;
   LatLng? _routeOrigin;
@@ -133,6 +140,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, String?> _routeArrivalTimes = {};
   final Map<String, List<LatLng>> _routePointsByMode = {};
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
+  String? _routeOriginBuildingCode;
+  String? _routeDestinationBuildingCode;
 
   final Map<String, List<NavigationStep>> _routeStepsByMode = {};
   // --- Navigation camera follow state ---
@@ -242,7 +251,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-Future<void> _loadIndoorFloor(String assetPath) async {
+FFuture<void> _loadIndoorFloor(String assetPath) async {
   try {
     final result = await _indoorController.loadFloor(assetPath);
     if (!mounted) return;
@@ -265,7 +274,7 @@ Future<void> _toggleIndoorMap() async {
   // turn OFF
   if (_showIndoor) {
     setState(() {
-        _clearIndoorState();
+      _clearIndoorState();
     });
     return;
   }
@@ -426,9 +435,18 @@ Future<void> _toggleIndoorMap() async {
       _routeSegmentsByMode.clear();
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
+      _destinationRoomMarker = null;
       if (clearSearch) {
         _searchController.clear();
       }
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _destinationRoomMarker = null;
+      _routeOriginBuildingCode = null;
+      _routeDestinationBuildingCode = null;
+      _originRoomController.clear();
+      _destinationRoomController.clear();
     });
   }
 
@@ -455,6 +473,8 @@ Future<void> _toggleIndoorMap() async {
       return;
     }
 
+    final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
     // Enter route preview mode
     setState(() {
       _selectedBuildingCenter = null; // Close building popup
@@ -465,6 +485,12 @@ Future<void> _toggleIndoorMap() async {
       _routeOriginText = currentLocationTag;
       _routeDestinationText =
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
+      _routeOriginBuildingCode =
+          currentBuildingCode; // current location has no building code
+      _routeDestinationBuildingCode = _selectedBuildingPoly?.code;
+      print(
+        '[DEBUG] Route building codes: origin=$_routeOriginBuildingCode, destination=$_routeDestinationBuildingCode',
+      );
     });
 
     // Fetch the initial route
@@ -801,6 +827,16 @@ Future<void> _toggleIndoorMap() async {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _searchController.clear();
+
+      //reset indoor map and building selection state
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _destinationRoomMarker = null;
+      _originRoomController.clear();
+      _destinationRoomController.clear();
+      _routeOriginBuildingCode = null;
+      _routeDestinationBuildingCode = null;
     });
   }
 
@@ -1137,9 +1173,9 @@ Future<void> _toggleIndoorMap() async {
     print(
       '[DEBUG] Origin selected: ${suggestion.name}, isConcordia: ${suggestion.isConcordiaBuilding}, placeId: ${suggestion.placeId}',
     );
-
     LatLng? newOrigin;
     String displayText = suggestion.name;
+    String? buildingCode;
 
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       print('[DEBUG] Handling Concordia building');
@@ -1148,6 +1184,7 @@ Future<void> _toggleIndoorMap() async {
       );
       newOrigin = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
+      buildingCode = suggestion.buildingName!.code;
       print('[DEBUG] Concordia building origin: $newOrigin');
     } else if (suggestion.placeId != null) {
       // Fetch place details for non-Concordia locations
@@ -1161,6 +1198,7 @@ Future<void> _toggleIndoorMap() async {
         print('[DEBUG] Place details result: $placeDetails');
         if (placeDetails != null) {
           newOrigin = placeDetails.location;
+          buildingCode = null;
           print('[DEBUG] Non-Concordia origin location: $newOrigin');
         } else {
           print(
@@ -1175,10 +1213,13 @@ Future<void> _toggleIndoorMap() async {
 
     if (newOrigin != null) {
       print('[DEBUG] Updating route origin state');
+      print('[DEBUG] New origin building code: $buildingCode');
       setState(() {
         _routeOrigin = newOrigin;
         _routeOriginText = displayText;
         _routeOriginSuggestions = [];
+        _routeOriginBuildingCode = buildingCode;
+        _originRoomController.clear();
       });
       print('[DEBUG] Calling _fetchRoute with new origin: $newOrigin');
       await _fetchRoutesAndDurations();
@@ -1190,6 +1231,7 @@ Future<void> _toggleIndoorMap() async {
   Future<void> _onRouteDestinationSelected(SearchSuggestion suggestion) async {
     LatLng? newDestination;
     String displayText = suggestion.name;
+    String? buildingCode;
 
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       final building = BuildingSearchService.searchBuilding(
@@ -1197,6 +1239,7 @@ Future<void> _toggleIndoorMap() async {
       );
       newDestination = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
+      buildingCode = suggestion.buildingName!.code;
     } else if (suggestion.placeId != null) {
       // Fetch place details for non-Concordia locations
       try {
@@ -1205,6 +1248,7 @@ Future<void> _toggleIndoorMap() async {
         );
         if (placeDetails != null) {
           newDestination = placeDetails.location;
+          buildingCode = null;
         }
       } catch (e) {
         print('Error fetching place details: $e');
@@ -1213,10 +1257,14 @@ Future<void> _toggleIndoorMap() async {
     }
 
     if (newDestination != null) {
+      print('[DEBUG] Updating route destination state');
+      print('[DEBUG] New destination building code: $buildingCode');
       setState(() {
         _routeDestination = newDestination;
         _routeDestinationText = displayText;
         _routeDestinationSuggestions = [];
+        _routeDestinationBuildingCode = buildingCode;
+        _destinationRoomController.clear();
       });
       await _fetchRoutesAndDurations();
     }
@@ -1495,10 +1543,45 @@ Future<void> _toggleIndoorMap() async {
         : concordiaSGW;
 
     _createBlueDotIcon();
-    _startLocationUpdates();
+    _determineUserLocationAndBuilding().then((_) {
+      _startLocationUpdates();
+    });
 
     // Listen to search input changes
     _searchController.addListener(_onSearchChanged);
+    // Clear destination room marker when room input changes
+    _destinationRoomController.addListener(_onDestinationRoomTextChanged);
+    _determineUserLocationAndBuilding();
+  }
+
+  Future<void> _determineUserLocationAndBuilding() async {
+    // Get user's current location
+    final position = await Geolocator.getCurrentPosition();
+    _currentLocation = LatLng(position.latitude, position.longitude);
+
+    // Check which building polygon contains the user
+    final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
+
+    setState(() {
+      _currentBuildingCode = buildingAtLocation?.code;
+    });
+  }
+
+  BuildingPolygon? _findBuildingAtLocation(LatLng location) {
+    for (final building in buildingPolygons) {
+      if (_isPointInPolygon(location, building.points)) {
+        return building;
+      }
+    }
+    return null;
+  }
+
+  void _onDestinationRoomTextChanged() {
+    if (_destinationRoomMarker == null) return;
+
+    setState(() {
+      _destinationRoomMarker = null;
+    });
   }
 
   void _onSearchChanged() {
@@ -1628,11 +1711,14 @@ Future<void> _toggleIndoorMap() async {
             '[DEBUG] Location update: ${position.latitude}, ${position.longitude}',
           );
 
+          final buildingAtLocation = _findBuildingAtLocation(newLatLng);
+
           if (!mounted) return;
           setState(() {
             _currentLocation = newLatLng;
             _currentCampus = detectCampus(newLatLng);
             _currentBuildingPoly = detectBuildingPoly(newLatLng);
+            _currentBuildingCode = buildingAtLocation?.code;
           });
 
           if (_isNavigating) {
@@ -1648,8 +1734,24 @@ Future<void> _toggleIndoorMap() async {
 
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
+    // Add current location marker
+    if (_currentLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_location'),
+          position: _currentLocation!,
+          icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+          zIndex: 999,
+        ),
+      );
+    }
 
-    // Note: selected non-Concordia marker intentionally omitted to avoid red pin reappearing
+    // Add destination room marker only when indoor map is shown
+    if (_destinationRoomMarker != null && _showIndoor) {
+      markers.add(_destinationRoomMarker!);
+    }
 
     // Add markers for route preview mode
     if (_showRoutePreview) {
@@ -1767,6 +1869,64 @@ Future<void> _toggleIndoorMap() async {
   Offset? _computePopupPosition(BuildContext context) {
   final screen = MediaQuery.of(context).size;
   final topPad = MediaQuery.of(context).padding.top;
+  Future<void> _onOriginRoomSubmitted(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
+  }
+
+  Future<void> _onDestinationRoomSubmitted(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    print('[DEBUG] Destination room submitted: $roomCode in $buildingCode');
+
+    try {
+      final repo = IndoorMapRepository();
+      final roomLocation = await repo.getRoomLocation(buildingCode, roomCode);
+
+      if (roomLocation == null) {
+        print('[ERROR] Could not find location for room $roomCode');
+        return;
+      }
+      print('[DEBUG] Room location found: $roomLocation');
+      // Create marker at room location
+      final marker = Marker(
+        markerId: const MarkerId('destination_room'),
+        position: roomLocation,
+        infoWindow: InfoWindow(title: 'Room $roomCode'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      );
+
+      // Update state with the new marker
+      if (!mounted) return;
+      setState(() {
+        _destinationRoomMarker = marker;
+      });
+
+      print('[DEBUG] Destination room marker placed at $roomLocation');
+    } catch (e) {
+      print('[ERROR] Error processing destination room: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: const Color(0xFFE53935),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final LatLng initialTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
+
+    final Campus labelCampus = _selectedCampus != Campus.none
+        ? _selectedCampus
+        : _currentCampus;
 
   final anchor = widget.debugAnchorOffset ?? _anchorOffset;
   if (anchor == null || _cameraMoving) return null;
@@ -1810,14 +1970,29 @@ Widget build(BuildContext context) {
           ? 'Loyola'
           : '';
 
+  @override
+Widget build(BuildContext context) {
+  final LatLng initialTarget = widget.initialCampus == Campus.loyola
+      ? concordiaLoyola
+      : concordiaSGW;
+
+  final Campus labelCampus =
+      _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
+
+  final String campusLabel = labelCampus == Campus.sgw
+      ? 'SGW'
+      : labelCampus == Campus.loyola
+          ? 'Loyola'
+          : '';
+
   // --- building + popup positioning (keep this logic here because it depends on map camera & device metrics)
   final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
-  final popupPos = _computePopupPosition(context); // <- small method shown below
+  final popupPos = _computePopupPosition(context);
 
   return Scaffold(
     body: Stack(
       children: [
-        // 1) Map
+        // 1) Map (refactored OutdoorMapView)
         if (widget.debugDisableMap)
           const SizedBox.expand()
         else
@@ -1840,7 +2015,13 @@ Widget build(BuildContext context) {
               setState(() => _cameraMoving = false);
               _updatePopupOffset();
             },
-            markers: {..._createMarkers(), ..._roomLabelMarkers},
+
+            markers: {
+              ..._createMarkers(),
+              ..._roomLabelMarkers,
+              if (_destinationRoomMarker != null) _destinationRoomMarker!,
+            },
+
             circles: _createCircles(),
             polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
             polylines: _routePolylines,
@@ -1861,23 +2042,106 @@ Widget build(BuildContext context) {
               ),
             ),
           ),
-
-        // 3) Top search (only when not in route preview + not navigating)
         if (!_showRoutePreview && !_isNavigating)
-          OutdoorTopSearch(
-            campusLabel: campusLabel,
-            controller: _searchController,
-            onSubmitted: _onSearchSubmitted,
-            suggestions: _searchSuggestions,
-            onSuggestionSelected: _onSuggestionSelected,
-            onFocus: _hideBuildingPopup,
-            showIndoor: _showIndoor,
-            floors: _indoorFloors,
-            selectedAssetPath: _selectedIndoorFloorAsset,
-            onFloorChanged: _loadIndoorFloor,
+          Positioned(
+            top: 65,
+            left: 20,
+            right: 20,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MapSearchBar(
+                  key: const Key('destination_search_bar'),
+                  campusLabel: campusLabel,
+                  controller: _searchController,
+                  onSubmitted: _onSearchSubmitted,
+                  suggestions: _searchSuggestions,
+                  onSuggestionSelected: _onSuggestionSelected,
+                  onFocus: _hideBuildingPopup,
+
+                  selectedBuildingCode: _selectedBuildingPoly?.code,
+                  currentBuildingCode: _currentBuildingCode,
+                  userLocation: _currentLocation,
+                  originRoomController: _originRoomController,
+                  destinationRoomController: _destinationRoomController,
+                  onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+                  onOriginRoomSubmitted: _onOriginRoomSubmitted,
+                  isConcordiaBuilding: (buildingCode) {
+                    return buildingPolygons.any(
+                      (building) =>
+                          (building.code ?? '').toUpperCase() ==
+                          buildingCode.toUpperCase(),
+                    );
+                  },
+                ),
+
+                if (_showIndoor && _indoorFloors.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: PointerInterceptor(
+                      child: IntrinsicWidth(
+                        child: Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B1D3B),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedIndoorFloorAsset ??
+                                    _indoorFloors.first.assetPath,
+                                isDense: true,
+                                dropdownColor: const Color(0xFF8B1D3B),
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: Colors.white,
+                                ),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                items: _indoorFloors
+                                    .map(
+                                      (f) => DropdownMenuItem<String>(
+                                        value: f.assetPath,
+                                        child: Text(
+                                          f.label,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (asset) async {
+                                  if (asset == null) return;
+                                  await _loadIndoorFloor(asset);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
 
-        // 4) Building popup
+        // 4) Building popup (refactor widget)
         if (selectedBuilding != null && popupPos != null)
           OutdoorBuildingPopup(
             building: selectedBuilding,
@@ -1891,7 +2155,7 @@ Widget build(BuildContext context) {
             isLoggedIn: widget.isLoggedIn,
           ),
 
-        // 5) Bottom left controls (FABs)
+        // 5) Bottom left controls (refactor widget)
         OutdoorBottomControls(
           currentLocation: _currentLocation,
           currentCampus: _currentCampus,
@@ -1903,7 +2167,7 @@ Widget build(BuildContext context) {
           },
         ),
 
-        // 6) Bottom bar (route bar OR campus toggle)
+        // 6) Bottom bar (refactor widget)
         OutdoorBottomBar(
           showRoutePreview: _showRoutePreview,
           isNavigating: _isNavigating,
@@ -1920,6 +2184,8 @@ Widget build(BuildContext context) {
           onShowSteps: _openStepsForSelectedMode,
           transitDetails: _buildTransitDetailItems(),
         ),
+
+        // 7) Invisible gesture detectors (testing)
         ..._createBuildingGestureDetectors(),
       ],
     ),
@@ -1964,6 +2230,8 @@ Widget build(BuildContext context) {
     _mapController?.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
+    _originRoomController.dispose();
+    _destinationRoomController.dispose();
     super.dispose();
   }
 }

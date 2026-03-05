@@ -22,7 +22,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.424"
+            "ref": "1.424"
         },
         "geometry": {
             "type": "Polygon",
@@ -197,7 +197,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.310"
+            "ref": "1.310"
         },
         "geometry": {
             "type": "Polygon",
@@ -434,7 +434,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.210"
+            "ref": "1.210"
         },
         "geometry": {
             "type": "Polygon",
@@ -573,7 +573,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.115"
+            "ref": "1.115"
         },
         "geometry": {
             "type": "Polygon",
@@ -636,7 +636,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.309"
+            "ref": "1.309"
         },
         "geometry": {
             "type": "Polygon",
@@ -805,7 +805,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.340"
+            "ref": "1.340"
         },
         "geometry": {
             "type": "Polygon",
@@ -844,7 +844,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.301"
+            "ref": "1.301"
         },
         "geometry": {
             "type": "Polygon",
@@ -979,7 +979,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.335"
+            "ref": "1.335"
         },
         "geometry": {
             "type": "Polygon",
@@ -1366,7 +1366,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.347"
+            "ref": "1.347"
         },
         "geometry": {
             "type": "Polygon",
@@ -1413,7 +1413,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.130"
+            "ref": "1.130"
         },
         "geometry": {
             "type": "Polygon",
@@ -1486,7 +1486,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.265"
+            "ref": "1.265"
         },
         "geometry": {
             "type": "Polygon",
@@ -1563,7 +1563,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.132"
+            "ref": "1.132"
         },
         "geometry": {
             "type": "Polygon",
@@ -1724,7 +1724,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.315"
+            "ref": "1.315"
         },
         "geometry": {
             "type": "Polygon",
@@ -1763,7 +1763,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.134"
+            "ref": "1.134"
         },
         "geometry": {
             "type": "Polygon",
@@ -1886,7 +1886,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.345"
+            "ref": "1.345"
         },
         "geometry": {
             "type": "Polygon",
@@ -1995,7 +1995,7 @@
         "properties": {
             "indoor": "room",
             "level": "1",
-            "ref": "001.493"
+            "ref": "1.493"
         },
         "geometry": {
             "type": "Polygon",
