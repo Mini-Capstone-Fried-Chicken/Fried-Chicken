@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:campus_app/utils/geo.dart';
+import 'package:flutter/material.dart';
 
 void main() {
   group('pointInPolygon - Basic Tests', () {
@@ -345,4 +346,163 @@ void main() {
       expect(pointInPolygon(point, polygon), isFalse);
     });
   });
+
+    group('polygonArea', () {
+    test('Returns positive area for simple square', () {
+      final square = [
+        const LatLng(0, 0),
+        const LatLng(0, 1),
+        const LatLng(1, 1),
+        const LatLng(1, 0),
+      ];
+
+      final a = polygonArea(square);
+      expect(a, closeTo(1.0, 1e-9));
+    });
+
+    test('Area is the same regardless of winding order (abs)', () {
+      final squareCW = [
+        const LatLng(0, 0),
+        const LatLng(0, 2),
+        const LatLng(2, 2),
+        const LatLng(2, 0),
+      ];
+      final squareCCW = squareCW.reversed.toList();
+
+      final a1 = polygonArea(squareCW);
+      final a2 = polygonArea(squareCCW);
+
+      expect(a1, closeTo(a2, 1e-12));
+      expect(a1, closeTo(4.0, 1e-9));
+    });
+
+    test('Tiny polygon has tiny non-negative area', () {
+      final tinySquare = [
+        const LatLng(0, 0),
+        const LatLng(0, 0.00001),
+        const LatLng(0.00001, 0.00001),
+        const LatLng(0.00001, 0),
+      ];
+
+      final a = polygonArea(tinySquare);
+      expect(a, greaterThan(0));
+    });
+  });
+
+  group('polygonCenter', () {
+    test('Throws ArgumentError when pts is empty', () {
+      expect(() => polygonCenter([]), throwsArgumentError);
+    });
+
+    test('If pts.length < 3 returns first point', () {
+      final pts = [const LatLng(10, 20), const LatLng(30, 40)];
+      final c = polygonCenter(pts);
+      expect(c, equals(const LatLng(10, 20)));
+    });
+
+    test('Uses average point when average is inside polygon', () {
+      final square = [
+        const LatLng(0, 0),
+        const LatLng(0, 10),
+        const LatLng(10, 10),
+        const LatLng(10, 0),
+      ];
+
+      final c = polygonCenter(square);
+
+      // average of vertices is (5,5) and it's inside
+      expect(c.latitude, closeTo(5.0, 1e-9));
+      expect(c.longitude, closeTo(5.0, 1e-9));
+      expect(pointInPolygon(c, square), isTrue);
+    });
+
+    test('Fallback path: average outside polygon but returns a midpoint inside', () {
+      // This is a "U" shape (concave). Average of vertices lands in the hole,
+      // so pointInPolygon(avg, pts) is false => fallback runs.
+      final uShape = [
+        const LatLng(0, 0),
+        const LatLng(0, 10),
+        const LatLng(2, 10),
+        const LatLng(2, 2),
+        const LatLng(8, 2),
+        const LatLng(8, 10),
+        const LatLng(10, 10),
+        const LatLng(10, 0),
+      ];
+      
+      double avgLat = 0, avgLng = 0;
+      for (final p in uShape) {
+        avgLat += p.latitude;
+        avgLng += p.longitude;
+      }
+      final avg = LatLng(avgLat / uShape.length, avgLng / uShape.length);
+
+      expect(pointInPolygon(avg, uShape), isFalse);
+
+      final c = polygonCenter(uShape);
+      expect(pointInPolygon(c, uShape), isTrue);
+    });
+  });
+
+  group('calculateBounds', () {
+    test('Throws ArgumentError when points is empty', () {
+      expect(() => calculateBounds([]), throwsArgumentError);
+    });
+
+    test('Returns correct bounds for multiple points', () {
+      final pts = [
+        const LatLng(45.0, -73.0),
+        const LatLng(46.0, -74.0),
+        const LatLng(44.5, -72.5),
+        const LatLng(45.5, -73.5),
+      ];
+
+      final b = calculateBounds(pts);
+
+      expect(b.southwest.latitude, closeTo(44.5, 1e-9));
+      expect(b.southwest.longitude, closeTo(-74.0, 1e-9));
+      expect(b.northeast.latitude, closeTo(46.0, 1e-9));
+      expect(b.northeast.longitude, closeTo(-72.5, 1e-9));
+    });
+
+    test('Single point returns bounds with same SW and NE', () {
+      final pts = [const LatLng(10, 20)];
+      final b = calculateBounds(pts);
+
+      expect(b.southwest, equals(const LatLng(10, 20)));
+      expect(b.northeast, equals(const LatLng(10, 20)));
+    });
+  });
+
+  group('parseHexColor', () {
+    test('Returns null for null/empty/whitespace', () {
+      expect(parseHexColor(null), isNull);
+      expect(parseHexColor(''), isNull);
+      expect(parseHexColor('   '), isNull);
+    });
+
+    test('Parses valid hex with #', () {
+      final c = parseHexColor('#FF0000');
+      expect(c, isNotNull);
+      expect(c!.value, equals(const Color(0xFFFF0000).value));
+    });
+
+    test('Parses valid hex without #', () {
+      final c = parseHexColor('00FF00');
+      expect(c, isNotNull);
+      expect(c!.value, equals(const Color(0xFF00FF00).value));
+    });
+
+    test('Returns null for invalid length', () {
+      expect(parseHexColor('#FFF'), isNull);
+      expect(parseHexColor('12345'), isNull);
+      expect(parseHexColor('1234567'), isNull);
+    });
+
+    test('Returns null for non-hex characters', () {
+      expect(parseHexColor('#GGGGGG'), isNull);
+      expect(parseHexColor('ZZZZZZ'), isNull);
+    });
+  });
+
 }
