@@ -505,4 +505,54 @@ void main() {
     });
   });
 
+  group('geo.dart helpers', () {
+  test('polygonArea returns expected area for square', () {
+    final square = [
+      const LatLng(0, 0),
+      const LatLng(0, 10),
+      const LatLng(10, 10),
+      const LatLng(10, 0),
+    ];
+    expect(polygonArea(square), closeTo(100.0, 1e-9));
+  });
+
+  test('polygonCenter throws on empty', () {
+    expect(() => polygonCenter([]), throwsArgumentError);
+  });
+
+  test('polygonCenter returns first point when < 3 points', () {
+    final pts = [const LatLng(1, 2), const LatLng(3, 4)];
+    expect(polygonCenter(pts), pts.first);
+  });
+
+  test('calculateBounds throws on empty', () {
+    expect(() => calculateBounds([]), throwsArgumentError);
+  });
+
+  test('calculateBounds returns correct min/max', () {
+    final points = [
+      const LatLng(2, 5),
+      const LatLng(10, -1),
+      const LatLng(-3, 7),
+    ];
+    final b = calculateBounds(points);
+    expect(b.southwest, const LatLng(-3, -1));
+    expect(b.northeast, const LatLng(10, 7));
+  });
+
+  test('parseHexColor parses valid hex with or without #', () {
+    final c1 = parseHexColor('#FF0000')!;
+    final c2 = parseHexColor('00FF00')!;
+    expect(c1.value, const Color(0xFFFF0000).value);
+    expect(c2.value, const Color(0xFF00FF00).value);
+  });
+
+  test('parseHexColor returns null for invalid inputs', () {
+    expect(parseHexColor(null), isNull);
+    expect(parseHexColor(''), isNull);
+    expect(parseHexColor('#FFF'), isNull);
+    expect(parseHexColor('GGGGGG'), isNull);
+  });
+});
+
 }
