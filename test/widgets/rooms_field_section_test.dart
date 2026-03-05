@@ -111,8 +111,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(buildTestWidget(destinationEnabled: true));
       await tester.enterText(find.byType(TextField).last, '999');
+      await tester.pump();
       await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(destinationController.text, '');
       expect(destinationValidCalled, isFalse);
@@ -125,8 +126,9 @@ void main() {
   ) async {
     await tester.pumpWidget(buildTestWidget(destinationEnabled: true));
     await tester.enterText(find.byType(TextField).last, '101');
+    await tester.pump();
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(destinationController.text, '101');
     expect(destinationValidCalled, isTrue);

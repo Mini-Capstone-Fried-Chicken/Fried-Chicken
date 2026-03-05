@@ -178,18 +178,31 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
           onSubmitted: (val) async {
             if (val.isEmpty || !enabled) return;
 
-            if (!isValid) {
+            await onChanged(val);
+
+            final isDestination =
+                controller == widget.destinationRoomController;
+
+            final isOrigin = controller == widget.originRoomController;
+
+            if (isOrigin && !_originValid) {
               controller.clear();
+              return;
             }
 
-            if (controller == widget.destinationRoomController &&
-                widget.onDestinationRoomSubmitted != null &&
-                widget.destinationBuildingCode != null &&
-                _destinationValid) {
-              widget.onDestinationRoomSubmitted!(
-                widget.destinationBuildingCode!,
-                val,
-              );
+            if (isDestination) {
+              if (!_destinationValid) {
+                controller.clear();
+                return;
+              }
+
+              if (widget.onDestinationRoomSubmitted != null &&
+                  widget.destinationBuildingCode != null) {
+                widget.onDestinationRoomSubmitted!(
+                  widget.destinationBuildingCode!,
+                  val,
+                );
+              }
             }
           },
           style: TextStyle(color: enabled ? Colors.black87 : Colors.grey[700]),
