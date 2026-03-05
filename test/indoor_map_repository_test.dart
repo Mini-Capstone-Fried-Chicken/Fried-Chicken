@@ -404,7 +404,7 @@ void main() {
           final hall = repository.getAssetPathsForBuilding('hall');
           expect(hall.length, 4);
           final mb = repository.getAssetPathsForBuilding('MB');
-          expect(mb.length, 1);
+          expect(mb.length, 2);
           final unknown = repository.getAssetPathsForBuilding('XYZ');
           expect(unknown, isEmpty);
         },
