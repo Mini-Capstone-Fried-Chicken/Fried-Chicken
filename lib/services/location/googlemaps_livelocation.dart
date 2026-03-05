@@ -20,15 +20,15 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../indoor_maps/indoor_floor_config.dart';
-import '../../utils/geo.dart';
+import 'package:campus_app/utils/geo.dart' as geo;
 import '../../shared/widgets/indoor_floor_dropdown.dart';
 import '../indoor_maps/indoor_map_controller.dart';
-import '../../shared/widgets/outdoor/outdoor_top_search.dart';
 import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
 import 'package:campus_app/models/campus.dart';
 import '../../shared/widgets/outdoor/outdoor_map_view.dart';
+import '../indoor_maps/indoor_map_repository.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -96,8 +96,7 @@ class OutdoorMapPage extends StatefulWidget {
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _originRoomController = TextEditingController();
-  final TextEditingController _destinationRoomController =
-      TextEditingController();
+  final TextEditingController _destinationRoomController = TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
@@ -222,6 +221,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
   }
 
+  Future<void> _onOriginRoomSubmitted(String buildingCode, String roomCode) async {
+  print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
+}
+
   Future<void> _syncToggleWithCameraCenter() async {
     if (!mounted) return;
 
@@ -251,7 +254,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-FFuture<void> _loadIndoorFloor(String assetPath) async {
+bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+  return geo.pointInPolygon(point, polygon);
+}
+
+Future<void> _loadIndoorFloor(String assetPath) async {
   try {
     final result = await _indoorController.loadFloor(assetPath);
     if (!mounted) return;
@@ -365,7 +372,7 @@ Future<void> _toggleIndoorMap() async {
 
   // ignore: unused_element
   void _selectBuildingWithoutMap(BuildingPolygon b) {
-    final center = polygonCenter(b.points);
+    final center = geo.polygonCenter(b.points);
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
 
     _searchController.value = TextEditingValue(
@@ -382,7 +389,7 @@ Future<void> _toggleIndoorMap() async {
   }
 
   void _onBuildingTapped(BuildingPolygon b) {
-    final center = polygonCenter(b.points);
+    final center = geo.polygonCenter(b.points);
     final controller = _mapController;
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
 
@@ -628,7 +635,7 @@ Future<void> _toggleIndoorMap() async {
     });
 
     if (!animateCamera || _mapController == null) return;
-    final bounds = calculateBounds(selectedPoints);
+    final bounds = geo.calculateBounds(selectedPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
@@ -676,7 +683,7 @@ Future<void> _toggleIndoorMap() async {
       return;
     }
 
-    final bounds = calculateBounds(allPoints);
+    final bounds = geo.calculateBounds(allPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
@@ -1869,12 +1876,33 @@ Future<void> _toggleIndoorMap() async {
   Offset? _computePopupPosition(BuildContext context) {
   final screen = MediaQuery.of(context).size;
   final topPad = MediaQuery.of(context).padding.top;
-  Future<void> _onOriginRoomSubmitted(
-    String buildingCode,
-    String roomCode,
-  ) async {
-    print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
-  }
+
+  final anchor = widget.debugAnchorOffset ?? _anchorOffset;
+  if (anchor == null || _cameraMoving) return null;
+
+  final ax = anchor.dx;
+  final ay = anchor.dy;
+
+  final inView =
+      ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
+  if (!inView) return null;
+
+  double left = ax - (_popupW / 2);
+  double top = ay - (_popupH / 2);
+
+  const margin = 8.0;
+  final minLeft = margin;
+  final maxLeft = screen.width - _popupW - margin;
+  final minTop = topPad + margin;
+  final maxTop = screen.height - _popupH - margin;
+
+  if (left < minLeft) left = minLeft;
+  if (left > maxLeft) left = maxLeft;
+  if (top < minTop) top = minTop;
+  if (top > maxTop) top = maxTop;
+
+  return Offset(left, top);
+}
 
   Future<void> _onDestinationRoomSubmitted(
     String buildingCode,
@@ -1919,62 +1947,9 @@ Future<void> _toggleIndoorMap() async {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final LatLng initialTarget = widget.initialCampus == Campus.loyola
-        ? concordiaLoyola
-        : concordiaSGW;
-
-    final Campus labelCampus = _selectedCampus != Campus.none
-        ? _selectedCampus
-        : _currentCampus;
-
-  final anchor = widget.debugAnchorOffset ?? _anchorOffset;
-  if (anchor == null || _cameraMoving) return null;
-
-  final ax = anchor.dx;
-  final ay = anchor.dy;
-
-  final inView = ax >= 0 &&
-      ax <= screen.width &&
-      ay >= topPad &&
-      ay <= screen.height;
-  if (!inView) return null;
-
-  double left = ax - (_popupW / 2);
-  double top = ay - (_popupH / 2);
-
-  const margin = 8.0;
-  final minLeft = margin;
-  final maxLeft = screen.width - _popupW - margin;
-  final minTop = topPad + margin;
-  final maxTop = screen.height - _popupH - margin;
-
-  if (left < minLeft) left = minLeft;
-  if (left > maxLeft) left = maxLeft;
-  if (top < minTop) top = minTop;
-  if (top > maxTop) top = maxTop;
-
-  return Offset(left, top);
-}
-
-  @override
 Widget build(BuildContext context) {
-  final initialTarget =
+  final LatLng initialTarget =
       widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
-
-  final labelCampus = _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
-
-  final campusLabel = labelCampus == Campus.sgw
-      ? 'SGW'
-      : labelCampus == Campus.loyola
-          ? 'Loyola'
-          : '';
-
-  @override
-Widget build(BuildContext context) {
-  final LatLng initialTarget = widget.initialCampus == Campus.loyola
-      ? concordiaLoyola
-      : concordiaSGW;
 
   final Campus labelCampus =
       _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
@@ -1985,14 +1960,14 @@ Widget build(BuildContext context) {
           ? 'Loyola'
           : '';
 
-  // --- building + popup positioning (keep this logic here because it depends on map camera & device metrics)
+  // --- building + popup positioning (depends on device metrics + camera)
   final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
   final popupPos = _computePopupPosition(context);
 
   return Scaffold(
     body: Stack(
       children: [
-        // 1) Map (refactored OutdoorMapView)
+        // 1) Map (refactored)
         if (widget.debugDisableMap)
           const SizedBox.expand()
         else
@@ -2015,15 +1990,15 @@ Widget build(BuildContext context) {
               setState(() => _cameraMoving = false);
               _updatePopupOffset();
             },
-
             markers: {
               ..._createMarkers(),
               ..._roomLabelMarkers,
-              if (_destinationRoomMarker != null) _destinationRoomMarker!,
             },
-
             circles: _createCircles(),
-            polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
+            polygons: {
+              ..._createBuildingPolygons(),
+              ..._indoorPolygons,
+            },
             polylines: _routePolylines,
           ),
 
@@ -2042,6 +2017,8 @@ Widget build(BuildContext context) {
               ),
             ),
           ),
+
+        // 3) Top search (RAW room feature kept)
         if (!_showRoutePreview && !_isNavigating)
           Positioned(
             top: 65,
@@ -2060,22 +2037,24 @@ Widget build(BuildContext context) {
                   onSuggestionSelected: _onSuggestionSelected,
                   onFocus: _hideBuildingPopup,
 
+                  // room feature props
+                  originRoomController: _originRoomController,
+                  destinationRoomController: _destinationRoomController,
+                  onOriginRoomSubmitted: _onOriginRoomSubmitted,
+                  onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
                   selectedBuildingCode: _selectedBuildingPoly?.code,
                   currentBuildingCode: _currentBuildingCode,
                   userLocation: _currentLocation,
-                  originRoomController: _originRoomController,
-                  destinationRoomController: _destinationRoomController,
-                  onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-                  onOriginRoomSubmitted: _onOriginRoomSubmitted,
                   isConcordiaBuilding: (buildingCode) {
                     return buildingPolygons.any(
-                      (building) =>
-                          (building.code ?? '').toUpperCase() ==
+                      (b) =>
+                          (b.code ?? '').toUpperCase() ==
                           buildingCode.toUpperCase(),
                     );
                   },
                 ),
 
+                // indoor dropdown (same behavior)
                 if (_showIndoor && _indoorFloors.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Align(
@@ -2155,7 +2134,7 @@ Widget build(BuildContext context) {
             isLoggedIn: widget.isLoggedIn,
           ),
 
-        // 5) Bottom left controls (refactor widget)
+        // 5) Bottom-left controls (refactor widget)
         OutdoorBottomControls(
           currentLocation: _currentLocation,
           currentCampus: _currentCampus,
