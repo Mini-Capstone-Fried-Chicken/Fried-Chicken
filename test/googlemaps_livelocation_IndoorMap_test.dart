@@ -1139,8 +1139,8 @@ void main() {
   // 12. RouteTravelMode enum coverage
   // --------------------------------------------------------------------------
   group('RouteTravelMode enum', () {
-    test('all 4 modes', () {
-      expect(RouteTravelMode.values.length, 4);
+    test('all 5 modes', () {
+      expect(RouteTravelMode.values.length, 5);
     });
 
     test('apiValue for each mode', () {
