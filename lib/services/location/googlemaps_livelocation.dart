@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -22,7 +19,17 @@ import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
-import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../indoor_maps/indoor_floor_config.dart';
+import 'package:campus_app/utils/geo.dart' as geo;
+import '../../shared/widgets/indoor_floor_dropdown.dart';
+import '../indoor_maps/indoor_map_controller.dart';
+import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
+import 'package:campus_app/models/campus.dart';
+import '../../shared/widgets/outdoor/outdoor_map_view.dart';
+import '../indoor_maps/indoor_map_repository.dart';
+import '../../shared/widgets/outdoor/outdoor_top_search.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -32,9 +39,6 @@ const String currentLocationTag = "Current location";
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
-
-enum Campus { sgw, loyola, none }
-
 // knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
   final sgwDistance = Geolocator.distanceBetween(
@@ -90,18 +94,10 @@ class OutdoorMapPage extends StatefulWidget {
   State<OutdoorMapPage> createState() => _OutdoorMapPageState();
 }
 
-class _IndoorFloorOption {
-  final String label;
-  final String assetPath;
-
-  const _IndoorFloorOption({required this.label, required this.assetPath});
-}
-
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _originRoomController = TextEditingController();
-  final TextEditingController _destinationRoomController =
-      TextEditingController();
+  final TextEditingController _destinationRoomController = TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
@@ -109,14 +105,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // Indoor overlay state
   Set<Polygon> _indoorPolygons = {};
   bool _showIndoor = false;
-  int _selectedIndoorFloor = 1;
-  List<int> _availableFloorsForSelectedBuilding = const [1];
+  List<IndoorFloorOption> _indoorFloors = const [];
+  String? _selectedIndoorFloorAsset;
+  final IndoorMapController _indoorController = IndoorMapController();
 
   // --- Indoor floors state ---
-  String? _indoorBuildingCode; // building currently shown in indoor mode
-  String? _selectedIndoorFloorAsset; // which floor file is loaded
-  List<_IndoorFloorOption> _indoorFloors = []; // dropdown options
-
   GoogleMapController? _mapController;
 
   LatLng? _currentLocation;
@@ -199,75 +192,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _lastCameraTarget;
 
-  List<_IndoorFloorOption> _floorsForBuilding(String code) {
-    switch (code.toUpperCase()) {
-      case 'HALL':
-        return const [
-          _IndoorFloorOption(
-            label: '1',
-            assetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
-          ),
-          _IndoorFloorOption(
-            label: '2',
-            assetPath: 'assets/indoor_maps/geojson/Hall/h2.geojson.json',
-          ),
-          _IndoorFloorOption(
-            label: '8',
-            assetPath: 'assets/indoor_maps/geojson/Hall/h8.geojson.json',
-          ),
-          _IndoorFloorOption(
-            label: '9',
-            assetPath: 'assets/indoor_maps/geojson/Hall/h9.geojson.json',
-          ),
-        ];
-
-      case 'MB':
-        return const [
-          _IndoorFloorOption(
-            label: '1',
-            assetPath: 'assets/indoor_maps/geojson/MB/mb1.geojson.json',
-          ),
-          _IndoorFloorOption(
-            label: '2',
-            assetPath: 'assets/indoor_maps/geojson/MB/mbS2.geojson.json',
-          ),
-        ];
-
-      case 'VE':
-        return const [
-          _IndoorFloorOption(
-            label: '1',
-            assetPath: 'assets/indoor_maps/geojson/VE/ve1.geojson.json',
-          ),
-          _IndoorFloorOption(
-            label: '2',
-            assetPath: 'assets/indoor_maps/geojson/VE/ve2.geojson.json',
-          ),
-        ];
-
-      case 'VL':
-        return const [
-          _IndoorFloorOption(
-            label: '1',
-            assetPath: 'assets/indoor_maps/geojson/VL/vl1.geojson.json',
-          ),
-          _IndoorFloorOption(
-            label: '2',
-            assetPath: 'assets/indoor_maps/geojson/VL/vl2.geojson.json',
-          ),
-        ];
-
-      case 'CC':
-        return const [
-          _IndoorFloorOption(
-            label: '1',
-            assetPath: 'assets/indoor_maps/geojson/CC/cc1.geojson.json',
-          ),
-        ];
-
-      default:
-        return const [];
-    }
+  void _clearIndoorState() {
+    _showIndoor = false;
+    _indoorFloors = const [];
+    _selectedIndoorFloorAsset = null;
+    _indoorPolygons = {};
+    _indoorGeoJson = null;
+    _roomLabelMarkers = {};
   }
 
   Campus _campusFromPoint(LatLng p) {
@@ -290,6 +221,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
   }
+
+  Future<void> _onOriginRoomSubmitted(String buildingCode, String roomCode) async {
+  print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
+}
 
   Future<void> _syncToggleWithCameraCenter() async {
     if (!mounted) return;
@@ -320,162 +255,58 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-  List<int> _getAvailableFloorsForBuilding(String code) {
-    switch (code.toUpperCase()) {
-      case 'HALL':
-        return [1]; // change later if you add more floors
-      case 'MB':
-        return [1];
-      case 'VE':
-        return [1];
-      case 'VL':
-        return [1];
-      case 'CC':
-        return [1];
-      default:
-        return [];
-    }
-  }
+bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+  return geo.pointInPolygon(point, polygon);
+}
 
-  String? _getIndoorAssetPath(String buildingCode, int floor) {
-    final code = buildingCode.toUpperCase();
-    switch (code) {
-      case 'HALL':
-        return 'assets/indoor_maps/geojson/Hall/h$floor.geojson.json';
-      case 'MB':
-        return 'assets/indoor_maps/geojson/MB/mb$floor.geojson.json';
-      case 'VE':
-        return 'assets/indoor_maps/geojson/VE/ve$floor.geojson.json';
-      case 'VL':
-        return 'assets/indoor_maps/geojson/VL/vl$floor.geojson.json';
-      case 'CC':
-        return 'assets/indoor_maps/geojson/CC/cc$floor.geojson.json';
-      default:
-        return null;
-    }
-  }
-
-  Future<void> _loadIndoorFloor(String assetPath) async {
-    try {
-      final repo = IndoorMapRepository();
-      final geo = await repo.loadGeoJsonAsset(assetPath);
-
-      final polys = _geoJsonToPolygons(geo);
-      final labels = await _createRoomLabels(geo);
-
-      if (!mounted) return;
-      setState(() {
-        _showIndoor = true;
-        _selectedIndoorFloorAsset = assetPath;
-        _indoorPolygons = polys;
-        _indoorGeoJson = geo;
-        _roomLabelMarkers = labels;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load indoor floor: $e')),
-      );
-    }
-  }
-
-  Future<void> _loadIndoorMapForSelectedBuilding() async {
-    final b = _selectedBuildingPoly;
-    if (b == null) return;
-
-    // If the current building doesn’t support indoor, block it
-    final floors = _getAvailableFloorsForBuilding(b.code);
-    if (floors.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Indoor map currently only available for Hall, MB, VE, VL, and CC',
-          ),
-        ),
-      );
-      return;
-    }
-
-    // Keep available floors in sync
+Future<void> _loadIndoorFloor(String assetPath) async {
+  try {
+    final result = await _indoorController.loadFloor(assetPath);
     if (!mounted) return;
     setState(() {
-      _availableFloorsForSelectedBuilding = floors;
-
-      // If current selected floor isn't available, snap to first
-      if (!floors.contains(_selectedIndoorFloor)) {
-        _selectedIndoorFloor = floors.first;
-      }
+      _showIndoor = true;
+      _selectedIndoorFloorAsset = assetPath;
+      _indoorPolygons = result.polygons;
+      _indoorGeoJson = result.geoJson;
+      _roomLabelMarkers = result.labels;
     });
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to load indoor floor: $e')),
+    );
+  }
+}
 
-    final assetPath = _getIndoorAssetPath(b.code, _selectedIndoorFloor);
-    if (assetPath == null) return;
-
+Future<void> _toggleIndoorMap() async {
+  // turn OFF
+  if (_showIndoor) {
     setState(() {
-      _isLoadingRouteData =
-          false; // just to avoid accidental UI confusion (optional)
+      _clearIndoorState();
     });
-
-    try {
-      final repo = IndoorMapRepository();
-      final geo = await repo.loadGeoJsonAsset(assetPath);
-
-      final polys = _geoJsonToPolygons(geo);
-      final labels = await _createRoomLabels(geo);
-
-      if (!mounted) return;
-      setState(() {
-        _showIndoor = true;
-        _indoorPolygons = polys;
-        _indoorGeoJson = geo;
-        _roomLabelMarkers = labels;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load indoor map: $e')));
-    }
+    return;
   }
 
-  Future<void> _toggleIndoorMap() async {
-    // If indoor is ON -> turn it OFF
-    if (_showIndoor) {
-      setState(() {
-        _showIndoor = false;
-        _indoorBuildingCode = null;
-        _selectedIndoorFloorAsset = null;
-        _indoorFloors = [];
-        _indoorPolygons = {};
-        _indoorGeoJson = null;
-        _roomLabelMarkers = {};
-      });
-      return;
-    }
+  // turn ON (needs selected building)
+  final b = _selectedBuildingPoly;
+  if (b == null) return;
 
-    // If indoor is OFF -> we need a selected building to open indoor
-    final b = _selectedBuildingPoly;
-    if (b == null) return;
-
-    final floors = _floorsForBuilding(b.code);
-    if (floors.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Indoor map not available for this building'),
-        ),
-      );
-      return;
-    }
-
-    // Save indoor building + options, default to first floor
-    setState(() {
-      _indoorBuildingCode = b.code;
-      _indoorFloors = floors;
-    });
-
-    await _loadIndoorFloor(floors.first.assetPath);
+  final floors = IndoorFloorConfig.floorsForBuilding(b.code);
+  if (floors.isEmpty) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No indoor maps available for this building')),
+    );
+    return;
   }
+
+  setState(() {
+    _indoorFloors = floors;
+    _selectedIndoorFloorAsset = floors.first.assetPath;
+  });
+
+  await _loadIndoorFloor(floors.first.assetPath);
+}
 
   Future<void> _goToMyLocation() async {
     final controller = _mapController;
@@ -512,80 +343,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
-  LatLng _polygonCenter(List<LatLng> pts) {
-    if (pts.length < 3) return pts.first;
-
-    // First try: simple average
-    double lat = 0;
-    double lng = 0;
-    for (final p in pts) {
-      lat += p.latitude;
-      lng += p.longitude;
-    }
-    final avg = LatLng(lat / pts.length, lng / pts.length);
-
-    // Check if the average point is inside the polygon
-    if (_isPointInPolygon(avg, pts)) return avg;
-
-    // Fallback: try midpoint of the longest diagonal
-    double maxDist = 0;
-    LatLng best = avg;
-    for (int i = 0; i < pts.length; i++) {
-      for (int j = i + 1; j < pts.length; j++) {
-        final mid = LatLng(
-          (pts[i].latitude + pts[j].latitude) / 2,
-          (pts[i].longitude + pts[j].longitude) / 2,
-        );
-        final dist =
-            (pts[i].latitude - pts[j].latitude) *
-                (pts[i].latitude - pts[j].latitude) +
-            (pts[i].longitude - pts[j].longitude) *
-                (pts[i].longitude - pts[j].longitude);
-        if (dist > maxDist && _isPointInPolygon(mid, pts)) {
-          maxDist = dist;
-          best = mid;
-        }
-      }
-    }
-
-    return best;
-  }
-
-  /// Ray-casting algorithm to check if a point is inside a polygon
-  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
-    bool inside = false;
-    int j = polygon.length - 1;
-
-    for (int i = 0; i < polygon.length; i++) {
-      final xi = polygon[i].latitude;
-      final yi = polygon[i].longitude;
-      final xj = polygon[j].latitude;
-      final yj = polygon[j].longitude;
-
-      if (((yi > point.longitude) != (yj > point.longitude)) &&
-          (point.latitude <
-              (xj - xi) * (point.longitude - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-      j = i;
-    }
-
-    return inside;
-  }
-
-  /// Calculates the approximate area of a polygon in square degrees
-  double _polygonArea(List<LatLng> pts) {
-    double area = 0;
-    int j = pts.length - 1;
-    for (int i = 0; i < pts.length; i++) {
-      area +=
-          (pts[j].longitude + pts[i].longitude) *
-          (pts[j].latitude - pts[i].latitude);
-      j = i;
-    }
-    return area.abs() / 2;
-  }
-
   void _schedulePopupUpdate() {
     _popupDebounce?.cancel();
     _popupDebounce = Timer(
@@ -616,7 +373,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   // ignore: unused_element
   void _selectBuildingWithoutMap(BuildingPolygon b) {
-    final center = _polygonCenter(b.points);
+    final center = geo.polygonCenter(b.points);
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
 
     _searchController.value = TextEditingValue(
@@ -633,7 +390,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _onBuildingTapped(BuildingPolygon b) {
-    final center = _polygonCenter(b.points);
+    final center = geo.polygonCenter(b.points);
     final controller = _mapController;
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
 
@@ -647,21 +404,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedBuildingCenter = center;
       _anchorOffset = null;
       _cameraMoving = true;
-      _destinationRoomMarker = null;
-      _showIndoor = false;
-      _indoorBuildingCode = null;
-      _selectedIndoorFloorAsset = null;
-      _indoorFloors = [];
-      _indoorPolygons = {};
-      _indoorGeoJson = null;
+      _clearIndoorState();
       _roomLabelMarkers = {};
-
-      _availableFloorsForSelectedBuilding = _getAvailableFloorsForBuilding(
-        b.code,
-      );
-      _selectedIndoorFloor = _availableFloorsForSelectedBuilding.isNotEmpty
-          ? _availableFloorsForSelectedBuilding.first
-          : 1;
     });
 
     if (controller == null) return;
@@ -892,7 +636,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
 
     if (!animateCamera || _mapController == null) return;
-    final bounds = _calculateBounds(selectedPoints);
+    final bounds = geo.calculateBounds(selectedPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
@@ -940,7 +684,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       return;
     }
 
-    final bounds = _calculateBounds(allPoints);
+    final bounds = geo.calculateBounds(allPoints);
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
@@ -1134,7 +878,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       return Colors.blue;
     }
 
-    final lineColor = _parseHexColor(segment.transitLineColorHex);
+    final lineColor = parseHexColor(segment.transitLineColorHex);
     if (lineColor != null) {
       return lineColor;
     }
@@ -1313,7 +1057,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
   }
 
-  Color? _parseHexColor(String? hex) {
+  Color? parseHexColor(String? hex) {
     if (hex == null || hex.trim().isEmpty) {
       return null;
     }
@@ -1532,25 +1276,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       });
       await _fetchRoutesAndDurations();
     }
-  }
-
-  LatLngBounds _calculateBounds(List<LatLng> points) {
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final point in points) {
-      minLat = minLat < point.latitude ? minLat : point.latitude;
-      maxLat = maxLat > point.latitude ? maxLat : point.latitude;
-      minLng = minLng < point.longitude ? minLng : point.longitude;
-      maxLng = maxLng > point.longitude ? maxLng : point.longitude;
-    }
-
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
   }
 
   void _hideBuildingPopup() {
@@ -2135,9 +1860,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
 
     _lastCameraTarget = targetLocation;
-
-    _lastCameraTarget = targetLocation;
-
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(targetLocation, 16),
     );
@@ -2152,12 +1874,36 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-  Future<void> _onOriginRoomSubmitted(
-    String buildingCode,
-    String roomCode,
-  ) async {
-    print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
-  }
+  Offset? _computePopupPosition(BuildContext context) {
+  final screen = MediaQuery.of(context).size;
+  final topPad = MediaQuery.of(context).padding.top;
+
+  final anchor = widget.debugAnchorOffset ?? _anchorOffset;
+  if (anchor == null || _cameraMoving) return null;
+
+  final ax = anchor.dx;
+  final ay = anchor.dy;
+
+  final inView =
+      ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
+  if (!inView) return null;
+
+  double left = ax - (_popupW / 2);
+  double top = ay - (_popupH / 2);
+
+  const margin = 8.0;
+  final minLeft = margin;
+  final maxLeft = screen.width - _popupW - margin;
+  final minTop = topPad + margin;
+  final maxTop = screen.height - _popupH - margin;
+
+  if (left < minLeft) left = minLeft;
+  if (left > maxLeft) left = maxLeft;
+  if (top < minTop) top = minTop;
+  if (top > maxTop) top = maxTop;
+
+  return Offset(left, top);
+}
 
   Future<void> _onDestinationRoomSubmitted(
     String buildingCode,
@@ -2202,553 +1948,178 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final LatLng initialTarget = widget.initialCampus == Campus.loyola
-        ? concordiaLoyola
-        : concordiaSGW;
+Widget build(BuildContext context) {
+  final LatLng initialTarget =
+      widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
 
-    final Campus labelCampus = _selectedCampus != Campus.none
-        ? _selectedCampus
-        : _currentCampus;
+  final Campus labelCampus =
+      _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
 
-    final String campusLabel = labelCampus == Campus.sgw
-        ? 'SGW'
-        : labelCampus == Campus.loyola
-        ? 'Loyola'
-        : '';
+  final String campusLabel = labelCampus == Campus.sgw
+      ? 'SGW'
+      : labelCampus == Campus.loyola
+          ? 'Loyola'
+          : '';
 
-    final screen = MediaQuery.of(context).size;
-    final topPad = MediaQuery.of(context).padding.top;
+  final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
+  final popupPos = _computePopupPosition(context);
 
-    double? popupLeft;
-    double? popupTop;
+  return Scaffold(
+    body: Stack(
+      children: [
+        if (widget.debugDisableMap)
+          const SizedBox.expand()
+        else
+          OutdoorMapView(
+            initialTarget: initialTarget,
+            showIndoorStyle: _showIndoor,
+            indoorMapStyle: _indoorMapStyle,
+            onMapCreated: (c) => _mapController = c,
+            onCameraMove: (pos) {
+              _lastCameraTarget = pos.target;
+              if (_selectedBuildingCenter != null) _schedulePopupUpdate();
+            },
+            onCameraMoveStarted: () {
+              if (_selectedBuildingCenter == null) return;
+              setState(() => _cameraMoving = true);
+            },
+            onCameraIdle: () {
+              _syncToggleWithCameraCenter();
+              if (_selectedBuildingCenter == null) return;
+              setState(() => _cameraMoving = false);
+              _updatePopupOffset();
+            },
+            markers: {
+              ..._createMarkers(),
+              ..._roomLabelMarkers,
+            },
+            circles: _createCircles(),
+            polygons: {
+              ..._createBuildingPolygons(),
+              ..._indoorPolygons,
+            },
+            polylines: _routePolylines,
+          ),
 
-    // Use debug anchor offset if provided (for testing)
-    final anchorToUse = widget.debugAnchorOffset ?? _anchorOffset;
-
-    if (anchorToUse != null && !_cameraMoving) {
-      final ax = anchorToUse.dx;
-      final ay = anchorToUse.dy;
-
-      final inView =
-          ax >= 0 && ax <= screen.width && ay >= topPad && ay <= screen.height;
-
-      if (inView) {
-        double left = ax - (_popupW / 2);
-        double top = ay - (_popupH / 2);
-
-        const margin = 8.0;
-        final minLeft = margin;
-        final maxLeft = screen.width - _popupW - margin;
-        final minTop = topPad + margin;
-        final maxTop = screen.height - _popupH - margin;
-
-        if (left < minLeft) left = minLeft;
-        if (left > maxLeft) left = maxLeft;
-        if (top < minTop) top = minTop;
-        if (top > maxTop) top = maxTop;
-
-        popupLeft = left;
-        popupTop = top;
-      }
-    }
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          if (widget.debugDisableMap)
-            const SizedBox.expand()
-          else if (widget.debugDisableMap)
-            const SizedBox.expand()
-          else
-            GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: initialTarget,
-                zoom: 16,
-              ),
-              myLocationEnabled: false,
-              myLocationButtonEnabled: false,
-              style: _showIndoor
-                  ? _indoorMapStyle
-                  : null, // Hide POIs when indoor map is showing
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-
-              // onCameraMove: (pos) {
-              //_lastCameraTarget = pos.target;
-              // },
-              onCameraMove: (pos) {
-                _lastCameraTarget = pos.target;
-                if (_selectedBuildingCenter != null) {
-                  _schedulePopupUpdate();
-                }
-              },
-              onCameraMoveStarted: () {
-                if (_selectedBuildingCenter == null) return;
-                setState(() {
-                  _cameraMoving = true;
-                });
-              },
-              onCameraIdle: () {
-                _syncToggleWithCameraCenter();
-
-                if (_selectedBuildingCenter == null) return;
-                setState(() {
-                  _cameraMoving = false;
-                });
-                _updatePopupOffset();
-              },
-              markers: {..._createMarkers(), ..._roomLabelMarkers},
-              circles: _createCircles(),
-              polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
-              polylines: _routePolylines,
-            ),
-
-          if (_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: NavigationNextStepHeader(
-                  modeLabel: _selectedTravelMode.label,
-                  nextStep: _getCurrentNavStep(),
-                  onStop: _stopNavigation,
-                  onShowSteps: _openStepsForSelectedMode,
-                ),
-              ),
-            ),
-          if (!_showRoutePreview && !_isNavigating)
-            Positioned(
-              top: 65,
-              left: 20,
-              right: 20,
-              child: Builder(
-                builder: (context) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      MapSearchBar(
-                        key: const Key('destination_search_bar'),
-                        campusLabel: campusLabel,
-                        controller: _searchController,
-                        onSubmitted: _onSearchSubmitted,
-                        suggestions: _searchSuggestions,
-                        onSuggestionSelected: _onSuggestionSelected,
-                        onFocus: _hideBuildingPopup,
-                        selectedBuildingCode: _selectedBuildingPoly?.code,
-                        currentBuildingCode: _currentBuildingCode,
-                        userLocation: _currentLocation,
-                        originRoomController: _originRoomController,
-                        destinationRoomController: _destinationRoomController,
-                        onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-                        onOriginRoomSubmitted: _onOriginRoomSubmitted,
-                        isConcordiaBuilding: (buildingCode) {
-                          return buildingPolygons.any(
-                            (building) =>
-                                building.code?.toUpperCase() ==
-                                buildingCode.toUpperCase(),
-                          );
-                        },
-                      ),
-                      if (_showIndoor && _indoorFloors.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: PointerInterceptor(
-                            child: IntrinsicWidth(
-                              child: Container(
-                                height: 40,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8B1D3B),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.25),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value:
-                                          _selectedIndoorFloorAsset ??
-                                          _indoorFloors.first.assetPath,
-                                      isDense: true,
-                                      dropdownColor: const Color(0xFF8B1D3B),
-                                      icon: const Icon(
-                                        Icons.keyboard_arrow_down,
-                                        color: Colors.white,
-                                      ),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      items: _indoorFloors
-                                          .map(
-                                            (f) => DropdownMenuItem<String>(
-                                              value: f.assetPath,
-                                              child: Text(
-                                                f.label,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                      onChanged: (asset) async {
-                                        if (asset == null) return;
-                                        await _loadIndoorFloor(asset);
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                },
-              ),
-            ),
-
-          if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
-              popupLeft != null &&
-              popupTop != null)
-            Positioned(
-              left: popupLeft,
-              top: popupTop,
-              child: PointerInterceptor(
-                child: BuildingInfoPopup(
-                  // Show full name + code
-                  title:
-                      '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
-                  description:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.description ??
-                      'No description available.',
-                  accessibility:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.accessibility ??
-                      false,
-                  facilities:
-                      buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                  _selectedBuildingPoly)!
-                              .code]
-                          ?.facilities ??
-                      const [],
-                  onMore: () {
-                    final link =
-                        widget.debugLinkOverride ??
-                        (buildingInfoByCode[(widget.debugSelectedBuilding ??
-                                        _selectedBuildingPoly)!
-                                    .code]
-                                ?.link ??
-                            '');
-                    _openLink(link);
-                  },
-                  onClose: _closePopup,
-                  isLoggedIn: widget.isLoggedIn,
-                  onIndoorMap: _toggleIndoorMap,
-                  onGetDirections: _getDirections,
-                ),
-              ),
-            ),
-
+        if (_isNavigating)
           Positioned(
-            bottom: 70,
-            left: 20,
+            top: 80,
+            left: 0,
+            right: 0,
             child: PointerInterceptor(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'location_button',
-                    mini: true,
-                    onPressed: () {
-                      final loc = _currentLocation;
-                      if (loc == null) return;
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(loc, 17),
-                      );
-                    },
-                    child: const Icon(Icons.my_location),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.extended(
-                    heroTag: 'campus_button',
-                    onPressed: _goToMyLocation,
-                    icon: const Icon(Icons.school),
-                    label: Text(
-                      _currentCampus == Campus.sgw
-                          ? 'SGW Campus'
-                          : _currentCampus == Campus.loyola
-                          ? 'Loyola Campus'
-                          : 'Off Campus',
-                    ),
-                  ),
-                ],
+              child: NavigationNextStepHeader(
+                modeLabel: _selectedTravelMode.label,
+                nextStep: _getCurrentNavStep(),
+                onStop: _stopNavigation,
+                onShowSteps: _openStepsForSelectedMode,
               ),
             ),
           ),
 
-          // Route Preview Panel
-          if (_showRoutePreview && !_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: RoutePreviewPanel(
-                originText: _routeOriginText,
-                destinationText: _routeDestinationText,
-                onClose: _closeRoutePreview,
-                onSwitch: _switchOriginDestination,
-                onOriginChanged: _onRouteOriginChanged,
-                onDestinationChanged: _onRouteDestinationChanged,
-                onOriginSelected: _onRouteOriginSelected,
-                onDestinationSelected: _onRouteDestinationSelected,
-                originSuggestions: _routeOriginSuggestions,
-                destinationSuggestions: _routeDestinationSuggestions,
-                originBuildingCode: _routeOriginBuildingCode,
-                destinationBuildingCode: _routeDestinationBuildingCode,
-                originRoomController: _originRoomController,
-                destinationRoomController: _destinationRoomController,
-                onOriginRoomSubmitted: _onOriginRoomSubmitted,
-                onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-                isConcordiaBuilding: (buildingCode) {
-                  return buildingPolygons.any(
-                    (building) =>
-                        building.code?.toUpperCase() ==
-                        buildingCode.toUpperCase(),
-                  );
-                },
-              ),
+        if (_showRoutePreview && !_isNavigating)
+  Positioned(
+    top: 80,
+    left: 0,
+    right: 0,
+    child: RoutePreviewPanel(
+      originText: _routeOriginText,
+      destinationText: _routeDestinationText,
+      onClose: _closeRoutePreview,
+      onSwitch: _switchOriginDestination,
+      onOriginChanged: _onRouteOriginChanged,
+      onDestinationChanged: _onRouteDestinationChanged,
+      onOriginSelected: _onRouteOriginSelected,
+      onDestinationSelected: _onRouteDestinationSelected,
+      originSuggestions: _routeOriginSuggestions,
+      destinationSuggestions: _routeDestinationSuggestions,
+
+      originRoomController: _originRoomController,
+      destinationRoomController: _destinationRoomController,
+      onOriginRoomSubmitted: _onOriginRoomSubmitted,
+      onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+      originBuildingCode: _routeOriginBuildingCode,
+      destinationBuildingCode: _routeDestinationBuildingCode,
+      isConcordiaBuilding: (buildingCode) {
+        return buildingPolygons.any(
+          (b) => (b.code ?? '').toUpperCase() == buildingCode.toUpperCase(),
+        );
+      },
+    ),
+  ),
+
+          if (!_showRoutePreview && !_isNavigating)
+            OutdoorTopSearch(
+              campusLabel: campusLabel,
+              controller: _searchController,
+              onSubmitted: _onSearchSubmitted,
+              suggestions: _searchSuggestions,
+              onSuggestionSelected: _onSuggestionSelected,
+              onFocus: _hideBuildingPopup,
+              originRoomController: _originRoomController,
+              destinationRoomController: _destinationRoomController,
+              onOriginRoomSubmitted: _onOriginRoomSubmitted,
+              onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+              selectedBuildingCode: _selectedBuildingPoly?.code,
+              currentBuildingCode: _currentBuildingCode,
+              userLocation: _currentLocation,
+              isConcordiaBuilding: (buildingCode) {
+                return buildingPolygons.any(
+                  (b) =>
+                      (b.code ?? '').toUpperCase() ==
+                      buildingCode.toUpperCase(),
+                );
+              },
+              showIndoor: _showIndoor,
+              floors: _indoorFloors,
+              selectedAssetPath: _selectedIndoorFloorAsset,
+              onFloorChanged: _loadIndoorFloor,
             ),
+        if (selectedBuilding != null && popupPos != null)
+          OutdoorBuildingPopup(
+            building: selectedBuilding,
+            position: popupPos,
+            buildingInfoByCode: buildingInfoByCode,
+            debugLinkOverride: widget.debugLinkOverride,
+            onClose: _closePopup,
+            onIndoorMap: _toggleIndoorMap,
+            onGetDirections: _getDirections,
+            onOpenLink: _openLink,
+            isLoggedIn: widget.isLoggedIn,
+          ),
 
-          if (_showRoutePreview)
-            Positioned(
-              bottom: 25,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: Center(
-                  child: RouteTravelModeBar(
-                    selectedTravelMode: _selectedTravelMode,
-                    onTravelModeSelected: _onTravelModeSelected,
-                    modeDurations: _routeDurations,
-                    isLoadingDurations: _isLoadingRouteData,
-                    onClose: _closeRoutePreview,
-                    onStart: _startNavigation,
-                    isNavigating: _isNavigating,
-                    onShowSteps: _openStepsForSelectedMode,
-                    transitDetails: _buildTransitDetailItems(),
-                    modeDistances: _routeDistances,
-                    modeArrivalTimes: _routeArrivalTimes,
-                  ),
-                ),
-              ),
-            ),
-
-          if (!_showRoutePreview)
-            Positioned(
-              bottom: 25,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 280,
-                  child: CampusToggle(
-                    currentCampus: _selectedCampus,
-                    onCampusChanged: _switchCampus,
-                  ),
-                ),
-              ),
-            ),
-
-          // Invisible gesture detectors for building polygons (for testing)
-          ..._createBuildingGestureDetectors(),
-        ],
-      ),
-    );
-  }
-
-  Set<Polygon> _geoJsonToPolygons(Map<String, dynamic> geojson) {
-    final features = (geojson['features'] as List).cast<dynamic>();
-
-    final polygons = <Polygon>{};
-
-    for (final f in features) {
-      final feature = f as Map<String, dynamic>;
-      final geometry = feature['geometry'] as Map<String, dynamic>;
-      if (geometry['type'] != 'Polygon') continue;
-
-      final rings = geometry['coordinates'] as List;
-      if (rings.isEmpty) continue;
-
-      final outer = rings[0] as List;
-
-      final points = outer.map<LatLng>((p) {
-        final coords = p as List;
-        final lng = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng); // GeoJSON is [lng,lat]
-      }).toList();
-
-      if (points.length < 3) continue;
-
-      final props =
-          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
-      final id = (props['ref'] ?? polygons.length).toString();
-
-      // Determine fill color based on feature type
-      Color fillColor;
-      if (props['escalators'] == 'yes') {
-        fillColor = Colors.green; // Escalator = green
-      } else if (props['highway'] == 'elevator') {
-        fillColor = Colors.orange; // Elevator = orange
-      } else if (props['highway'] == 'steps') {
-        fillColor = Colors.pink; // Steps = pink
-      } else if (props['amenity'] == 'toilets') {
-        fillColor = Colors.blue; // Toilets = blue
-      } else if (props['indoor'] == 'corridor') {
-        fillColor = const Color.fromARGB(
-          255,
-          232,
-          122,
-          149,
-        ); // Corridor = lighter red
-      } else {
-        fillColor = const Color(0xFF800020); // Default room = dark red
-      }
-
-      polygons.add(
-        Polygon(
-          polygonId: PolygonId('indoor-$id'),
-          points: points,
-          strokeWidth: 2,
-          strokeColor: Colors.black,
-          fillColor: fillColor.withOpacity(1.0),
-          zIndex: 20,
+        OutdoorBottomControls(
+          currentLocation: _currentLocation,
+          currentCampus: _currentCampus,
+          onGoToMyLocation: _goToMyLocation,
+          onCenterOnUser: () {
+            final loc = _currentLocation;
+            if (loc == null) return;
+            _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
+          },
         ),
-      );
-    }
 
-    return polygons;
-  }
-
-  Future<BitmapDescriptor> _createTextBitmap(
-    String text, {
-    double fontSize = 10,
-  }) async {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: fontSize,
-          fontWeight: FontWeight.bold,
+        OutdoorBottomBar(
+          showRoutePreview: _showRoutePreview,
+          isNavigating: _isNavigating,
+          selectedCampus: _selectedCampus,
+          onCampusChanged: _switchCampus,
+          selectedTravelMode: _selectedTravelMode,
+          onTravelModeSelected: _onTravelModeSelected,
+          routeDurations: _routeDurations,
+          routeDistances: _routeDistances,
+          routeArrivalTimes: _routeArrivalTimes,
+          isLoadingRouteData: _isLoadingRouteData,
+          onCloseRoutePreview: _closeRoutePreview,
+          onStartNavigation: _startNavigation,
+          onShowSteps: _openStepsForSelectedMode,
+          transitDetails: _buildTransitDetailItems(),
         ),
-      ),
-      textDirection: ui.TextDirection.ltr,
-    );
-    painter.layout();
 
-    final width = painter.width.ceil();
-    final height = painter.height.ceil();
-
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(
-      recorder,
-      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-    );
-
-    painter.paint(canvas, Offset.zero);
-
-    final picture = recorder.endRecording();
-    ui.Image? img;
-    ByteData? byteData;
-    try {
-      img = await picture.toImage(width, height);
-      byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    } finally {
-      img?.dispose();
-      picture.dispose();
-    }
-    final Uint8List bytes = byteData!.buffer.asUint8List();
-
-    return BitmapDescriptor.bytes(bytes);
-  }
-
-  /// Creates text labels at the center of each room polygon
-  Future<Set<Marker>> _createRoomLabels(Map<String, dynamic> geojson) async {
-    final features = (geojson['features'] as List).cast<dynamic>();
-    final markers = <Marker>{};
-    int index = 0;
-
-    for (final f in features) {
-      final feature = f as Map<String, dynamic>;
-      final geometry = feature['geometry'] as Map<String, dynamic>;
-      final props =
-          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
-
-      if (geometry['type'] != 'Polygon') continue;
-      if (props['ref'] == null) continue;
-
-      final rings = geometry['coordinates'] as List;
-      if (rings.isEmpty) continue;
-      final outer = rings[0] as List;
-
-      final points = outer.map<LatLng>((p) {
-        final coords = p as List;
-        final lng = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng);
-      }).toList();
-
-      if (points.length < 3) continue;
-
-      // Skip very small polygons where text won't fit
-      final area = _polygonArea(points);
-      if (area < 1e-10) continue;
-
-      final center = _polygonCenter(points);
-      final ref = props['ref'].toString();
-
-      // Choose font size based on polygon area
-      final double fontSize = area > 5e-8 ? 10 : 8;
-      final icon = await _createTextBitmap(ref, fontSize: fontSize);
-
-      markers.add(
-        Marker(
-          markerId: MarkerId('room-label-${index++}-$ref'),
-          position: center,
-          icon: icon,
-          anchor: const Offset(0.5, 0.5),
-          flat: true,
-          zIndex: 30,
-          consumeTapEvents: false,
-          infoWindow: InfoWindow.noText,
-        ),
-      );
-    }
-
-    return markers;
-  }
+        ..._createBuildingGestureDetectors(),
+      ],
+    ),
+  );
+}
 
   static const String _indoorMapStyle = '''
   [

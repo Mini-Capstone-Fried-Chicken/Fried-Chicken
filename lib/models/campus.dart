@@ -1,0 +1,1 @@
+enum Campus { sgw, loyola, none }
