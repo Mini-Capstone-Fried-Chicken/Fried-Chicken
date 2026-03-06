@@ -20,7 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-
+import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/data/building_polygons.dart';
 import 'package:campus_app/shared/widgets/campus_toggle.dart';
