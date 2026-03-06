@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
+import 'package:campus_app/models/campus.dart';
 
 class FakeGeolocator extends GeolocatorPlatform {
   bool _isLocationServiceEnabled = true;

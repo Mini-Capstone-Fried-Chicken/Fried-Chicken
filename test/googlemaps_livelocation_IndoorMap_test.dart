@@ -30,6 +30,7 @@ import 'package:campus_app/shared/widgets/route_preview_panel.dart';
 import 'package:campus_app/services/google_directions_service.dart';
 import 'package:campus_app/services/navigation_steps.dart';
 import 'package:campus_app/features/indoor/data/building_info.dart';
+import 'package:campus_app/models/campus.dart';
 
 // ============================================================================
 // GoogleMap MethodChannel mock

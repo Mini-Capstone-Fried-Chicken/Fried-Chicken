@@ -1,7 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// SGW shuttle stop — Hall Building entrance on De Maisonneuve Blvd W
-const LatLng shuttleStopSGW = LatLng(45.497302, -73.578401);
+const LatLng shuttleStopSGW = LatLng(45.497194, -73.578452);
 
 /// Loyola shuttle stop — main entrance of the Loyola campus
 const LatLng shuttleStopLoyola = LatLng(45.458052, -73.639134);

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:campus_app/shared/widgets/campus_toggle.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/features/indoor/data/building_info.dart';
+import 'package:campus_app/models/campus.dart';
 
 void main() {
   group('CampusToggle', () {
