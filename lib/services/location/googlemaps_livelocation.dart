@@ -29,6 +29,7 @@ import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
 import 'package:campus_app/models/campus.dart';
 import '../../shared/widgets/outdoor/outdoor_map_view.dart';
 import '../indoor_maps/indoor_map_repository.dart';
+import '../../shared/widgets/outdoor/outdoor_top_search.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -1960,14 +1961,12 @@ Widget build(BuildContext context) {
           ? 'Loyola'
           : '';
 
-  // --- building + popup positioning (depends on device metrics + camera)
   final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
   final popupPos = _computePopupPosition(context);
 
   return Scaffold(
     body: Stack(
       children: [
-        // 1) Map (refactored)
         if (widget.debugDisableMap)
           const SizedBox.expand()
         else
@@ -2002,7 +2001,6 @@ Widget build(BuildContext context) {
             polylines: _routePolylines,
           ),
 
-        // 2) Navigation header
         if (_isNavigating)
           Positioned(
             top: 80,
@@ -2018,109 +2016,36 @@ Widget build(BuildContext context) {
             ),
           ),
 
-        // 3) Top search (RAW room feature kept)
         if (!_showRoutePreview && !_isNavigating)
-          Positioned(
-            top: 65,
-            left: 20,
-            right: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                MapSearchBar(
-                  key: const Key('destination_search_bar'),
-                  campusLabel: campusLabel,
-                  controller: _searchController,
-                  onSubmitted: _onSearchSubmitted,
-                  suggestions: _searchSuggestions,
-                  onSuggestionSelected: _onSuggestionSelected,
-                  onFocus: _hideBuildingPopup,
+          OutdoorTopSearch(
+            campusLabel: campusLabel,
+            controller: _searchController,
+            onSubmitted: _onSearchSubmitted,
+            suggestions: _searchSuggestions,
+            onSuggestionSelected: _onSuggestionSelected,
+            onFocus: _hideBuildingPopup,
 
-                  // room feature props
-                  originRoomController: _originRoomController,
-                  destinationRoomController: _destinationRoomController,
-                  onOriginRoomSubmitted: _onOriginRoomSubmitted,
-                  onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-                  selectedBuildingCode: _selectedBuildingPoly?.code,
-                  currentBuildingCode: _currentBuildingCode,
-                  userLocation: _currentLocation,
-                  isConcordiaBuilding: (buildingCode) {
-                    return buildingPolygons.any(
-                      (b) =>
-                          (b.code ?? '').toUpperCase() ==
-                          buildingCode.toUpperCase(),
-                    );
-                  },
-                ),
+            originRoomController: _originRoomController,
+            destinationRoomController: _destinationRoomController,
+            onOriginRoomSubmitted: _onOriginRoomSubmitted,
+            onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+            selectedBuildingCode: _selectedBuildingPoly?.code,
+            currentBuildingCode: _currentBuildingCode,
+            userLocation: _currentLocation,
+            isConcordiaBuilding: (buildingCode) {
+              return buildingPolygons.any(
+                (b) =>
+                    (b.code ?? '').toUpperCase() ==
+                    buildingCode.toUpperCase(),
+              );
+            },
 
-                // indoor dropdown (same behavior)
-                if (_showIndoor && _indoorFloors.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: PointerInterceptor(
-                      child: IntrinsicWidth(
-                        child: Container(
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B1D3B),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedIndoorFloorAsset ??
-                                    _indoorFloors.first.assetPath,
-                                isDense: true,
-                                dropdownColor: const Color(0xFF8B1D3B),
-                                icon: const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: Colors.white,
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                items: _indoorFloors
-                                    .map(
-                                      (f) => DropdownMenuItem<String>(
-                                        value: f.assetPath,
-                                        child: Text(
-                                          f.label,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (asset) async {
-                                  if (asset == null) return;
-                                  await _loadIndoorFloor(asset);
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            showIndoor: _showIndoor,
+            floors: _indoorFloors,
+            selectedAssetPath: _selectedIndoorFloorAsset,
+            onFloorChanged: _loadIndoorFloor,
           ),
 
-        // 4) Building popup (refactor widget)
         if (selectedBuilding != null && popupPos != null)
           OutdoorBuildingPopup(
             building: selectedBuilding,
@@ -2134,7 +2059,6 @@ Widget build(BuildContext context) {
             isLoggedIn: widget.isLoggedIn,
           ),
 
-        // 5) Bottom-left controls (refactor widget)
         OutdoorBottomControls(
           currentLocation: _currentLocation,
           currentCampus: _currentCampus,
@@ -2146,7 +2070,6 @@ Widget build(BuildContext context) {
           },
         ),
 
-        // 6) Bottom bar (refactor widget)
         OutdoorBottomBar(
           showRoutePreview: _showRoutePreview,
           isNavigating: _isNavigating,
@@ -2164,7 +2087,6 @@ Widget build(BuildContext context) {
           transitDetails: _buildTransitDetailItems(),
         ),
 
-        // 7) Invisible gesture detectors (testing)
         ..._createBuildingGestureDetectors(),
       ],
     ),
