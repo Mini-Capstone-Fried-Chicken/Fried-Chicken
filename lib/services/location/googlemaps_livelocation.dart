@@ -2016,36 +2016,64 @@ Widget build(BuildContext context) {
             ),
           ),
 
-        if (!_showRoutePreview && !_isNavigating)
-          OutdoorTopSearch(
-            campusLabel: campusLabel,
-            controller: _searchController,
-            onSubmitted: _onSearchSubmitted,
-            suggestions: _searchSuggestions,
-            onSuggestionSelected: _onSuggestionSelected,
-            onFocus: _hideBuildingPopup,
+        if (_showRoutePreview && !_isNavigating)
+  Positioned(
+    top: 80,
+    left: 0,
+    right: 0,
+    child: RoutePreviewPanel(
+      originText: _routeOriginText,
+      destinationText: _routeDestinationText,
+      onClose: _closeRoutePreview,
+      onSwitch: _switchOriginDestination,
+      onOriginChanged: _onRouteOriginChanged,
+      onDestinationChanged: _onRouteDestinationChanged,
+      onOriginSelected: _onRouteOriginSelected,
+      onDestinationSelected: _onRouteDestinationSelected,
+      originSuggestions: _routeOriginSuggestions,
+      destinationSuggestions: _routeDestinationSuggestions,
 
-            originRoomController: _originRoomController,
-            destinationRoomController: _destinationRoomController,
-            onOriginRoomSubmitted: _onOriginRoomSubmitted,
-            onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-            selectedBuildingCode: _selectedBuildingPoly?.code,
-            currentBuildingCode: _currentBuildingCode,
-            userLocation: _currentLocation,
-            isConcordiaBuilding: (buildingCode) {
-              return buildingPolygons.any(
-                (b) =>
-                    (b.code ?? '').toUpperCase() ==
-                    buildingCode.toUpperCase(),
-              );
-            },
+      originRoomController: _originRoomController,
+      destinationRoomController: _destinationRoomController,
+      onOriginRoomSubmitted: _onOriginRoomSubmitted,
+      onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+      originBuildingCode: _routeOriginBuildingCode,
+      destinationBuildingCode: _routeDestinationBuildingCode,
+      isConcordiaBuilding: (buildingCode) {
+        return buildingPolygons.any(
+          (b) => (b.code ?? '').toUpperCase() == buildingCode.toUpperCase(),
+        );
+      },
+    ),
+  ),
 
-            showIndoor: _showIndoor,
-            floors: _indoorFloors,
-            selectedAssetPath: _selectedIndoorFloorAsset,
-            onFloorChanged: _loadIndoorFloor,
-          ),
-
+          if (!_showRoutePreview && !_isNavigating)
+            OutdoorTopSearch(
+              campusLabel: campusLabel,
+              controller: _searchController,
+              onSubmitted: _onSearchSubmitted,
+              suggestions: _searchSuggestions,
+              onSuggestionSelected: _onSuggestionSelected,
+              onFocus: _hideBuildingPopup,
+              originRoomController: _originRoomController,
+              destinationRoomController: _destinationRoomController,
+              onOriginRoomSubmitted: _onOriginRoomSubmitted,
+              onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+              selectedBuildingCode: _selectedBuildingPoly?.code,
+              currentBuildingCode: _currentBuildingCode,
+              userLocation: _currentLocation,
+              isConcordiaBuilding: (buildingCode) {
+                return buildingPolygons.any(
+                  (b) =>
+                      (b.code ?? '').toUpperCase() ==
+                      buildingCode.toUpperCase(),
+                );
+              },
+              showIndoor: _showIndoor,
+              floors: _indoorFloors,
+              selectedAssetPath: _selectedIndoorFloorAsset,
+              onFloorChanged: _loadIndoorFloor,
+            ),
         if (selectedBuilding != null && popupPos != null)
           OutdoorBuildingPopup(
             building: selectedBuilding,
