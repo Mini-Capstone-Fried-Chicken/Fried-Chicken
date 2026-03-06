@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -23,6 +22,8 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../../services/indoor_maps/indoor_map_controller.dart';
+import '../../services/indoor_maps/indoor_geojson_renderer.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -128,6 +129,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
+  Set<Marker> _amenityMarkers = {};
+  double _currentZoom = 18.0;
+  double _lastIconZoom = 18.0;
 
   Set<Polyline> _routePolylines = {};
 
@@ -357,25 +361,43 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Future<void> _loadIndoorFloor(String assetPath) async {
     try {
-      final repo = IndoorMapRepository();
-      final geo = await repo.loadGeoJsonAsset(assetPath);
-
-      final polys = _geoJsonToPolygons(geo);
-      final labels = await _createRoomLabels(geo);
+      final controller = IndoorMapController();
+      final result = await controller.loadFloor(assetPath, zoom: _currentZoom);
 
       if (!mounted) return;
       setState(() {
         _showIndoor = true;
         _selectedIndoorFloorAsset = assetPath;
-        _indoorPolygons = polys;
-        _indoorGeoJson = geo;
-        _roomLabelMarkers = labels;
+        _indoorPolygons = result.polygons;
+        _indoorGeoJson = result.geoJson;
+        _roomLabelMarkers = result.labels;
+        _amenityMarkers = result.amenityIcons;
+        _lastIconZoom = _currentZoom;
       });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load indoor floor: $e')),
       );
+    }
+  }
+
+  Future<void> _reloadAmenityIconsForZoom() async {
+    if (_indoorGeoJson == null || !_showIndoor) return;
+
+    try {
+      final amenityIcons = await IndoorGeoJsonRenderer.createAmenityIcons(
+        _indoorGeoJson!,
+        zoom: _currentZoom,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _amenityMarkers = amenityIcons;
+        _lastIconZoom = _currentZoom;
+      });
+    } catch (e) {
+      // Silently fail - not critical
     }
   }
 
@@ -417,18 +439,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
 
     try {
-      final repo = IndoorMapRepository();
-      final geo = await repo.loadGeoJsonAsset(assetPath);
-
-      final polys = _geoJsonToPolygons(geo);
-      final labels = await _createRoomLabels(geo);
+      final controller = IndoorMapController();
+      final result = await controller.loadFloor(assetPath);
 
       if (!mounted) return;
       setState(() {
         _showIndoor = true;
-        _indoorPolygons = polys;
-        _indoorGeoJson = geo;
-        _roomLabelMarkers = labels;
+        _indoorPolygons = result.polygons;
+        _indoorGeoJson = result.geoJson;
+        _roomLabelMarkers = result.labels;
+        _amenityMarkers = result.amenityIcons;
       });
     } catch (e) {
       if (!mounted) return;
@@ -449,6 +469,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorPolygons = {};
         _indoorGeoJson = null;
         _roomLabelMarkers = {};
+        _amenityMarkers = {};
       });
       return;
     }
@@ -2280,6 +2301,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               // },
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
+                _currentZoom = pos.zoom;
                 if (_selectedBuildingCenter != null) {
                   _schedulePopupUpdate();
                 }
@@ -2293,13 +2315,22 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onCameraIdle: () {
                 _syncToggleWithCameraCenter();
 
+                // Reload amenity icons if zoom changed significantly
+                if (_showIndoor && (_currentZoom - _lastIconZoom).abs() >= 1.0) {
+                  _reloadAmenityIconsForZoom();
+                }
+
                 if (_selectedBuildingCenter == null) return;
                 setState(() {
                   _cameraMoving = false;
                 });
                 _updatePopupOffset();
               },
-              markers: {..._createMarkers(), ..._roomLabelMarkers},
+              markers: {
+                ..._createMarkers(),
+                if (_showIndoor) ..._roomLabelMarkers,
+                if (_showIndoor) ..._amenityMarkers,
+              },
               circles: _createCircles(),
               polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
               polylines: _routePolylines,
@@ -2348,7 +2379,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                         isConcordiaBuilding: (buildingCode) {
                           return buildingPolygons.any(
                             (building) =>
-                                building.code?.toUpperCase() ==
+                                building.code.toUpperCase() ==
                                 buildingCode.toUpperCase(),
                           );
                         },
@@ -2533,7 +2564,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 isConcordiaBuilding: (buildingCode) {
                   return buildingPolygons.any(
                     (building) =>
-                        building.code?.toUpperCase() ==
+                        building.code.toUpperCase() ==
                         buildingCode.toUpperCase(),
                   );
                 },
