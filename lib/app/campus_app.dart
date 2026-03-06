@@ -9,10 +9,10 @@ class CampusApp extends StatefulWidget {
   const CampusApp({super.key});
 
   @override
-  State<CampusApp> createState() => _CampusAppState();
+  State<CampusApp> createState() => CampusAppState();
 }
 
-class _CampusAppState extends State<CampusApp> {
+class CampusAppState extends State<CampusApp> {
   static const Map<String, String> indoorAssetsById = {
     // SVGs
     "MB-1": "assets/indoor_svg/MB-1.svg",
@@ -35,7 +35,7 @@ class _CampusAppState extends State<CampusApp> {
     "LB-5": "assets/indoor_svg/LB-5.png",
   };
 
-  String? _findAssetPath(String id) {
+  String? findAssetPath(String id) {
     final direct = indoorAssetsById[id];
     if (direct != null) return direct;
 
@@ -75,7 +75,7 @@ class _CampusAppState extends State<CampusApp> {
       ),
 
       onGenerateRoute: (settings) {
-        return RouteFactoryIndoor.createRoute(settings, _findAssetPath);
+        return RouteFactoryIndoor.createRoute(settings, findAssetPath);
       },
     );
   }
