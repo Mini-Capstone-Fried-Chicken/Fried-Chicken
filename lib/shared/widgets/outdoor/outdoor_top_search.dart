@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../../../shared/widgets/map_search_bar.dart';
 import '../../../shared/widgets/indoor_floor_dropdown.dart';
 import '../../../services/indoor_maps/indoor_floor_config.dart';
 import '../../../data/search_suggestion.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class OutdoorTopSearch extends StatelessWidget {
   final String campusLabel;
@@ -22,7 +23,8 @@ class OutdoorTopSearch extends StatelessWidget {
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
   final void Function(String buildingCode, String roomCode) onOriginRoomSubmitted;
-  final void Function(String buildingCode, String roomCode) onDestinationRoomSubmitted;
+  final void Function(String buildingCode, String roomCode)
+      onDestinationRoomSubmitted;
 
   final String? selectedBuildingCode;
   final String? currentBuildingCode;
@@ -69,6 +71,14 @@ class OutdoorTopSearch extends StatelessWidget {
             suggestions: suggestions,
             onSuggestionSelected: onSuggestionSelected,
             onFocus: onFocus,
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
+            onOriginRoomSubmitted: onOriginRoomSubmitted,
+            onDestinationRoomSubmitted: onDestinationRoomSubmitted,
+            selectedBuildingCode: selectedBuildingCode,
+            currentBuildingCode: currentBuildingCode,
+            userLocation: userLocation,
+            isConcordiaBuilding: isConcordiaBuilding,
           ),
           if (showIndoor && floors.isNotEmpty) ...[
             const SizedBox(height: 10),
