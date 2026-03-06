@@ -23,6 +23,7 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../../services/concordia_shuttle_service.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -98,7 +99,7 @@ class _IndoorFloorOption {
     required this.label,
     required this.assetPath,
   });
-  }
+}
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
@@ -113,9 +114,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   List<int> _availableFloorsForSelectedBuilding = const [1];
 
   // --- Indoor floors state ---
-  String? _indoorBuildingCode; // building currently shown in indoor mode
-  String? _selectedIndoorFloorAsset; // which floor file is loaded
-  List<_IndoorFloorOption> _indoorFloors = []; // dropdown options
+  String? _indoorBuildingCode;
+  String? _selectedIndoorFloorAsset;
+  List<_IndoorFloorOption> _indoorFloors = [];
 
   GoogleMapController? _mapController;
 
@@ -124,7 +125,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BuildingPolygon? _currentBuildingPoly;
   BuildingPolygon? _selectedBuildingPoly;
   // ignore: unused_field
-  SearchResult? _selectedSearchResult; // For non-Concordia places
+  SearchResult? _selectedSearchResult;
   // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
@@ -146,15 +147,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   final Map<String, List<NavigationStep>> _routeStepsByMode = {};
   // --- Navigation camera follow state ---
-  bool _navigationFollowUser =
-      false; // true while we follow user during navigation
+  bool _navigationFollowUser = false;
   DateTime _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
-  // tuning params (adjust as desired)
   static const double _navZoom = 18.0;
-  static const double _navTilt =
-      60.0; // degrees — gives angled view like Google Maps
-  // Default aerial map view
-  static const double _defaultZoom = 15.0; // adjust to your normal map zoom
+  static const double _navTilt = 60.0;
+  static const double _defaultZoom = 15.0;
   static const double _defaultTilt = 0.0;
   static const double _defaultBearing = 0.0;
   // ignore: unused_field
@@ -162,21 +159,26 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // ignore: unused_field
   static const double _navDistanceThresholdMeters = 5.0;
   static const Duration _navCameraMinInterval = Duration(milliseconds: 700);
-  // Navigation session state (when user presses Start)
   bool _isNavigating = false;
-  String? _navModeKey; // 'walking'/'driving'/'bicycling'/'transit'
+  String? _navModeKey;
   int _navStepIndex = 0;
   bool _isLoadingRouteData = false;
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
   Timer? _routeDebounceTimer;
 
+  // Google Directions modes only — shuttle is handled separately
   static const List<RouteTravelMode> _supportedTravelModes = [
     RouteTravelMode.driving,
     RouteTravelMode.walking,
     RouteTravelMode.bicycling,
     RouteTravelMode.transit,
   ];
+
+  List<ShuttleDeparture> _shuttleNextBuses = [];
+  int? _shuttleWalkingMinutes;
+  String _shuttleNearestStop = 'SGW';
+  BitmapDescriptor? _shuttleStopIcon;
 
   StreamSubscription<Position>? _posSub;
 
@@ -194,75 +196,75 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   LatLng? _lastCameraTarget;
 
   List<_IndoorFloorOption> _floorsForBuilding(String code) {
-  switch (code.toUpperCase()) {
-    case 'HALL':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h2.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '8',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h8.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '9',
-          assetPath: 'assets/indoor_maps/geojson/Hall/h9.geojson.json',
-        ),
-      ];
+    switch (code.toUpperCase()) {
+      case 'HALL':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h2.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '8',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h8.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '9',
+            assetPath: 'assets/indoor_maps/geojson/Hall/h9.geojson.json',
+          ),
+        ];
 
-    case 'MB':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/MB/mb1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
-        ),
-      ];
+      case 'MB':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/MB/mb1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
+          ),
+        ];
 
-    case 'VE':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/VE/ve1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/VE/ve2.geojson.json',
-        ),
-      ];
+      case 'VE':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/VE/ve1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/VE/ve2.geojson.json',
+          ),
+        ];
 
-    case 'VL':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/VL/vl1.geojson.json',
-        ),
-        _IndoorFloorOption(
-          label: '2',
-          assetPath: 'assets/indoor_maps/geojson/VL/vl2.geojson.json',
-        ),
-      ];
+      case 'VL':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/VL/vl1.geojson.json',
+          ),
+          _IndoorFloorOption(
+            label: '2',
+            assetPath: 'assets/indoor_maps/geojson/VL/vl2.geojson.json',
+          ),
+        ];
 
-    case 'CC':
-      return const [
-        _IndoorFloorOption(
-          label: '1',
-          assetPath: 'assets/indoor_maps/geojson/CC/cc1.geojson.json',
-        ),
-      ];
+      case 'CC':
+        return const [
+          _IndoorFloorOption(
+            label: '1',
+            assetPath: 'assets/indoor_maps/geojson/CC/cc1.geojson.json',
+          ),
+        ];
 
-    default:
-      return const [];
+      default:
+        return const [];
+    }
   }
-}
 
   Campus _campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
@@ -315,158 +317,153 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   List<int> _getAvailableFloorsForBuilding(String code) {
-  switch (code.toUpperCase()) {
-    case 'HALL':
-      return [1]; // change later if you add more floors
-    case 'MB':
-      return [1];
-    case 'VE':
-      return [1];
-    case 'VL':
-      return [1];
-    case 'CC':
-      return [1];
-    default:
-      return [];
-  }
-}
-
-String? _getIndoorAssetPath(String buildingCode, int floor) {
-  final code = buildingCode.toUpperCase();
-  switch (code) {
-    case 'HALL':
-      return 'assets/indoor_maps/geojson/Hall/h$floor.geojson.json';
-    case 'MB':
-      return 'assets/indoor_maps/geojson/MB/mb$floor.geojson.json';
-    case 'VE':
-      return 'assets/indoor_maps/geojson/VE/ve$floor.geojson.json';
-    case 'VL':
-      return 'assets/indoor_maps/geojson/VL/vl$floor.geojson.json';
-    case 'CC':
-      return 'assets/indoor_maps/geojson/CC/cc$floor.geojson.json';
-    default:
-      return null;
-  }
-}
-
-Future<void> _loadIndoorFloor(String assetPath) async {
-  try {
-    final repo = IndoorMapRepository();
-    final geo = await repo.loadGeoJsonAsset(assetPath);
-
-    final polys = _geoJsonToPolygons(geo);
-    final labels = await _createRoomLabels(geo);
-
-    if (!mounted) return;
-    setState(() {
-      _showIndoor = true;
-      _selectedIndoorFloorAsset = assetPath;
-      _indoorPolygons = polys;
-      _indoorGeoJson = geo;
-      _roomLabelMarkers = labels;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to load indoor floor: $e')),
-    );
-  }
-}
-
-Future<void> _loadIndoorMapForSelectedBuilding() async {
-  final b = _selectedBuildingPoly;
-  if (b == null) return;
-
-  // If the current building doesn’t support indoor, block it
-  final floors = _getAvailableFloorsForBuilding(b.code);
-  if (floors.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Indoor map currently only available for Hall, MB, VE, VL, and CC'),
-      ),
-    );
-    return;
-  }
-
-  // Keep available floors in sync
-  if (!mounted) return;
-  setState(() {
-    _availableFloorsForSelectedBuilding = floors;
-
-    // If current selected floor isn't available, snap to first
-    if (!floors.contains(_selectedIndoorFloor)) {
-      _selectedIndoorFloor = floors.first;
+    switch (code.toUpperCase()) {
+      case 'HALL':
+        return [1];
+      case 'MB':
+        return [1];
+      case 'VE':
+        return [1];
+      case 'VL':
+        return [1];
+      case 'CC':
+        return [1];
+      default:
+        return [];
     }
-  });
+  }
 
-  final assetPath = _getIndoorAssetPath(b.code, _selectedIndoorFloor);
-  if (assetPath == null) return;
+  String? _getIndoorAssetPath(String buildingCode, int floor) {
+    final code = buildingCode.toUpperCase();
+    switch (code) {
+      case 'HALL':
+        return 'assets/indoor_maps/geojson/Hall/h$floor.geojson.json';
+      case 'MB':
+        return 'assets/indoor_maps/geojson/MB/mb$floor.geojson.json';
+      case 'VE':
+        return 'assets/indoor_maps/geojson/VE/ve$floor.geojson.json';
+      case 'VL':
+        return 'assets/indoor_maps/geojson/VL/vl$floor.geojson.json';
+      case 'CC':
+        return 'assets/indoor_maps/geojson/CC/cc$floor.geojson.json';
+      default:
+        return null;
+    }
+  }
 
-  setState(() {
-    _isLoadingRouteData = false; // just to avoid accidental UI confusion (optional)
-  });
+  Future<void> _loadIndoorFloor(String assetPath) async {
+    try {
+      final repo = IndoorMapRepository();
+      final geo = await repo.loadGeoJsonAsset(assetPath);
 
-  try {
-    final repo = IndoorMapRepository();
-    final geo = await repo.loadGeoJsonAsset(assetPath);
+      final polys = _geoJsonToPolygons(geo);
+      final labels = await _createRoomLabels(geo);
 
-    final polys = _geoJsonToPolygons(geo);
-    final labels = await _createRoomLabels(geo);
+      if (!mounted) return;
+      setState(() {
+        _showIndoor = true;
+        _selectedIndoorFloorAsset = assetPath;
+        _indoorPolygons = polys;
+        _indoorGeoJson = geo;
+        _roomLabelMarkers = labels;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load indoor floor: $e')),
+      );
+    }
+  }
+
+  Future<void> _loadIndoorMapForSelectedBuilding() async {
+    final b = _selectedBuildingPoly;
+    if (b == null) return;
+
+    final floors = _getAvailableFloorsForBuilding(b.code);
+    if (floors.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Indoor map currently only available for Hall, MB, VE, VL, and CC'),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     setState(() {
-      _showIndoor = true;
-      _indoorPolygons = polys;
-      _indoorGeoJson = geo;
-      _roomLabelMarkers = labels;
+      _availableFloorsForSelectedBuilding = floors;
+
+      if (!floors.contains(_selectedIndoorFloor)) {
+        _selectedIndoorFloor = floors.first;
+      }
     });
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to load indoor map: $e')),
-    );
+
+    final assetPath = _getIndoorAssetPath(b.code, _selectedIndoorFloor);
+    if (assetPath == null) return;
+
+    setState(() {
+      _isLoadingRouteData = false;
+    });
+
+    try {
+      final repo = IndoorMapRepository();
+      final geo = await repo.loadGeoJsonAsset(assetPath);
+
+      final polys = _geoJsonToPolygons(geo);
+      final labels = await _createRoomLabels(geo);
+
+      if (!mounted) return;
+      setState(() {
+        _showIndoor = true;
+        _indoorPolygons = polys;
+        _indoorGeoJson = geo;
+        _roomLabelMarkers = labels;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load indoor map: $e')),
+      );
+    }
   }
-}
 
   Future<void> _toggleIndoorMap() async {
-  // If indoor is ON -> turn it OFF
-  if (_showIndoor) {
+    if (_showIndoor) {
+      setState(() {
+        _showIndoor = false;
+        _indoorBuildingCode = null;
+        _selectedIndoorFloorAsset = null;
+        _indoorFloors = [];
+        _indoorPolygons = {};
+        _indoorGeoJson = null;
+        _roomLabelMarkers = {};
+      });
+      return;
+    }
+
+    final b = _selectedBuildingPoly;
+    if (b == null) return;
+
+    final floors = _floorsForBuilding(b.code);
+    if (floors.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indoor map not available for this building'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
-      _showIndoor = false;
-      _indoorBuildingCode = null;
-      _selectedIndoorFloorAsset = null;
-      _indoorFloors = [];
-      _indoorPolygons = {};
-      _indoorGeoJson = null;
-      _roomLabelMarkers = {};
+      _indoorBuildingCode = b.code;
+      _indoorFloors = floors;
     });
-    return;
+
+    await _loadIndoorFloor(floors.first.assetPath);
   }
-
-  // If indoor is OFF -> we need a selected building to open indoor
-  final b = _selectedBuildingPoly;
-  if (b == null) return;
-
-  final floors = _floorsForBuilding(b.code);
-  if (floors.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Indoor map not available for this building'),
-      ),
-    );
-    return;
-  }
-
-  // Save indoor building + options, default to first floor
-  setState(() {
-    _indoorBuildingCode = b.code;
-    _indoorFloors = floors;
-  });
-
-  await _loadIndoorFloor(floors.first.assetPath);
-}
 
   Future<void> _goToMyLocation() async {
     final controller = _mapController;
@@ -495,7 +492,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
 
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok) {
-      // optional: show a snackbar
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -506,7 +502,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   LatLng _polygonCenter(List<LatLng> pts) {
     if (pts.length < 3) return pts.first;
 
-    // First try: simple average
     double lat = 0;
     double lng = 0;
     for (final p in pts) {
@@ -515,10 +510,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     }
     final avg = LatLng(lat / pts.length, lng / pts.length);
 
-    // Check if the average point is inside the polygon
     if (_isPointInPolygon(avg, pts)) return avg;
 
-    // Fallback: try midpoint of the longest diagonal
     double maxDist = 0;
     LatLng best = avg;
     for (int i = 0; i < pts.length; i++) {
@@ -542,7 +535,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     return best;
   }
 
-  /// Ray-casting algorithm to check if a point is inside a polygon
   bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
     bool inside = false;
     int j = polygon.length - 1;
@@ -564,7 +556,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     return inside;
   }
 
-  /// Calculates the approximate area of a polygon in square degrees
   double _polygonArea(List<LatLng> pts) {
     double area = 0;
     int j = pts.length - 1;
@@ -646,7 +637,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _indoorGeoJson = null;
       _roomLabelMarkers = {};
 
-      _availableFloorsForSelectedBuilding = _getAvailableFloorsForBuilding(b.code);
+      _availableFloorsForSelectedBuilding =
+          _getAvailableFloorsForBuilding(b.code);
       _selectedIndoorFloor = _availableFloorsForSelectedBuilding.isNotEmpty
           ? _availableFloorsForSelectedBuilding.first
           : 1;
@@ -687,6 +679,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _routeSegmentsByMode.clear();
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
+      _shuttleNextBuses = [];
+      _shuttleWalkingMinutes = null;
       if (clearSearch) {
         _searchController.clear();
       }
@@ -716,9 +710,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       return;
     }
 
-    // Enter route preview mode
     setState(() {
-      _selectedBuildingCenter = null; // Close building popup
+      _selectedBuildingCenter = null;
       _anchorOffset = null;
       _showRoutePreview = true;
       _routeOrigin = origin;
@@ -728,7 +721,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
     });
 
-    // Fetch the initial route
     await _fetchRoutesAndDurations();
   }
 
@@ -807,6 +799,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       });
 
       _applySelectedModeRoute(animateCamera: true);
+
+      _fetchShuttleInfo();
     } catch (e) {
       print('Error getting directions: $e');
       if (!mounted) return;
@@ -817,6 +811,12 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   }
 
   void _openStepsForSelectedMode() {
+    // ── NEW: shuttle uses a schedule modal instead of steps ───────────────
+    if (_selectedTravelMode == RouteTravelMode.shuttle) {
+      _showShuttleScheduleModal();
+      return;
+    }
+
     final key = _selectedTravelMode.apiValue;
     final steps = _routeStepsByMode[key] ?? const [];
 
@@ -830,6 +830,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   }
 
   void _applySelectedModeRoute({required bool animateCamera}) {
+    if (_selectedTravelMode == RouteTravelMode.shuttle) return;
+
     final selectedModeKey = _selectedTravelMode.apiValue;
     final selectedSegments = _routeSegmentsByMode[selectedModeKey];
     if (_selectedTravelMode == RouteTravelMode.transit &&
@@ -916,6 +918,18 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   }
 
   void _startNavigation() {
+    if (_selectedTravelMode == RouteTravelMode.shuttle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please follow the shuttle schedule. Turn-by-turn navigation is not available for the Concordia Shuttle.',
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     final key = _selectedTravelMode.apiValue;
     final steps = _routeStepsByMode[key] ?? const [];
 
@@ -933,16 +947,13 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _navModeKey = key;
       _navStepIndex = 0;
 
-      // enable camera follow
       _navigationFollowUser = true;
       _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
     });
 
-    // Immediately center the camera on current location (if we have it)
     if (_currentLocation != null && _mapController != null) {
       try {
         final currentPos = _currentLocation!;
-        // Use a camera position with tilt & zoom and keep current bearing 0 for initial.
         final initialCam = CameraPosition(
           target: currentPos,
           zoom: _navZoom,
@@ -953,7 +964,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
           CameraUpdate.newCameraPosition(initialCam),
         );
       } catch (e) {
-        // ignore animate errors
         print('Error animating camera when starting navigation: $e');
       }
     }
@@ -966,7 +976,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _navStepIndex = 0;
       _navigationFollowUser = false;
     });
-    // Reset camera to default aerial view
     if (_mapController != null && _currentLocation != null) {
       try {
         final cam = CameraPosition(
@@ -982,29 +991,24 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       }
     }
 
-    // Close route preview (brings search bar back)
     _closeRoutePreview();
   }
 
   void _maybeUpdateCameraForNavigation(LatLng userLatLng, double? heading) {
-    // sanity checks
     if (_mapController == null) return;
     if (!_navigationFollowUser) return;
 
     final now = DateTime.now();
 
-    // Debounce: only update camera if sufficient time has elapsed
     if (now.difference(_lastNavCameraUpdate) < _navCameraMinInterval) {
       return;
     }
 
-    // Compute bearing: prefer device heading if available and > 0,
     double bearing = 0.0;
     if (heading != null && heading >= 0.0) {
       bearing = heading;
     }
 
-    // Build new camera position with tilt and bearing
     final cam = CameraPosition(
       target: userLatLng,
       zoom: _navZoom,
@@ -1015,7 +1019,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     try {
       _mapController!.animateCamera(CameraUpdate.newCameraPosition(cam));
     } catch (e) {
-      // animate could fail if map controller disposed
       print('Error animating navigation camera: $e');
     }
   }
@@ -1027,12 +1030,10 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     final steps = _routeStepsByMode[key] ?? const [];
     if (steps.isEmpty) return;
 
-    // If already at last step, do nothing
     if (_navStepIndex >= steps.length - 1) return;
 
     final current = steps[_navStepIndex];
-    final end =
-        current.endPoint; // needs Step 1 (points stored in NavigationStep)
+    final end = current.endPoint;
     if (end == null) return;
 
     final d = Geolocator.distanceBetween(
@@ -1042,7 +1043,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       end.longitude,
     );
 
-    // 20m threshold
     if (d <= 20) {
       setState(() => _navStepIndex += 1);
     }
@@ -1062,6 +1062,8 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _searchController.clear();
+      _shuttleNextBuses = [];
+      _shuttleWalkingMinutes = null;
     });
   }
 
@@ -1294,7 +1296,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
 
   void _switchOriginDestination() {
     setState(() {
-      // Swap origin and destination
       final tempOrigin = _routeOriginText;
       final tempOriginLatLng = _routeOrigin;
       final tempDestination = _routeDestinationText;
@@ -1305,7 +1306,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _routeDestinationText = tempOrigin;
       _routeDestination = tempOriginLatLng;
 
-      // Clear suggestions
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
     });
@@ -1318,6 +1318,11 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       _selectedTravelMode = mode;
     });
 
+    if (mode == RouteTravelMode.shuttle) {
+      _fetchShuttleInfo();
+      return;
+    }
+
     if (_routePointsByMode.containsKey(mode.apiValue)) {
       _applySelectedModeRoute(animateCamera: false);
       return;
@@ -1325,6 +1330,119 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
 
     _fetchRoutesAndDurations();
   }
+
+
+  ///shuttle stop marker icon
+  Future<void> _createShuttleStopIcon() async {
+  _shuttleStopIcon = await BitmapDescriptor.fromAssetImage(
+    const ImageConfiguration(size: Size(600, 600)),
+    'assets/images/shuttle_icon.png',
+  );
+}
+
+  ///walking time + 4 next buses 
+  Future<void> _fetchShuttleInfo() async {
+    final origin = _routeOrigin ?? _currentLocation;
+
+    if (origin == null) {
+      setState(() {
+        _routeDurations['shuttle'] = '–';
+      });
+      return;
+    }
+
+    setState(() {
+      _shuttleNextBuses = [];
+      _shuttleWalkingMinutes = null;
+    });
+
+    try {
+      final nearestStop = ConcordiaShuttleService.nearestStop(origin);
+      final stopLatLng = ConcordiaShuttleService.stopLocation(nearestStop);
+
+      int walkingSeconds = 0;
+      List<LatLng> walkPoints = [];
+
+      final walkRoute = await GoogleDirectionsService.instance.getRouteDetails(
+        origin: origin,
+        destination: stopLatLng,
+        mode: 'walking',
+      );
+
+      if (walkRoute != null) {
+        walkingSeconds = walkRoute.durationSeconds ?? 0;
+        walkPoints = walkRoute.points;
+      }
+
+      final walkingMinutes = (walkingSeconds / 60).ceil();
+
+      final buses = ConcordiaShuttleService.getNextDepartures(
+        fromStop: nearestStop,
+        now: DateTime.now(),
+        count: 4,
+        walkingDuration: Duration(seconds: walkingSeconds),
+      );
+
+      String shuttleDurationLabel;
+      if (!ConcordiaShuttleService.isInService()) {
+        shuttleDurationLabel = 'No service';
+      } else if (buses.isNotEmpty) {
+        shuttleDurationLabel = buses.first.statusLabel;
+      } else {
+        shuttleDurationLabel = '–';
+      }
+
+      if (walkPoints.isNotEmpty) {
+        setState(() {
+          _routePolylines = {
+            Polyline(
+              polylineId: const PolylineId('shuttle_walk'),
+              points: walkPoints,
+              color: const Color(0xFF76263D),
+              width: 5,
+              patterns: [PatternItem.dot, PatternItem.gap(10)],
+            ),
+          };
+        });
+
+        if (_mapController != null) {
+          final bounds = _calculateBounds([...walkPoints, stopLatLng]);
+          _mapController!
+              .animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+        }
+      } else {
+        setState(() {
+          _routePolylines = {};
+        });
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _shuttleNearestStop = nearestStop;
+        _shuttleWalkingMinutes = walkingMinutes > 1 ? walkingMinutes : null;
+        _shuttleNextBuses = buses;
+        _routeDurations['shuttle'] = shuttleDurationLabel;
+      });
+    } catch (e) {
+      print('Error fetching shuttle info: $e');
+      if (!mounted) return;
+      setState(() {
+        _routeDurations['shuttle'] = '–';
+      });
+    }
+  }
+
+  //open full day schedule 
+  void _showShuttleScheduleModal() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _ShuttleScheduleSheet(nearestStop: _shuttleNearestStop),
+    );
+  }
+
 
   Future<void> _onRouteOriginChanged(String query) async {
     if (query.trim().isEmpty) {
@@ -1334,12 +1452,10 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       return;
     }
 
-    // Clear old suggestions immediately
     setState(() {
       _routeOriginSuggestions = [];
     });
 
-    // Debounce the search
     _routeDebounceTimer?.cancel();
     _routeDebounceTimer = Timer(const Duration(milliseconds: 500), () async {
       try {
@@ -1368,12 +1484,10 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       return;
     }
 
-    // Clear old suggestions immediately
     setState(() {
       _routeDestinationSuggestions = [];
     });
 
-    // Debounce the search
     _routeDebounceTimer?.cancel();
     _routeDebounceTimer = Timer(const Duration(milliseconds: 500), () async {
       try {
@@ -1411,7 +1525,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
       print('[DEBUG] Concordia building origin: $newOrigin');
     } else if (suggestion.placeId != null) {
-      // Fetch place details for non-Concordia locations
       print(
         '[DEBUG] Fetching place details for non-Concordia place: ${suggestion.placeId}',
       );
@@ -1459,7 +1572,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       newDestination = building?.center;
       displayText = '${suggestion.name} - ${suggestion.buildingName!.code}';
     } else if (suggestion.placeId != null) {
-      // Fetch place details for non-Concordia locations
       try {
         final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
           suggestion.placeId!,
@@ -1511,26 +1623,21 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   Future<void> _onSearchSubmitted(String query) async {
     if (query.trim().isEmpty) return;
 
-    // First try to find in Concordia buildings
     final concordiaBuilding = BuildingSearchService.searchBuilding(query);
 
     if (concordiaBuilding != null) {
-      // Highlight and show the building just like when it's clicked
       _onBuildingTapped(concordiaBuilding);
       return;
     }
 
-    // If not found in Concordia buildings, use Google Places API
     final results = await BuildingSearchService.searchWithGooglePlaces(
       query,
       userLocation: _currentLocation,
     );
 
     if (results.isNotEmpty) {
-      // Find the first non-Concordia result, or use the first result if all are Concordia
       SearchResult? selectedResult;
 
-      // Priority: non-Concordia buildings first
       for (final result in results) {
         if (!result.isConcordiaBuilding) {
           selectedResult = result;
@@ -1538,7 +1645,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
         }
       }
 
-      // If all results are Concordia buildings, use the first one
       if (selectedResult == null && results.isNotEmpty) {
         selectedResult = results.first;
       }
@@ -1546,15 +1652,12 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       if (selectedResult != null) {
         if (selectedResult.isConcordiaBuilding &&
             selectedResult.buildingPolygon != null) {
-          // It's a Concordia building found via Google Places
           _onBuildingTapped(selectedResult.buildingPolygon!);
         } else {
-          // It's a non-Concordia place
           _onPlaceSelected(selectedResult);
         }
       }
     } else {
-      // Show a message that the place wasn't found
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1563,7 +1666,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
           backgroundColor: const Color(0xFF800020),
         ),
       );
-      // Clear the search bar
       _searchController.clear();
     }
   }
@@ -1572,24 +1674,20 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     final controller = _mapController;
     if (controller == null) return;
 
-    // Clear any selected building polygon
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
       _selectedSearchResult = result;
     });
 
-    // Update search bar with place name
     _searchController.value = TextEditingValue(
       text: result.name,
       selection: TextSelection.collapsed(offset: result.name.length),
     );
 
     if (result.isConcordiaBuilding) {
-      // For Concordia buildings: just animate camera
       controller.animateCamera(CameraUpdate.newLatLngZoom(result.location, 18));
 
-      // Show info about the Concordia building
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1599,9 +1697,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
         ),
       );
     } else {
-      // For non-Concordia buildings: automatically show route preview
       if (_currentLocation == null) {
-        // If current location is not available, just show the place
         controller.animateCamera(
           CameraUpdate.newLatLngZoom(result.location, 18),
         );
@@ -1614,7 +1710,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
           ),
         );
       } else {
-        // Automatically enter route preview mode
         _enterRoutePreviewForPlace(result);
       }
     }
@@ -1627,7 +1722,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       '[DEBUG] Entering route preview for non-Concordia place: ${place.name}',
     );
 
-    // Enter route preview mode with current location as origin and selected place as destination
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
@@ -1644,34 +1738,28 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
       '[DEBUG] Route preview initialized - origin: $_routeOrigin, destination: $_routeDestination',
     );
 
-    // Fetch the route
     await _fetchRoutesAndDurations();
   }
 
   Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
-      // Concordia building selected
       final buildingPolygon = BuildingSearchService.searchBuilding(
         suggestion.buildingName!.code,
       );
       if (buildingPolygon == null) return;
       _onBuildingTapped(buildingPolygon);
     } else if (suggestion.placeId != null) {
-      // Google Place selected - fetch details first
       final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
         suggestion.placeId!,
       );
       if (placeDetails != null) {
-        // Check if it's a Concordia building
         final concordiaBuilding = BuildingSearchService.searchBuilding(
           suggestion.name,
         );
 
         if (concordiaBuilding != null) {
-          // Found it in Concordia buildings
           _onBuildingTapped(concordiaBuilding);
         } else {
-          // Not a Concordia building
           final searchResult = SearchResult.fromGooglePlace(
             name: placeDetails.name,
             address: placeDetails.formattedAddress,
@@ -1735,26 +1823,21 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     return polys;
   }
 
-  // Create invisible gesture detectors for building polygons (for testing)
   List<Widget> _createBuildingGestureDetectors() {
     final detectors = <Widget>[];
 
     for (final building in buildingPolygons) {
-      // Create a positioned widget at the building location
       detectors.add(
         Positioned(
-          // This is a simplified approach - in reality we'd need to convert
-          // LatLng to screen coordinates, but for testing purposes we'll
-          // create detectors that can be found by key
-          left: 0, // Will need proper coordinate conversion
-          top: 0, // Will need proper coordinate conversion
+          left: 0,
+          top: 0,
           child: GestureDetector(
             key: Key('building_detector_${building.code}'),
             onTap: () => _onBuildingTapped(building),
             child: Container(
-              width: 100, // Placeholder size
-              height: 100, // Placeholder size
-              color: Colors.transparent, // Invisible
+              width: 100,
+              height: 100,
+              color: Colors.transparent,
             ),
           ),
         ),
@@ -1775,17 +1858,15 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
         : concordiaSGW;
 
     _createBlueDotIcon();
+    _createShuttleStopIcon(); // NEW
     _startLocationUpdates();
 
-    // Listen to search input changes
     _searchController.addListener(_onSearchChanged);
   }
 
   void _onSearchChanged() {
-    // Cancel previous timer
     _debounceTimer?.cancel();
 
-    // Set a new timer to delay the API call
     _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       final query = _searchController.text;
       try {
@@ -1800,7 +1881,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
         }
       } catch (e) {
         print('Error getting search suggestions: $e');
-        // On error, just show Concordia buildings
         if (mounted) {
           setState(() {
             _searchSuggestions = BuildingSearchService.getSuggestions(
@@ -1812,23 +1892,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     });
   }
 
-  /*
-  Future<void> _createBlueDotIcon() async {
-    _blueDotIcon =
-        await BitmapDescriptor.fromAssetImage(
-          const ImageConfiguration(size: Size(48, 48)),
-          'assets/blue_dot.png',
-        ).catchError((_) {
-          return BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueBlue,
-          );
-        });
-
-    _blueDotIcon ??= BitmapDescriptor.defaultMarkerWithHue(
-      BitmapDescriptor.hueAzure,
-    );
-  }
-  */
   Future<void> _createBlueDotIcon() async {
     _blueDotIcon = BitmapDescriptor.defaultMarkerWithHue(
       BitmapDescriptor.hueAzure,
@@ -1918,9 +1981,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
           if (_isNavigating) {
             _maybeAdvanceNavigationStep(newLatLng);
           }
-          // Follow the user with the camera if navigation follow mode is active
           if (_navigationFollowUser) {
-            // pass both the LatLng and the raw position for heading if available
             _maybeUpdateCameraForNavigation(newLatLng, position.heading);
           }
         });
@@ -1929,11 +1990,45 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
 
-    // Note: selected non-Concordia marker intentionally omitted to avoid red pin reappearing
+    final shuttleIcon = _shuttleStopIcon;
+    if (shuttleIcon != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('shuttle_stop_sgw'),
+          position: shuttleStopSGW,
+          icon: shuttleIcon,
+          infoWindow: const InfoWindow(
+            title: 'Concordia Shuttle — SGW',
+            snippet: 'Hall Building stop',
+          ),
+          onTap: () {
+            if (_showRoutePreview) {
+              setState(() => _selectedTravelMode = RouteTravelMode.shuttle);
+              _fetchShuttleInfo();
+            }
+          },
+        ),
+      );
+      markers.add(
+        Marker(
+          markerId: const MarkerId('shuttle_stop_loyola'),
+          position: shuttleStopLoyola,
+          icon: shuttleIcon,
+          infoWindow: const InfoWindow(
+            title: 'Concordia Shuttle — Loyola',
+            snippet: 'Loyola campus stop',
+          ),
+          onTap: () {
+            if (_showRoutePreview) {
+              setState(() => _selectedTravelMode = RouteTravelMode.shuttle);
+              _fetchShuttleInfo();
+            }
+          },
+        ),
+      );
+    }
 
-    // Add markers for route preview mode
     if (_showRoutePreview) {
-      // Destination marker (red)
       if (_routeDestination != null) {
         markers.add(
           Marker(
@@ -2069,7 +2164,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     double? popupLeft;
     double? popupTop;
 
-    // Use debug anchor offset if provided (for testing)
     final anchorToUse = widget.debugAnchorOffset ?? _anchorOffset;
 
     if (anchorToUse != null && !_cameraMoving) {
@@ -2114,16 +2208,10 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
               ),
               myLocationEnabled: false,
               myLocationButtonEnabled: false,
-              style: _showIndoor
-                  ? _indoorMapStyle
-                  : null, // Hide POIs when indoor map is showing
+              style: _showIndoor ? _indoorMapStyle : null,
               onMapCreated: (controller) {
                 _mapController = controller;
               },
-
-              // onCameraMove: (pos) {
-              //_lastCameraTarget = pos.target;
-              // },
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
                 if (_selectedBuildingCenter != null) {
@@ -2168,86 +2256,87 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
               ),
             ),
           if (!_showRoutePreview && !_isNavigating)
-  Positioned(
-    top: 65,
-    left: 20,
-    right: 20,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MapSearchBar(
-          key: const Key('destination_search_bar'),
-          campusLabel: campusLabel,
-          controller: _searchController,
-          onSubmitted: _onSearchSubmitted,
-          suggestions: _searchSuggestions,
-          onSuggestionSelected: _onSuggestionSelected,
-          onFocus: _hideBuildingPopup,
-        ),
-        if (_showIndoor && _indoorFloors.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: PointerInterceptor(
-              child: IntrinsicWidth(
-                child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B1D3B),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+            Positioned(
+              top: 65,
+              left: 20,
+              right: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MapSearchBar(
+                    key: const Key('destination_search_bar'),
+                    campusLabel: campusLabel,
+                    controller: _searchController,
+                    onSubmitted: _onSearchSubmitted,
+                    suggestions: _searchSuggestions,
+                    onSuggestionSelected: _onSuggestionSelected,
+                    onFocus: _hideBuildingPopup,
                   ),
-                  child: Center(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedIndoorFloorAsset ??
-                            _indoorFloors.first.assetPath,
-                        isDense: true,
-                        dropdownColor: const Color(0xFF8B1D3B),
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: _indoorFloors
-                            .map(
-                              (f) => DropdownMenuItem<String>(
-                                value: f.assetPath,
-                                child: Text(
-                                  f.label,
-                                  style:
-                                      const TextStyle(color: Colors.white),
+                  if (_showIndoor && _indoorFloors.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: PointerInterceptor(
+                        child: IntrinsicWidth(
+                          child: Container(
+                            height: 40,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B1D3B),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedIndoorFloorAsset ??
+                                      _indoorFloors.first.assetPath,
+                                  isDense: true,
+                                  dropdownColor: const Color(0xFF8B1D3B),
+                                  icon: const Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.white,
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  items: _indoorFloors
+                                      .map(
+                                        (f) => DropdownMenuItem<String>(
+                                          value: f.assetPath,
+                                          child: Text(
+                                            f.label,
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (asset) async {
+                                    if (asset == null) return;
+                                    await _loadIndoorFloor(asset);
+                                  },
                                 ),
                               ),
-                            )
-                            .toList(),
-                        onChanged: (asset) async {
-                          if (asset == null) return;
-                          await _loadIndoorFloor(asset);
-                        },
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  ],
+                ],
               ),
             ),
-          ),
-        ],
-      ],
-    ),
-  ),
           if ((widget.debugSelectedBuilding ?? _selectedBuildingPoly) != null &&
               popupLeft != null &&
               popupTop != null)
@@ -2256,7 +2345,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
               top: popupTop,
               child: PointerInterceptor(
                 child: BuildingInfoPopup(
-                  // Show full name + code
                   title:
                       '${buildingInfoByCode[(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code]?.name ?? (widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.name} - ${(widget.debugSelectedBuilding ?? _selectedBuildingPoly)!.code}',
                   description:
@@ -2371,6 +2459,11 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
                     transitDetails: _buildTransitDetailItems(),
                     modeDistances: _routeDistances,
                     modeArrivalTimes: _routeArrivalTimes,
+                    shuttleNextBuses:
+                        _shuttleNextBuses.map((b) => b.statusLabel).toList(),
+                    shuttleWalkingMinutes: _shuttleWalkingMinutes,
+                    shuttleNearestStop: _shuttleNearestStop,
+                    onViewSchedule: _showShuttleScheduleModal,
                   ),
                 ),
               ),
@@ -2418,7 +2511,7 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
         final coords = p as List;
         final lng = (coords[0] as num).toDouble();
         final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng); // GeoJSON is [lng,lat]
+        return LatLng(lat, lng);
       }).toList();
 
       if (points.length < 3) continue;
@@ -2427,25 +2520,19 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
       final id = (props['ref'] ?? polygons.length).toString();
 
-      // Determine fill color based on feature type
       Color fillColor;
       if (props['escalators'] == 'yes') {
-        fillColor = Colors.green; // Escalator = green
+        fillColor = Colors.green;
       } else if (props['highway'] == 'elevator') {
-        fillColor = Colors.orange; // Elevator = orange
+        fillColor = Colors.orange;
       } else if (props['highway'] == 'steps') {
-        fillColor = Colors.pink; // Steps = pink
+        fillColor = Colors.pink;
       } else if (props['amenity'] == 'toilets') {
-        fillColor = Colors.blue; // Toilets = blue
+        fillColor = Colors.blue;
       } else if (props['indoor'] == 'corridor') {
-        fillColor = const Color.fromARGB(
-          255,
-          232,
-          122,
-          149,
-        ); // Corridor = lighter red
+        fillColor = const Color.fromARGB(255, 232, 122, 149);
       } else {
-        fillColor = const Color(0xFF800020); // Default room = dark red
+        fillColor = const Color(0xFF800020);
       }
 
       polygons.add(
@@ -2506,7 +2593,6 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     return BitmapDescriptor.bytes(bytes);
   }
 
-  /// Creates text labels at the center of each room polygon
   Future<Set<Marker>> _createRoomLabels(Map<String, dynamic> geojson) async {
     final features = (geojson['features'] as List).cast<dynamic>();
     final markers = <Marker>{};
@@ -2534,14 +2620,12 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
 
       if (points.length < 3) continue;
 
-      // Skip very small polygons where text won't fit
       final area = _polygonArea(points);
       if (area < 1e-10) continue;
 
       final center = _polygonCenter(points);
       final ref = props['ref'].toString();
 
-      // Choose font size based on polygon area
       final double fontSize = area > 5e-8 ? 10 : 8;
       final icon = await _createTextBitmap(ref, fontSize: fontSize);
 
@@ -2601,5 +2685,210 @@ Future<void> _loadIndoorMapForSelectedBuilding() async {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+}
+
+
+class _ShuttleScheduleSheet extends StatelessWidget {
+  final String nearestStop;
+
+  const _ShuttleScheduleSheet({required this.nearestStop});
+
+  @override
+  Widget build(BuildContext context) {
+    const burgundy = Color(0xFF76263D);
+    final today = DateTime.now();
+    final times = ConcordiaShuttleService.getFullScheduleForDay(today);
+    final isWeekday =
+        today.weekday >= DateTime.monday && today.weekday <= DateTime.friday;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.62,
+      minChildSize: 0.35,
+      maxChildSize: 0.92,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                height: 4,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 10, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.directions_bus_filled, color: burgundy),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Concordia Shuttle Schedule',
+                            style: TextStyle(
+                              color: burgundy,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            isWeekday
+                                ? 'Mon–Fri  ·  Every 30 min  ·  8:00 AM – 10:00 PM'
+                                : 'Sat–Sun  ·  Every 15 min  ·  9:00 AM – 6:00 PM',
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    _StopChip(
+                        label: 'SGW  (Hall Building)', color: burgundy),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.sync_alt,
+                          size: 16, color: Colors.black45),
+                    ),
+                    _StopChip(label: 'Loyola', color: burgundy),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: times.length,
+                  itemBuilder: (context, index) {
+                    final t = times[index];
+                    final now = DateTime.now();
+                    final isPast = t.isBefore(now);
+                    final isNext = !isPast &&
+                        (index == 0 || times[index - 1].isBefore(now));
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isNext
+                            ? burgundy.withOpacity(0.08)
+                            : Colors.transparent,
+                        border: isNext
+                            ? Border.all(color: burgundy.withOpacity(0.3))
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.directions_bus_filled,
+                            size: 16,
+                            color: isPast
+                                ? Colors.black26
+                                : isNext
+                                    ? burgundy
+                                    : Colors.black54,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            ConcordiaShuttleService.formatTime(t),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isNext
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: isPast
+                                  ? Colors.black26
+                                  : isNext
+                                      ? burgundy
+                                      : Colors.black87,
+                            ),
+                          ),
+                          if (isNext) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: burgundy,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text(
+                                'Next bus',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StopChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StopChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }
