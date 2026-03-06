@@ -3,12 +3,59 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+class _ParsedFeature {
+  final List<LatLng> points;
+  final Map<String, dynamic> properties;
+
+  _ParsedFeature(this.points, this.properties);
+}
+
 class IndoorGeoJsonRenderer {
   IndoorGeoJsonRenderer._();
 
-  static Set<Polygon> geoJsonToPolygons(Map<String, dynamic> geojson) {
+  static Color _getAmenityColor(Map<String, dynamic> props) {
+    if (props['escalators'] == 'yes') {
+      return Colors.green;
+    } else if (props['highway'] == 'elevator') {
+      return Colors.orange;
+    } else if (props['highway'] == 'steps') {
+      return Colors.purple;
+    } else if (props['amenity'] == 'toilets') {
+      return Colors.blue;
+    } else if (props['amenity'] == 'drinking_water') {
+      return Colors.cyan;
+    } else if (props['indoor'] == 'corridor') {
+      return const Color.fromARGB(255, 232, 122, 149);
+    } else {
+      return const Color(0xFF800020);
+    }
+  }
+
+  static ({IconData icon, Color color, String type})? _getAmenityIcon(
+    Map<String, dynamic> props,
+  ) {
+    if (props['amenity'] == 'toilets') {
+      return (icon: Icons.wc, color: Colors.blue, type: 'toilet');
+    } else if (props['highway'] == 'elevator') {
+      return (icon: Icons.elevator, color: Colors.orange, type: 'elevator');
+    } else if (props['escalators'] == 'yes') {
+      return (icon: Icons.escalator, color: Colors.green, type: 'escalator');
+    } else if (props['highway'] == 'steps') {
+      return (icon: Icons.stairs, color: Colors.purple, type: 'stairs');
+    } else if (props['amenity'] == 'drinking_water') {
+      return (
+        icon: Icons.water_drop,
+        color: Colors.cyan,
+        type: 'water_fountain',
+      );
+    }
+    return null;
+  }
+
+  static Iterable<_ParsedFeature> _parsePolygonFeatures(
+    Map<String, dynamic> geojson,
+  ) sync* {
     final features = (geojson['features'] as List).cast<dynamic>();
-    final polygons = <Polygon>{};
 
     for (final f in features) {
       final feature = f as Map<String, dynamic>;
@@ -31,29 +78,24 @@ class IndoorGeoJsonRenderer {
 
       final props =
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
-      final id = (props['ref'] ?? polygons.length).toString();
+      yield _ParsedFeature(points, props);
+    }
+  }
 
-      Color fillColor;
-      if (props['escalators'] == 'yes') {
-        fillColor = Colors.green;
-      } else if (props['highway'] == 'elevator') {
-        fillColor = Colors.orange;
-      } else if (props['highway'] == 'steps') {
-        fillColor = Colors.purple;
-      } else if (props['amenity'] == 'toilets') {
-        fillColor = Colors.blue;
-      } else if (props['amenity'] == 'drinking_water') {
-        fillColor = Colors.cyan;
-      } else if (props['indoor'] == 'corridor') {
-        fillColor = const Color.fromARGB(255, 232, 122, 149);
-      } else {
-        fillColor = const Color(0xFF800020);
-      }
+  static Set<Polygon> geoJsonToPolygons(Map<String, dynamic> geojson) {
+    final polygons = <Polygon>{};
+    int index = 0;
+
+    for (final parsed in _parsePolygonFeatures(geojson)) {
+      final props = parsed.properties;
+      final id = (props['ref'] ?? index++).toString();
+
+      final fillColor = _getAmenityColor(props);
 
       polygons.add(
         Polygon(
           polygonId: PolygonId('indoor-$id'),
-          points: points,
+          points: parsed.points,
           strokeWidth: 2,
           strokeColor: Colors.black,
           fillColor: fillColor.withOpacity(1.0),
@@ -68,37 +110,17 @@ class IndoorGeoJsonRenderer {
   static Future<Set<Marker>> createRoomLabels(
     Map<String, dynamic> geojson,
   ) async {
-    final features = (geojson['features'] as List).cast<dynamic>();
     final markers = <Marker>{};
     int index = 0;
 
-    for (final f in features) {
-      final feature = f as Map<String, dynamic>;
-      final geometry = feature['geometry'] as Map<String, dynamic>;
-      final props =
-          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
-
-      if (geometry['type'] != 'Polygon') continue;
+    for (final parsed in _parsePolygonFeatures(geojson)) {
+      final props = parsed.properties;
       if (props['ref'] == null) continue;
 
-      final rings = geometry['coordinates'] as List;
-      if (rings.isEmpty) continue;
-
-      final outer = rings[0] as List;
-
-      final points = outer.map<LatLng>((p) {
-        final coords = p as List;
-        final lng = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng);
-      }).toList();
-
-      if (points.length < 3) continue;
-
-      final area = polygonArea(points);
+      final area = polygonArea(parsed.points);
       if (area < 1e-10) continue;
 
-      final center = polygonCenter(points);
+      final center = polygonCenter(parsed.points);
       final ref = props['ref'].toString();
 
       final double fontSize = area > 5e-8 ? 10 : 8;
@@ -125,7 +147,6 @@ class IndoorGeoJsonRenderer {
     Map<String, dynamic> geojson, {
     double zoom = 18.0,
   }) async {
-    final features = (geojson['features'] as List).cast<dynamic>();
     final markers = <Marker>{};
     int index = 0;
 
@@ -133,69 +154,29 @@ class IndoorGeoJsonRenderer {
     // Zoom 17 = 20px, Zoom 20 = 35px
     final double iconSize = (15 + (zoom - 17) * 5).clamp(16.0, 40.0);
 
-    for (final f in features) {
-      final feature = f as Map<String, dynamic>;
-      final geometry = feature['geometry'] as Map<String, dynamic>;
-      final props =
-          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
+    for (final parsed in _parsePolygonFeatures(geojson)) {
+      final props = parsed.properties;
 
-      if (geometry['type'] != 'Polygon') continue;
+      final amenityInfo = _getAmenityIcon(props);
+      if (amenityInfo == null) continue;
 
-      final rings = geometry['coordinates'] as List;
-      if (rings.isEmpty) continue;
-
-      final outer = rings[0] as List;
-
-      final points = outer.map<LatLng>((p) {
-        final coords = p as List;
-        final lng = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng);
-      }).toList();
-
-      if (points.length < 3) continue;
-
-      IconData? iconData;
-      Color iconColor;
-      String markerType;
-
-      if (props['amenity'] == 'toilets') {
-        iconData = Icons.wc;
-        iconColor = Colors.blue;
-        markerType = 'toilet';
-      } else if (props['highway'] == 'elevator') {
-        iconData = Icons.elevator;
-        iconColor = Colors.orange;
-        markerType = 'elevator';
-      } else if (props['escalators'] == 'yes') {
-        iconData = Icons.escalator;
-        iconColor = Colors.green;
-        markerType = 'escalator';
-      } else if (props['highway'] == 'steps') {
-        iconData = Icons.stairs;
-        iconColor = Colors.purple;
-        markerType = 'stairs';
-      } else if (props['amenity'] == 'drinking_water') {
-        iconData = Icons.water_drop;
-        iconColor = Colors.cyan;
-        markerType = 'water_fountain';
-      } else {
-        continue;
-      }
-
-      final center = polygonCenter(points);
-      final icon = await _createIconBitmap(iconData, iconColor, size: iconSize);
+      final center = polygonCenter(parsed.points);
+      final icon = await _createIconBitmap(
+        amenityInfo.icon,
+        amenityInfo.color,
+        size: iconSize,
+      );
 
       markers.add(
         Marker(
-          markerId: MarkerId('amenity-$markerType-${index++}'),
+          markerId: MarkerId('amenity-${amenityInfo.type}-${index++}'),
           position: center,
           icon: icon,
           anchor: const Offset(0.5, 0.5),
           flat: true,
           zIndex: 40,
           consumeTapEvents: false,
-          infoWindow: InfoWindow(title: markerType.toUpperCase()),
+          infoWindow: InfoWindow(title: amenityInfo.type.toUpperCase()),
         ),
       );
     }

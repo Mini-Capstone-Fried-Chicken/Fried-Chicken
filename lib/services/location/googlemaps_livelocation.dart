@@ -24,6 +24,7 @@ import '../../services/navigation_steps.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
 import '../../services/indoor_maps/indoor_map_controller.dart';
 import '../../services/indoor_maps/indoor_geojson_renderer.dart';
+import '../../models/campus.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -33,8 +34,6 @@ const String currentLocationTag = "Current location";
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
-
-enum Campus { sgw, loyola, none }
 
 // knowing which campus the user is in
 Campus detectCampus(LatLng userLocation) {
