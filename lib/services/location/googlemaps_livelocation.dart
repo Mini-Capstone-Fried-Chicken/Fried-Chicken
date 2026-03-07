@@ -1,36 +1,34 @@
 import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:campus_app/models/campus.dart';
+import 'package:campus_app/utils/geo.dart' as geo;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../shared/widgets/map_search_bar.dart';
-import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
-import '../building_search_service.dart';
-import '../google_places_service.dart';
-import '../google_directions_service.dart';
-import '../../shared/widgets/campus_toggle.dart';
-import '../../shared/widgets/building_info_popup.dart';
-import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
-import '../../services/navigation_steps.dart';
-import '../indoor_maps/indoor_floor_config.dart';
-import 'package:campus_app/utils/geo.dart' as geo;
-import '../../shared/widgets/indoor_floor_dropdown.dart';
-import '../indoor_maps/indoor_map_controller.dart';
-import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
-import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
-import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
-import 'package:campus_app/models/campus.dart';
-import '../../shared/widgets/outdoor/outdoor_map_view.dart';
-import '../indoor_maps/indoor_map_repository.dart';
-import '../../shared/widgets/outdoor/outdoor_top_search.dart';
 import '../../services/concordia_shuttle_service.dart';
+import '../../services/navigation_steps.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
+import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
+import '../../shared/widgets/outdoor/outdoor_map_view.dart';
+import '../../shared/widgets/outdoor/outdoor_top_search.dart';
+import '../../shared/widgets/route_preview_panel.dart';
+import '../building_detection.dart';
+import '../building_search_service.dart';
+import '../google_directions_service.dart';
+import '../google_places_service.dart';
+import '../indoor_maps/indoor_floor_config.dart';
+import '../indoor_maps/indoor_map_controller.dart';
+import '../indoor_maps/indoor_map_repository.dart';
+import '../indoors_routing/indoor_same_floor_router.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -59,6 +57,31 @@ Campus detectCampus(LatLng userLocation) {
   if (sgwDistance <= campusRadius) return Campus.sgw;
   if (loyolaDistance <= campusRadius) return Campus.loyola;
   return Campus.none;
+}
+
+@visibleForTesting
+Set<Polyline> buildIndoorRoutePolylines(List<LatLng> routePoints) {
+  if (routePoints.length < 2) {
+    return {};
+  }
+
+  return {
+    Polyline(
+      polylineId: const PolylineId('indoor_same_floor_route'),
+      points: routePoints,
+      color: const Color(0xFF0A7E4D),
+      width: 6,
+      zIndex: 50,
+    ),
+  };
+}
+
+@visibleForTesting
+Set<Polyline> mergeMapPolylines({
+  required Set<Polyline> outdoorPolylines,
+  required Set<Polyline> indoorPolylines,
+}) {
+  return {...outdoorPolylines, ...indoorPolylines};
 }
 
 class OutdoorMapPage extends StatefulWidget {
@@ -98,7 +121,8 @@ class OutdoorMapPage extends StatefulWidget {
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _originRoomController = TextEditingController();
-  final TextEditingController _destinationRoomController = TextEditingController();
+  final TextEditingController _destinationRoomController =
+      TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
@@ -124,6 +148,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Set<Marker> _roomLabelMarkers = {};
 
   Set<Polyline> _routePolylines = {};
+  Set<Polyline> _indoorRoutePolylines = {};
+  final IndoorSameFloorRouter _indoorSameFloorRouter = IndoorSameFloorRouter();
+  String? _indoorOriginRoomCode;
+  String? _indoorDestinationRoomCode;
+  Marker? _originRoomMarker;
+  List<NavigationStep> _indoorSteps = const [];
+  String? _indoorDistanceText;
+  String? _indoorDurationText;
 
   // Room location marker
   Marker? _destinationRoomMarker;
@@ -202,6 +234,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorPolygons = {};
     _indoorGeoJson = null;
     _roomLabelMarkers = {};
+    _originRoomMarker = null;
+    _destinationRoomMarker = null;
+    _resetIndoorRouteState();
   }
 
   Campus _campusFromPoint(LatLng p) {
@@ -225,8 +260,324 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
   }
 
-  Future<void> _onOriginRoomSubmitted(String buildingCode, String roomCode) async {
-    print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
+  Future<void> _onOriginRoomSubmitted(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    final normalizedRoom = roomCode.trim().toUpperCase();
+    if (normalizedRoom.isEmpty) return;
+    if (!_showIndoor) return;
+
+    final originPoint = _findRoomCenterOnActiveFloor(normalizedRoom);
+    if (originPoint == null) {
+      if (!mounted) return;
+      setState(() {
+        _indoorOriginRoomCode = null;
+        _originRoomMarker = null;
+        _indoorRoutePolylines = {};
+        _indoorSteps = const [];
+        _indoorDistanceText = null;
+        _indoorDurationText = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Room $normalizedRoom is not on the selected floor'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _indoorOriginRoomCode = normalizedRoom;
+      _originRoomMarker = _buildOriginRoomMarker(normalizedRoom, originPoint);
+    });
+
+    await _rebuildIndoorSameFloorRoute(showNoPathSnack: true);
+  }
+
+  Marker _buildOriginRoomMarker(String roomCode, LatLng point) {
+    return Marker(
+      markerId: const MarkerId('origin_room'),
+      position: point,
+      infoWindow: InfoWindow(title: 'Room $roomCode'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+    );
+  }
+
+  void _resetIndoorRouteState() {
+    _indoorRoutePolylines = {};
+    _indoorOriginRoomCode = null;
+    _indoorDestinationRoomCode = null;
+    _originRoomMarker = null;
+    _indoorSteps = const [];
+    _indoorDistanceText = null;
+    _indoorDurationText = null;
+  }
+
+  String _metersText(double meters) {
+    if (meters >= 1000) {
+      return '${(meters / 1000).toStringAsFixed(1)} km';
+    }
+    return '${meters.round()} m';
+  }
+
+  String _durationTextFromSeconds(int seconds) {
+    final mins = (seconds / 60).ceil();
+    return mins <= 1 ? '1 min' : '$mins min';
+  }
+
+  double _bearingDegrees(LatLng from, LatLng to) {
+    final lat1 = from.latitude * math.pi / 180.0;
+    final lat2 = to.latitude * math.pi / 180.0;
+    final dLon = (to.longitude - from.longitude) * math.pi / 180.0;
+
+    final y = math.sin(dLon) * math.cos(lat2);
+    final x =
+        math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    final brng = math.atan2(y, x) * 180.0 / math.pi;
+    return (brng + 360.0) % 360.0;
+  }
+
+  double _normalizeTurnDelta(double delta) {
+    var value = delta;
+    while (value > 180) value -= 360;
+    while (value < -180) value += 360;
+    return value;
+  }
+
+  void _buildIndoorNavigationFromRoute(List<LatLng> routePoints) {
+    if (routePoints.length < 2) {
+      _indoorSteps = const [];
+      _indoorDistanceText = null;
+      _indoorDurationText = null;
+      return;
+    }
+
+    const walkingMetersPerSecond = 1.35;
+    final steps = <NavigationStep>[];
+    double totalMeters = 0;
+
+    for (var i = 1; i < routePoints.length; i++) {
+      final a = routePoints[i - 1];
+      final b = routePoints[i];
+      final meters = Geolocator.distanceBetween(
+        a.latitude,
+        a.longitude,
+        b.latitude,
+        b.longitude,
+      );
+      if (meters < 1.0) continue;
+      totalMeters += meters;
+
+      String instruction;
+      String? maneuver;
+      if (i == 1) {
+        instruction = 'Walk ahead';
+        maneuver = 'straight';
+      } else {
+        final prevA = routePoints[i - 2];
+        final prevB = routePoints[i - 1];
+        final previousBearing = _bearingDegrees(prevA, prevB);
+        final currentBearing = _bearingDegrees(a, b);
+        final turn = _normalizeTurnDelta(currentBearing - previousBearing);
+
+        if (turn > 25 && turn < 140) {
+          instruction = 'Turn right';
+          maneuver = 'turn-right';
+        } else if (turn < -25 && turn > -140) {
+          instruction = 'Turn left';
+          maneuver = 'turn-left';
+        } else if (turn.abs() >= 140) {
+          instruction = 'Make a U-turn';
+          maneuver = 'uturn-right';
+        } else {
+          instruction = 'Continue straight';
+          maneuver = 'straight';
+        }
+      }
+
+      final stepSeconds = (meters / walkingMetersPerSecond).round();
+      steps.add(
+        NavigationStep(
+          instruction: instruction,
+          travelMode: 'walking',
+          distanceText: _metersText(meters),
+          durationText: _durationTextFromSeconds(stepSeconds),
+          maneuver: maneuver,
+          points: [a, b],
+        ),
+      );
+    }
+
+    final totalSeconds = (totalMeters / walkingMetersPerSecond).round();
+    _indoorSteps = [
+      ...steps,
+      const NavigationStep(
+        instruction: 'Arrive at your destination room',
+        travelMode: 'walking',
+      ),
+    ];
+    _indoorDistanceText = _metersText(totalMeters);
+    _indoorDurationText = _durationTextFromSeconds(totalSeconds);
+  }
+
+  void _openIndoorDirections() {
+    if (_indoorSteps.isEmpty) return;
+    showNavigationStepsModal(
+      context,
+      title: 'Indoor walking',
+      steps: _indoorSteps,
+      totalDuration: _indoorDurationText,
+      totalDistance: _indoorDistanceText,
+    );
+  }
+
+  Widget _buildIndoorDirectionsCard() {
+    final duration = _indoorDurationText ?? '';
+    final distance = _indoorDistanceText;
+    final summary = distance == null || distance.isEmpty
+        ? '$duration walk'
+        : '$duration walk • $distance';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              summary.trim(),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E1E1E),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _openIndoorDirections,
+            child: const Text('Get directions'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  LatLng? _findRoomCenterOnActiveFloor(String roomCode) {
+    final geoJson = _indoorGeoJson;
+    if (geoJson == null) {
+      return null;
+    }
+    return _indoorSameFloorRouter.roomCenterOnFloor(
+      floorGeoJson: geoJson,
+      roomCode: roomCode,
+    );
+  }
+
+  Marker _buildDestinationRoomMarker(String roomCode, LatLng point) {
+    return Marker(
+      markerId: const MarkerId('destination_room'),
+      position: point,
+      infoWindow: InfoWindow(title: 'Room $roomCode'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+    );
+  }
+
+  Future<void> _rebuildIndoorSameFloorRoute({
+    bool showNoPathSnack = false,
+  }) async {
+    if (!_showIndoor || _indoorGeoJson == null) {
+      if (!mounted) return;
+      setState(() {
+        _indoorRoutePolylines = {};
+        _indoorSteps = const [];
+        _indoorDistanceText = null;
+        _indoorDurationText = null;
+      });
+      return;
+    }
+
+    final origin = _indoorOriginRoomCode;
+    final destination = _indoorDestinationRoomCode;
+
+    if (origin == null || destination == null) {
+      if (!mounted) return;
+      setState(() {
+        _indoorRoutePolylines = {};
+        _indoorSteps = const [];
+        _indoorDistanceText = null;
+        _indoorDurationText = null;
+      });
+      return;
+    }
+
+    final routePoints = _indoorSameFloorRouter.findShortestPath(
+      floorGeoJson: _indoorGeoJson!,
+      originRoomCode: origin,
+      destinationRoomCode: destination,
+    );
+
+    if (!mounted) return;
+
+    if (routePoints == null || routePoints.length < 2) {
+      setState(() {
+        _indoorRoutePolylines = {};
+        _indoorSteps = const [];
+        _indoorDistanceText = null;
+        _indoorDurationText = null;
+      });
+
+      if (showNoPathSnack) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No same-floor path found between selected rooms'),
+          ),
+        );
+      }
+      return;
+    }
+
+    _buildIndoorNavigationFromRoute(routePoints);
+
+    setState(() {
+      _indoorRoutePolylines = buildIndoorRoutePolylines(routePoints);
+    });
+  }
+
+  Future<void> _refreshIndoorRouteForActiveFloor() async {
+    final origin = _indoorOriginRoomCode;
+    if (origin != null) {
+      final originPoint = _findRoomCenterOnActiveFloor(origin);
+      if (!mounted) return;
+      setState(() {
+        _originRoomMarker = originPoint == null
+            ? null
+            : _buildOriginRoomMarker(origin, originPoint);
+      });
+    }
+
+    final destination = _indoorDestinationRoomCode;
+    if (destination != null) {
+      final destinationPoint = _findRoomCenterOnActiveFloor(destination);
+      if (!mounted) return;
+      setState(() {
+        _destinationRoomMarker = destinationPoint == null
+            ? null
+            : _buildDestinationRoomMarker(destination, destinationPoint);
+      });
+    }
+
+    await _rebuildIndoorSameFloorRoute();
   }
 
   Future<void> _syncToggleWithCameraCenter() async {
@@ -273,6 +624,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorGeoJson = result.geoJson;
         _roomLabelMarkers = result.labels;
       });
+      await _refreshIndoorRouteForActiveFloor();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -298,7 +650,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (floors.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No indoor maps available for this building')),
+        const SnackBar(
+          content: Text('No indoor maps available for this building'),
+        ),
       );
       return;
     }
@@ -459,6 +813,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeDestinationBuildingCode = null;
       _originRoomController.clear();
       _destinationRoomController.clear();
+      _resetIndoorRouteState();
     });
   }
 
@@ -856,6 +1211,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _destinationRoomController.clear();
       _routeOriginBuildingCode = null;
       _routeDestinationBuildingCode = null;
+      _resetIndoorRouteState();
     });
   }
 
@@ -1199,8 +1555,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
           if (_mapController != null) {
             final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
-            _mapController!
-                .animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+            _mapController!.animateCamera(
+              CameraUpdate.newLatLngBounds(bounds, 100),
+            );
           }
         } else {
           setState(() {
@@ -1231,8 +1588,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          _ShuttleScheduleSheet(nearestStop: _shuttleNearestStop),
+      builder: (_) => _ShuttleScheduleSheet(nearestStop: _shuttleNearestStop),
     );
   }
 
@@ -1649,6 +2005,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
 
     _searchController.addListener(_onSearchChanged);
+    _originRoomController.addListener(_onOriginRoomTextChanged);
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
     _determineUserLocationAndBuilding();
@@ -1674,11 +2031,47 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return null;
   }
 
-  void _onDestinationRoomTextChanged() {
-    if (_destinationRoomMarker == null) return;
+  void _onOriginRoomTextChanged() {
+    final current = _originRoomController.text.trim().toUpperCase();
+    if (_indoorOriginRoomCode == null || current == _indoorOriginRoomCode) {
+      return;
+    }
 
     setState(() {
-      _destinationRoomMarker = null;
+      _indoorOriginRoomCode = null;
+      _originRoomMarker = null;
+      _indoorRoutePolylines = {};
+      _indoorSteps = const [];
+      _indoorDistanceText = null;
+      _indoorDurationText = null;
+    });
+  }
+
+  void _onDestinationRoomTextChanged() {
+    final current = _destinationRoomController.text.trim().toUpperCase();
+
+    final shouldClearMarker =
+        _destinationRoomMarker != null &&
+        (_indoorDestinationRoomCode == null ||
+            current != _indoorDestinationRoomCode);
+
+    final shouldClearRoute =
+        _indoorDestinationRoomCode != null &&
+        current != _indoorDestinationRoomCode;
+
+    if (!shouldClearMarker && !shouldClearRoute) return;
+
+    setState(() {
+      if (shouldClearMarker) {
+        _destinationRoomMarker = null;
+      }
+      if (shouldClearRoute) {
+        _indoorDestinationRoomCode = null;
+        _indoorRoutePolylines = {};
+        _indoorSteps = const [];
+        _indoorDistanceText = null;
+        _indoorDurationText = null;
+      }
     });
   }
 
@@ -1810,8 +2203,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
+    final showGpsMarker = !(_showIndoor && _originRoomMarker != null);
+
     // Add current location marker
-    if (_currentLocation != null) {
+    if (_currentLocation != null && showGpsMarker) {
       markers.add(
         Marker(
           markerId: const MarkerId('current_location'),
@@ -1861,6 +2256,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           },
         ),
       );
+    }
+
+    if (_showIndoor && _originRoomMarker != null) {
+      markers.add(_originRoomMarker!);
     }
 
     // Add destination room marker only when indoor map is shown
@@ -2014,32 +2413,56 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     String buildingCode,
     String roomCode,
   ) async {
-    print('[DEBUG] Destination room submitted: $roomCode in $buildingCode');
+    final normalizedRoom = roomCode.trim().toUpperCase();
+    if (normalizedRoom.isEmpty) return;
 
     try {
-      final repo = IndoorMapRepository();
-      final roomLocation = await repo.getRoomLocation(buildingCode, roomCode);
+      LatLng? roomLocation;
 
-      if (roomLocation == null) {
-        print('[ERROR] Could not find location for room $roomCode');
-        return;
+      if (_showIndoor && _indoorGeoJson != null) {
+        roomLocation = _findRoomCenterOnActiveFloor(normalizedRoom);
+        if (roomLocation == null) {
+          if (!mounted) return;
+          setState(() {
+            _indoorDestinationRoomCode = null;
+            _indoorRoutePolylines = {};
+            _indoorSteps = const [];
+            _indoorDistanceText = null;
+            _indoorDurationText = null;
+            _destinationRoomMarker = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Room $normalizedRoom is not on the selected floor',
+              ),
+            ),
+          );
+          return;
+        }
+      } else {
+        final repo = IndoorMapRepository();
+        roomLocation = await repo.getRoomLocation(buildingCode, normalizedRoom);
+        if (roomLocation == null) {
+          return;
+        }
       }
-      print('[DEBUG] Room location found: $roomLocation');
-      final marker = Marker(
-        markerId: const MarkerId('destination_room'),
-        position: roomLocation,
-        infoWindow: InfoWindow(title: 'Room $roomCode'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      );
 
       if (!mounted) return;
       setState(() {
-        _destinationRoomMarker = marker;
+        _destinationRoomMarker = _buildDestinationRoomMarker(
+          normalizedRoom,
+          roomLocation!,
+        );
+        if (_showIndoor) {
+          _indoorDestinationRoomCode = normalizedRoom;
+        }
       });
 
-      print('[DEBUG] Destination room marker placed at $roomLocation');
+      if (_showIndoor) {
+        await _rebuildIndoorSameFloorRoute(showNoPathSnack: true);
+      }
     } catch (e) {
-      print('[ERROR] Error processing destination room: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2052,19 +2475,22 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+    final LatLng initialTarget = widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
 
-    final Campus labelCampus =
-        _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
+    final Campus labelCampus = _selectedCampus != Campus.none
+        ? _selectedCampus
+        : _currentCampus;
 
     final String campusLabel = labelCampus == Campus.sgw
         ? 'SGW'
         : labelCampus == Campus.loyola
-            ? 'Loyola'
-            : '';
+        ? 'Loyola'
+        : '';
 
-    final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
+    final selectedBuilding =
+        widget.debugSelectedBuilding ?? _selectedBuildingPoly;
     final popupPos = _computePopupPosition(context);
 
     return Scaffold(
@@ -2092,16 +2518,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 setState(() => _cameraMoving = false);
                 _updatePopupOffset();
               },
-              markers: {
-                ..._createMarkers(),
-                ..._roomLabelMarkers,
-              },
+              markers: {..._createMarkers(), ..._roomLabelMarkers},
               circles: _createCircles(),
-              polygons: {
-                ..._createBuildingPolygons(),
-                ..._indoorPolygons,
-              },
-              polylines: _routePolylines,
+              polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
+              polylines: mergeMapPolylines(
+                outdoorPolylines: _routePolylines,
+                indoorPolylines: _indoorRoutePolylines,
+              ),
+            ),
+
+          if (_showIndoor &&
+              !_showRoutePreview &&
+              _indoorRoutePolylines.isNotEmpty)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 110,
+              child: PointerInterceptor(child: _buildIndoorDirectionsCard()),
             ),
 
           if (_isNavigating)
@@ -2143,7 +2576,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 destinationBuildingCode: _routeDestinationBuildingCode,
                 isConcordiaBuilding: (buildingCode) {
                   return buildingPolygons.any(
-                    (b) => (b.code ?? '').toUpperCase() == buildingCode.toUpperCase(),
+                    (b) =>
+                        (b.code ?? '').toUpperCase() ==
+                        buildingCode.toUpperCase(),
                   );
                 },
               ),
@@ -2168,8 +2603,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     transitDetails: _buildTransitDetailItems(),
                     modeDistances: _routeDistances,
                     modeArrivalTimes: _routeArrivalTimes,
-                    shuttleNextBuses:
-                        _shuttleNextBuses.map((b) => b.statusLabel).toList(),
+                    shuttleNextBuses: _shuttleNextBuses
+                        .map((b) => b.statusLabel)
+                        .toList(),
                     shuttleWalkingMinutes: _shuttleWalkingMinutes,
                     shuttleNearestStop: _shuttleNearestStop,
                     onViewSchedule: _showShuttleScheduleModal,
@@ -2206,7 +2642,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onFloorChanged: _loadIndoorFloor,
             ),
 
-          if (selectedBuilding != null && popupPos != null)
+          if (!_showIndoor && selectedBuilding != null && popupPos != null)
             OutdoorBuildingPopup(
               building: selectedBuilding,
               position: popupPos,
@@ -2227,7 +2663,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onCenterOnUser: () {
                 final loc = _currentLocation;
                 if (loc == null) return;
-                _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
+                _mapController?.animateCamera(
+                  CameraUpdate.newLatLngZoom(loc, 17),
+                );
               },
             ),
 
@@ -2292,13 +2730,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _routeDebounceTimer?.cancel();
     _mapController?.dispose();
     _searchController.removeListener(_onSearchChanged);
+    _originRoomController.removeListener(_onOriginRoomTextChanged);
+    _destinationRoomController.removeListener(_onDestinationRoomTextChanged);
     _searchController.dispose();
     _originRoomController.dispose();
     _destinationRoomController.dispose();
     super.dispose();
   }
 }
-
 
 class _ShuttleScheduleSheet extends StatelessWidget {
   final String nearestStop;
@@ -2375,16 +2814,20 @@ class _ShuttleScheduleSheet extends StatelessWidget {
               ),
 
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: [
-                    _StopChip(
-                        label: 'SGW  (Hall Building)', color: burgundy),
+                    _StopChip(label: 'SGW  (Hall Building)', color: burgundy),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.sync_alt,
-                          size: 16, color: Colors.black45),
+                      child: Icon(
+                        Icons.sync_alt,
+                        size: 16,
+                        color: Colors.black45,
+                      ),
                     ),
                     _StopChip(label: 'Loyola', color: burgundy),
                   ],
@@ -2402,13 +2845,16 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                     final t = times[index];
                     final now = DateTime.now();
                     final isPast = t.isBefore(now);
-                    final isNext = !isPast &&
+                    final isNext =
+                        !isPast &&
                         (index == 0 || times[index - 1].isBefore(now));
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: isNext
                             ? burgundy.withOpacity(0.08)
@@ -2426,8 +2872,8 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                             color: isPast
                                 ? Colors.black26
                                 : isNext
-                                    ? burgundy
-                                    : Colors.black54,
+                                ? burgundy
+                                : Colors.black54,
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -2440,15 +2886,17 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                               color: isPast
                                   ? Colors.black26
                                   : isNext
-                                      ? burgundy
-                                      : Colors.black87,
+                                  ? burgundy
+                                  : Colors.black87,
                             ),
                           ),
                           if (isNext) ...[
                             const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: burgundy,
                                 borderRadius: BorderRadius.circular(10),
