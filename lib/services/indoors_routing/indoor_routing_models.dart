@@ -17,7 +17,12 @@ class IndoorRoutingNode {
   final String? transitionType;
   final String? level;
   final LatLng center;
+
+  // Outer polygon ring.
   final List<LatLng> polygonPoints;
+
+  // Inner polygon rings (holes), if any.
+  final List<List<LatLng>> holePolygons;
 
   const IndoorRoutingNode({
     required this.id,
@@ -27,6 +32,7 @@ class IndoorRoutingNode {
     required this.level,
     required this.center,
     required this.polygonPoints,
+    this.holePolygons = const [],
   });
 
   // Rooms are not considered walkable connectors in the graph.
@@ -47,6 +53,7 @@ class IndoorRoutingEdge {
 class LocalPointMeters {
   final double x;
   final double y;
+
   const LocalPointMeters({required this.x, required this.y});
 }
 
