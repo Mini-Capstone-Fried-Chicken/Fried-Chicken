@@ -25,6 +25,16 @@ copy .env.example .env
 ```
 Then fill in your own values for `GOOGLE_DIRECTIONS_API_KEY` and `GOOGLE_PLACES_API_KEY`.
 
+To enable Microsoft Clarity mobile analytics/session replay for usability testing, also set:
+```
+CLARITY_PROJECT_ID=YOUR_CLARITY_PROJECT_ID
+```
+
+Notes:
+- Clarity is enabled only when `CLARITY_PROJECT_ID` is present.
+- Clarity integration runs on Android/iOS targets (not web).
+- In debug builds, Clarity uses verbose logs to help verify setup.
+- run with flutter.bat run -d emulator-5554
 3. Run the app:
 ```
 flutter run

@@ -60,6 +60,7 @@ if not exist .env (
 REM Load environment variables from .env
 set "GOOGLE_DIRECTIONS_API_KEY="
 set "GOOGLE_PLACES_API_KEY="
+set "CLARITY_PROJECT_ID="
 
 for /f "usebackq delims=" %%x in (.env) do (
     set "line=%%x"
@@ -78,6 +79,7 @@ for /f "usebackq delims=" %%x in (.env) do (
             REM Set the API key variables
             if "!temp_key!"=="GOOGLE_DIRECTIONS_API_KEY" set "GOOGLE_DIRECTIONS_API_KEY=!temp_value!"
             if "!temp_key!"=="GOOGLE_PLACES_API_KEY" set "GOOGLE_PLACES_API_KEY=!temp_value!"
+            if "!temp_key!"=="CLARITY_PROJECT_ID" set "CLARITY_PROJECT_ID=!temp_value!"
         )
     )
 )
@@ -96,6 +98,12 @@ if "!GOOGLE_PLACES_API_KEY!"=="" (
     echo   [OK] GOOGLE_PLACES_API_KEY loaded
 )
 
+if "!CLARITY_PROJECT_ID!"=="" (
+    echo   [INFO] CLARITY_PROJECT_ID is empty (Clarity disabled)
+) else (
+    echo   [OK] CLARITY_PROJECT_ID loaded
+)
+
 echo.
 echo [INFO] Running: flutter %*
 echo.
@@ -104,6 +112,7 @@ REM Build optional dart-define arguments only when keys exist
 set "EXTRA_ARGS="
 if not "!GOOGLE_DIRECTIONS_API_KEY!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=GOOGLE_DIRECTIONS_API_KEY=!GOOGLE_DIRECTIONS_API_KEY!"
 if not "!GOOGLE_PLACES_API_KEY!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=GOOGLE_PLACES_API_KEY=!GOOGLE_PLACES_API_KEY!"
+if not "!CLARITY_PROJECT_ID!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --dart-define=CLARITY_PROJECT_ID=!CLARITY_PROJECT_ID!"
 
 REM Call the real flutter with optional API keys
 if exist "%FLUTTER_SDK%" (
