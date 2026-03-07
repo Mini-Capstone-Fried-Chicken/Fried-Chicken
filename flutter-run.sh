@@ -13,4 +13,5 @@ fi
 # Run Flutter command with environment variables
 flutter "$@" \
     --dart-define=GOOGLE_DIRECTIONS_API_KEY=$GOOGLE_DIRECTIONS_API_KEY \
-    --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
+    --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY \
+    --dart-define=CLARITY_PROJECT_ID=$CLARITY_PROJECT_ID
