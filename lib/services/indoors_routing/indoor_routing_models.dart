@@ -47,7 +47,6 @@ class IndoorRoutingEdge {
 class LocalPointMeters {
   final double x;
   final double y;
-
   const LocalPointMeters({required this.x, required this.y});
 }
 

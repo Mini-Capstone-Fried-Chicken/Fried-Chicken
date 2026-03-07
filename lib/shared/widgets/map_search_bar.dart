@@ -66,20 +66,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
         false;
   }
 
-  String _normalizeCode(String? code) => (code ?? '').trim().toUpperCase();
-
-  bool get _showSameBuildingRoomFields {
-    if (!widget.showRoomFields) return false;
-
-    final origin = _normalizeCode(widget.currentBuildingCode);
-    final destination = _normalizeCode(widget.selectedBuildingCode);
-
-    if (origin.isEmpty || destination.isEmpty) return false;
-    if (origin != destination) return false;
-
-    return widget.isConcordiaBuilding?.call(destination) ?? false;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -134,7 +120,18 @@ class _MapSearchBarState extends State<MapSearchBar> {
         ? "Search anywhere"
         : "Search anywhere near ${widget.campusLabel}";
 
-    final shouldShowRoomFields = _showSameBuildingRoomFields;
+    final indoorMode = widget.showRoomFields;
+    final effectiveOriginCode = indoorMode
+        ? widget.selectedBuildingCode
+        : widget.currentBuildingCode;
+    final effectiveDestinationCode = widget.selectedBuildingCode;
+
+    final showRooms = indoorMode
+        ? (effectiveDestinationCode?.isNotEmpty ?? false)
+        : (_isUserInConcordiaBuilding || _isConcordiaBuilding);
+
+    final originEnabled = indoorMode ? true : _isUserInConcordiaBuilding;
+    final destinationEnabled = indoorMode ? true : _isConcordiaBuilding;
 
     return TapRegion(
       onTapOutside: (_) {
@@ -167,20 +164,20 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     onSubmitted: widget.onSubmitted,
                     onChanged: (_) => _updateSuggestionsVisibility(),
                   ),
-                  if (shouldShowRoomFields)
+                  if (showRooms)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
                       ),
                       child: RoomFieldsSection(
-                        originBuildingCode: widget.currentBuildingCode,
-                        destinationBuildingCode: widget.selectedBuildingCode,
+                        originBuildingCode: effectiveOriginCode,
+                        destinationBuildingCode: effectiveDestinationCode,
                         originRoomController: widget.originRoomController,
                         destinationRoomController:
                             widget.destinationRoomController,
-                        originEnabled: true,
-                        destinationEnabled: true,
+                        originEnabled: originEnabled,
+                        destinationEnabled: destinationEnabled,
                         onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
                         onDestinationRoomSubmitted:
                             widget.onDestinationRoomSubmitted,
@@ -190,7 +187,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
               ),
             ),
           ),
-
           if (_showSuggestions && _hasSuggestions)
             PointerInterceptor(
               child: Material(

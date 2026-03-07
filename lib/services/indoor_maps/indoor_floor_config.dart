@@ -32,7 +32,7 @@ class IndoorFloorConfig {
       ),
       IndoorFloorOption(
         label: 'S2',
-        assetPath: 'assets/indoor_maps/geojson/MB/mb2.geojson.json',
+        assetPath: 'assets/indoor_maps/geojson/MB/mbS2.geojson.json',
       ),
     ],
     'VE': [

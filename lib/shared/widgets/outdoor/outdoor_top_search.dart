@@ -77,10 +77,13 @@ class OutdoorTopSearch extends StatelessWidget {
             onOriginRoomSubmitted: onOriginRoomSubmitted,
             onDestinationRoomSubmitted: onDestinationRoomSubmitted,
             selectedBuildingCode: selectedBuildingCode,
-            currentBuildingCode: currentBuildingCode,
+            currentBuildingCode: showIndoor
+                ? selectedBuildingCode
+                : currentBuildingCode,
             userLocation: userLocation,
             isConcordiaBuilding: isConcordiaBuilding,
-            showRoomFields: showIndoor,
+            showRoomFields:
+                showIndoor && (selectedBuildingCode?.isNotEmpty ?? false),
           ),
           if (showIndoor && floors.isNotEmpty) ...[
             const SizedBox(height: 10),

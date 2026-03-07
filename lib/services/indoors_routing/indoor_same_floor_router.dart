@@ -6,7 +6,6 @@ import 'indoor_dijkstra.dart';
 import 'indoor_floor_graph_builder.dart';
 import 'indoor_routing_models.dart';
 
-// Main public service for same-floor indoor routing.
 class IndoorSameFloorRouter {
   static const double adjacencyEpsilonMeters =
       IndoorBoundaryAdjacency.adjacencyEpsilonMeters;
@@ -24,7 +23,6 @@ class IndoorSameFloorRouter {
   }) : floorGraphBuilder = floorGraphBuilder ?? IndoorFloorGraphBuilder(),
        indoorDijkstra = indoorDijkstra ?? IndoorDijkstra();
 
-  // Returns true if the room exists on the currently loaded floor.
   bool roomExistsOnFloor({
     required Map<String, dynamic> floorGeoJson,
     required String roomCode,
@@ -33,7 +31,6 @@ class IndoorSameFloorRouter {
         null;
   }
 
-  // Finds the center point of a given room on the current floor.
   LatLng? roomCenterOnFloor({
     required Map<String, dynamic> floorGeoJson,
     required String roomCode,
@@ -53,8 +50,6 @@ class IndoorSameFloorRouter {
     return null;
   }
 
-  // Builds the graph from GeoJSON, finds the shortest node path,
-  // then converts that node path into drawable route points.
   List<LatLng>? findShortestPath({
     required Map<String, dynamic> floorGeoJson,
     required String originRoomCode,
@@ -78,27 +73,20 @@ class IndoorSameFloorRouter {
     for (final node in nodes) {
       if (node.nodeType != IndoorRoutingNodeType.room) continue;
 
-      if (node.roomCode == originCode) {
-        originNode = node;
-      }
-
-      if (node.roomCode == destinationCode) {
-        destinationNode = node;
-      }
+      if (node.roomCode == originCode) originNode = node;
+      if (node.roomCode == destinationCode) destinationNode = node;
     }
 
     if (originNode == null || destinationNode == null) {
       return null;
     }
 
-    // If start and end are the same room, return that single point.
     if (originNode.id == destinationNode.id) {
       return [originNode.center];
     }
 
     final adjacency = floorGraphBuilder.buildAdjacencyList(nodes);
 
-    // Prevent the graph from using other rooms as hallway shortcuts.
     final filteredAdjacency = _withoutIntermediateRooms(
       adjacency: adjacency,
       nodes: nodes,
@@ -110,56 +98,6 @@ class IndoorSameFloorRouter {
       startNodeId: originNode.id,
       endNodeId: destinationNode.id,
     );
-
-    // ---------- DEBUG OUTPUT ----------
-    print('--- INDOOR ROUTE DEBUG ---');
-    print('Origin room: $originCode (node ${originNode.id})');
-    print('Destination room: $destinationCode (node ${destinationNode.id})');
-    print('Path node IDs: $pathNodeIds');
-
-    if (pathNodeIds != null) {
-      for (final nodeId in pathNodeIds) {
-        final node = nodes[nodeId];
-        print(
-          'Node $nodeId | type=${node.nodeType} | room=${node.roomCode} | center=${node.center}',
-        );
-      }
-
-      print(
-        'Total chosen path weight: ${_pathWeight(pathNodeIds, filteredAdjacency)}',
-      );
-    }
-
-    print('Origin neighbors:');
-    for (final edge in filteredAdjacency[originNode.id] ?? const []) {
-      final n = nodes[edge.toNodeId];
-      print(
-        '  -> node ${n.id} | type=${n.nodeType} | room=${n.roomCode} | weight=${edge.weightMeters}',
-      );
-    }
-
-    print('Destination neighbors:');
-    for (final edge in filteredAdjacency[destinationNode.id] ?? const []) {
-      final n = nodes[edge.toNodeId];
-      print(
-        '  -> node ${n.id} | type=${n.nodeType} | room=${n.roomCode} | weight=${edge.weightMeters}',
-      );
-    }
-
-    print('--- CORRIDOR GRAPH ---');
-    for (final node in nodes) {
-      if (node.nodeType != IndoorRoutingNodeType.corridor) continue;
-
-      print('Corridor node ${node.id} center=${node.center}');
-      for (final edge in filteredAdjacency[node.id] ?? const []) {
-        final neighbor = nodes[edge.toNodeId];
-        print(
-          '  -> ${neighbor.id} type=${neighbor.nodeType} room=${neighbor.roomCode} weight=${edge.weightMeters}',
-        );
-      }
-    }
-    print('----------------------');
-    // ---------- END DEBUG OUTPUT ----------
 
     if (pathNodeIds == null || pathNodeIds.isEmpty) {
       return null;
@@ -177,8 +115,6 @@ class IndoorSameFloorRouter {
     return removeConsecutiveDuplicatePoints(routePoints);
   }
 
-  // Removes all rooms from the graph except the origin and destination rooms.
-  // This prevents the shortest path from cutting through unrelated rooms.
   Map<int, List<IndoorRoutingEdge>> _withoutIntermediateRooms({
     required Map<int, List<IndoorRoutingEdge>> adjacency,
     required List<IndoorRoutingNode> nodes,
@@ -187,8 +123,8 @@ class IndoorSameFloorRouter {
     final blockedRoomIds = <int>{};
 
     for (final node in nodes) {
-      final isRoom = node.nodeType == IndoorRoutingNodeType.room;
-      if (isRoom && !allowedRoomIds.contains(node.id)) {
+      if (node.nodeType == IndoorRoutingNodeType.room &&
+          !allowedRoomIds.contains(node.id)) {
         blockedRoomIds.add(node.id);
       }
     }
@@ -204,11 +140,11 @@ class IndoorSameFloorRouter {
       }
 
       final keptEdges = <IndoorRoutingEdge>[];
+
       for (final edge in entry.value) {
-        if (blockedRoomIds.contains(edge.toNodeId)) {
-          continue;
+        if (!blockedRoomIds.contains(edge.toNodeId)) {
+          keptEdges.add(edge);
         }
-        keptEdges.add(edge);
       }
 
       filtered[fromNodeId] = keptEdges;
@@ -217,25 +153,19 @@ class IndoorSameFloorRouter {
     return filtered;
   }
 
-  // Builds the final drawn route from the node path.
-  // Route shape:
-  // room center -> portal -> corridor center/bend -> portal -> ... -> room center
   List<LatLng> buildRoutePointsFromNodePath({
     required List<int> pathNodeIds,
     required List<IndoorRoutingNode> nodes,
   }) {
     if (pathNodeIds.isEmpty) return const [];
 
-    final nodeById = <int, IndoorRoutingNode>{
-      for (final node in nodes) node.id: node,
-    };
+    final nodeById = {for (final n in nodes) n.id: n};
 
     final orderedNodes = <IndoorRoutingNode>[];
-    for (final nodeId in pathNodeIds) {
-      final node = nodeById[nodeId];
-      if (node != null) {
-        orderedNodes.add(node);
-      }
+
+    for (final id in pathNodeIds) {
+      final node = nodeById[id];
+      if (node != null) orderedNodes.add(node);
     }
 
     if (orderedNodes.isEmpty) return const [];
@@ -245,9 +175,9 @@ class IndoorSameFloorRouter {
 
     final points = <LatLng>[startNode.center];
 
-    // Single-edge path: room -> portal -> room/walkable target.
     if (orderedNodes.length == 2) {
       final portal = _portalBetween(orderedNodes[0], orderedNodes[1]);
+
       if (portal != null && !areSameLatLng(points.last, portal)) {
         points.add(portal);
       }
@@ -260,6 +190,7 @@ class IndoorSameFloorRouter {
     }
 
     final firstPortal = _portalBetween(orderedNodes[0], orderedNodes[1]);
+
     if (firstPortal != null && !areSameLatLng(points.last, firstPortal)) {
       points.add(firstPortal);
     }
@@ -272,29 +203,8 @@ class IndoorSameFloorRouter {
       final entryPortal = _portalBetween(previousNode, currentNode);
       final exitPortal = _portalBetween(currentNode, nextNode);
 
-      // Guard: intermediate room nodes should not normally happen anymore.
-      if (currentNode.nodeType == IndoorRoutingNodeType.room) {
-        if (exitPortal != null && !areSameLatLng(points.last, exitPortal)) {
-          points.add(exitPortal);
-        }
-        continue;
-      }
+      if (entryPortal == null || exitPortal == null) continue;
 
-      // If we do not have enough portal information, fall back gently.
-      if (entryPortal == null || exitPortal == null) {
-        if (entryPortal != null && !areSameLatLng(points.last, entryPortal)) {
-          points.add(entryPortal);
-        }
-        if (!areSameLatLng(points.last, currentNode.center)) {
-          points.add(currentNode.center);
-        }
-        if (exitPortal != null && !areSameLatLng(points.last, exitPortal)) {
-          points.add(exitPortal);
-        }
-        continue;
-      }
-
-      // Best case: go directly from entry portal to exit portal inside corridor.
       final directInside = _segmentInsidePolygon(
         entryPortal,
         exitPortal,
@@ -302,16 +212,11 @@ class IndoorSameFloorRouter {
       );
 
       if (directInside) {
-        if (!areSameLatLng(points.last, entryPortal)) {
-          points.add(entryPortal);
-        }
-        if (!areSameLatLng(points.last, exitPortal)) {
-          points.add(exitPortal);
-        }
+        points.add(entryPortal);
+        points.add(exitPortal);
         continue;
       }
 
-      // Next best: try a single bend point from the corridor polygon.
       final bendPoint = _findCorridorBendPoint(
         entryPortal,
         exitPortal,
@@ -319,19 +224,12 @@ class IndoorSameFloorRouter {
       );
 
       if (bendPoint != null) {
-        if (!areSameLatLng(points.last, entryPortal)) {
-          points.add(entryPortal);
-        }
-        if (!areSameLatLng(points.last, bendPoint)) {
-          points.add(bendPoint);
-        }
-        if (!areSameLatLng(points.last, exitPortal)) {
-          points.add(exitPortal);
-        }
+        points.add(entryPortal);
+        points.add(bendPoint);
+        points.add(exitPortal);
         continue;
       }
 
-      // Next best after that: try two bend points.
       final bendPair = _findCorridorTwoBendPath(
         entryPortal,
         exitPortal,
@@ -339,27 +237,19 @@ class IndoorSameFloorRouter {
       );
 
       if (bendPair != null) {
-        if (!areSameLatLng(points.last, entryPortal)) {
-          points.add(entryPortal);
-        }
-        if (!areSameLatLng(points.last, bendPair.$1)) {
-          points.add(bendPair.$1);
-        }
-        if (!areSameLatLng(points.last, bendPair.$2)) {
-          points.add(bendPair.$2);
-        }
-        if (!areSameLatLng(points.last, exitPortal)) {
-          points.add(exitPortal);
-        }
+        points.add(entryPortal);
+        points.add(bendPair.$1);
+        points.add(bendPair.$2);
+        points.add(exitPortal);
         continue;
       }
 
-      // Next best: route through corridor center only if safe.
       final entryToCenterInside = _segmentInsidePolygon(
         entryPortal,
         currentNode.center,
         currentNode.polygonPoints,
       );
+
       final centerToExitInside = _segmentInsidePolygon(
         currentNode.center,
         exitPortal,
@@ -367,27 +257,10 @@ class IndoorSameFloorRouter {
       );
 
       if (entryToCenterInside && centerToExitInside) {
-        if (!areSameLatLng(points.last, entryPortal)) {
-          points.add(entryPortal);
-        }
-        if (!areSameLatLng(points.last, currentNode.center)) {
-          points.add(currentNode.center);
-        }
-        if (!areSameLatLng(points.last, exitPortal)) {
-          points.add(exitPortal);
-        }
-        continue;
-      }
-
-      // Final visual fallback.
-      if (!areSameLatLng(points.last, entryPortal)) {
         points.add(entryPortal);
-      }
-      if (!areSameLatLng(points.last, currentNode.center)) {
         points.add(currentNode.center);
-      }
-      if (!areSameLatLng(points.last, exitPortal)) {
         points.add(exitPortal);
+        continue;
       }
     }
 
@@ -399,7 +272,7 @@ class IndoorSameFloorRouter {
   }
 
   LatLng? _portalBetween(IndoorRoutingNode a, IndoorRoutingNode b) {
-    final minSharedBoundary =
+    final minShared =
         (a.nodeType == IndoorRoutingNodeType.room ||
             b.nodeType == IndoorRoutingNodeType.room)
         ? minimumSharedBoundaryRoomToWalkableMeters
@@ -408,18 +281,16 @@ class IndoorSameFloorRouter {
     return floorGraphBuilder.boundaryAdjacency.sharedBoundaryMidpoint(
       polygonA: a.polygonPoints,
       polygonB: b.polygonPoints,
-      minimumSharedBoundaryMeters: minSharedBoundary,
+      minimumSharedBoundaryMeters: minShared,
     );
   }
 
-  // Tries to find a bend point inside a corridor polygon so the route can turn
-  // without cutting through walls.
   LatLng? _findCorridorBendPoint(
     LatLng entry,
     LatLng exit,
     List<LatLng> corridorPolygon,
   ) {
-    LatLng? bestCandidate;
+    LatLng? best;
     double bestScore = double.infinity;
 
     for (final candidate in corridorPolygon) {
@@ -430,20 +301,18 @@ class IndoorSameFloorRouter {
       final entryOk = _segmentInsidePolygon(entry, candidate, corridorPolygon);
       final exitOk = _segmentInsidePolygon(candidate, exit, corridorPolygon);
 
-      if (!entryOk || !exitOk) {
-        continue;
-      }
+      if (!entryOk || !exitOk) continue;
 
       final score =
           _distanceScore(entry, candidate) + _distanceScore(candidate, exit);
 
       if (score < bestScore) {
         bestScore = score;
-        bestCandidate = candidate;
+        best = candidate;
       }
     }
 
-    return bestCandidate;
+    return best;
   }
 
   (LatLng, LatLng)? _findCorridorTwoBendPath(
@@ -455,59 +324,39 @@ class IndoorSameFloorRouter {
     LatLng? bestB;
     double bestScore = double.infinity;
 
-    for (final candidateA in corridorPolygon) {
-      if (areSameLatLng(candidateA, entry) || areSameLatLng(candidateA, exit)) {
-        continue;
-      }
+    for (final a in corridorPolygon) {
+      if (areSameLatLng(a, entry) || areSameLatLng(a, exit)) continue;
 
-      for (final candidateB in corridorPolygon) {
-        if (areSameLatLng(candidateB, entry) ||
-            areSameLatLng(candidateB, exit) ||
-            areSameLatLng(candidateA, candidateB)) {
+      for (final b in corridorPolygon) {
+        if (areSameLatLng(b, entry) ||
+            areSameLatLng(b, exit) ||
+            areSameLatLng(a, b))
           continue;
-        }
 
-        final firstOk = _segmentInsidePolygon(
-          entry,
-          candidateA,
-          corridorPolygon,
-        );
-        final secondOk = _segmentInsidePolygon(
-          candidateA,
-          candidateB,
-          corridorPolygon,
-        );
-        final thirdOk = _segmentInsidePolygon(
-          candidateB,
-          exit,
-          corridorPolygon,
-        );
+        final firstOk = _segmentInsidePolygon(entry, a, corridorPolygon);
+        final secondOk = _segmentInsidePolygon(a, b, corridorPolygon);
+        final thirdOk = _segmentInsidePolygon(b, exit, corridorPolygon);
 
-        if (!firstOk || !secondOk || !thirdOk) {
-          continue;
-        }
+        if (!firstOk || !secondOk || !thirdOk) continue;
 
         final score =
-            _distanceScore(entry, candidateA) +
-            _distanceScore(candidateA, candidateB) +
-            _distanceScore(candidateB, exit);
+            _distanceScore(entry, a) +
+            _distanceScore(a, b) +
+            _distanceScore(b, exit);
 
         if (score < bestScore) {
           bestScore = score;
-          bestA = candidateA;
-          bestB = candidateB;
+          bestA = a;
+          bestB = b;
         }
       }
     }
 
-    if (bestA == null || bestB == null) {
-      return null;
-    }
+    if (bestA == null || bestB == null) return null;
 
     return (bestA, bestB);
   }
 
-  // Checks whether a segment stays inside a polygon by sampling points along it.
   bool _segmentInsidePolygon(
     LatLng a,
     LatLng b,
@@ -521,9 +370,7 @@ class IndoorSameFloorRouter {
         a.longitude + (b.longitude - a.longitude) * t,
       );
 
-      if (!geo.pointInPolygon(p, polygon)) {
-        return false;
-      }
+      if (!geo.pointInPolygon(p, polygon)) return false;
     }
 
     return true;
@@ -535,39 +382,8 @@ class IndoorSameFloorRouter {
     return dLat * dLat + dLng * dLng;
   }
 
-  double _pathWeight(
-    List<int> pathNodeIds,
-    Map<int, List<IndoorRoutingEdge>> adjacency,
-  ) {
-    double total = 0.0;
-
-    for (int i = 0; i < pathNodeIds.length - 1; i++) {
-      final from = pathNodeIds[i];
-      final to = pathNodeIds[i + 1];
-
-      final edges = adjacency[from] ?? const [];
-      IndoorRoutingEdge? found;
-
-      for (final edge in edges) {
-        if (edge.toNodeId == to) {
-          found = edge;
-          break;
-        }
-      }
-
-      if (found != null) {
-        total += found.weightMeters;
-      }
-    }
-
-    return total;
-  }
-
-  // Cleans up repeated consecutive points before drawing the polyline.
   List<LatLng> removeConsecutiveDuplicatePoints(List<LatLng> points) {
-    if (points.length <= 1) {
-      return points;
-    }
+    if (points.length <= 1) return points;
 
     final cleaned = <LatLng>[points.first];
 
