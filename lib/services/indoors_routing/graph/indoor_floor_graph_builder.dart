@@ -28,60 +28,37 @@ class IndoorFloorGraphBuilder {
     final nodes = <IndoorRoutingNode>[];
 
     for (final featureRaw in featuresRaw) {
-      if (featureRaw is! Map) continue;
-      final feature = featureRaw.cast<String, dynamic>();
+      final feature = _asFeatureMap(featureRaw);
+      if (feature == null) continue;
 
-      final rings = extractPolygonRingsFromFeature(feature);
-      if (rings == null) continue;
+      final parsedFeature = _parseFloorFeature(feature);
+      if (parsedFeature == null) continue;
 
-      final outerRing = rings.outerRing;
-      final holeRings = rings.holeRings;
+      final rings = parsedFeature.rings;
+      if (rings.outerRing.length < 3) continue;
 
-      if (outerRing.length < 3) continue;
-
-      final properties =
-          (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
-
-      final indoorType = properties['indoor']?.toString();
-      final highwayType = properties['highway']?.toString();
-      final escalatorFlag =
-          properties['escalators']?.toString().toLowerCase() == 'yes';
-      final level = properties['level']?.toString();
-
-      if (indoorType == 'room') {
-        final ref = properties['ref']?.toString().trim().toUpperCase();
-        final roomCode = (ref == null || ref.isEmpty) ? null : ref;
-        final center = geo.polygonCenter(outerRing);
-
+      if (_isRoom(parsedFeature.properties)) {
         nodes.add(
-          IndoorRoutingNode(
+          _buildRoomNode(
             id: nodes.length,
-            nodeType: IndoorRoutingNodeType.room,
-            roomCode: roomCode,
-            transitionType: null,
-            level: level,
-            center: center,
-            polygonPoints: outerRing,
-            holePolygons: holeRings,
+            rings: rings,
+            properties: parsedFeature.properties,
           ),
         );
         continue;
       }
 
-      if (indoorType == 'corridor') {
+      if (_isCorridor(parsedFeature.properties)) {
         _addCorridorNodes(
           nodes: nodes,
-          corridorPolygon: outerRing,
-          holePolygons: holeRings,
-          level: level,
+          corridorPolygon: rings.outerRing,
+          holePolygons: rings.holeRings,
+          level: parsedFeature.properties['level']?.toString(),
         );
         continue;
       }
 
-      // US-5.4 same-floor only: skip transitions for now.
-      if (highwayType == 'steps' ||
-          highwayType == 'elevator' ||
-          escalatorFlag) {
+      if (_isTransition(parsedFeature.properties)) {
         continue;
       }
     }
@@ -89,97 +66,162 @@ class IndoorFloorGraphBuilder {
     return nodes;
   }
 
+  Map<String, dynamic>? _asFeatureMap(dynamic featureRaw) {
+    if (featureRaw is! Map) return null;
+    return featureRaw.cast<String, dynamic>();
+  }
+
+  _ParsedFloorFeature? _parseFloorFeature(Map<String, dynamic> feature) {
+    final rings = extractPolygonRingsFromFeature(feature);
+    if (rings == null) return null;
+
+    final properties =
+        (feature['properties'] as Map?)?.cast<String, dynamic>() ?? const {};
+
+    return _ParsedFloorFeature(rings: rings, properties: properties);
+  }
+
+  bool _isRoom(Map<String, dynamic> properties) {
+    return properties['indoor']?.toString() == 'room';
+  }
+
+  bool _isCorridor(Map<String, dynamic> properties) {
+    return properties['indoor']?.toString() == 'corridor';
+  }
+
+  bool _isTransition(Map<String, dynamic> properties) {
+    final highwayType = properties['highway']?.toString();
+    final escalatorFlag =
+        properties['escalators']?.toString().toLowerCase() == 'yes';
+
+    return highwayType == 'steps' || highwayType == 'elevator' || escalatorFlag;
+  }
+
+  IndoorRoutingNode _buildRoomNode({
+    required int id,
+    required ({List<LatLng> outerRing, List<List<LatLng>> holeRings}) rings,
+    required Map<String, dynamic> properties,
+  }) {
+    final ref = properties['ref']?.toString().trim().toUpperCase();
+    final roomCode = (ref == null || ref.isEmpty) ? null : ref;
+    final center = geo.polygonCenter(rings.outerRing);
+
+    return IndoorRoutingNode(
+      id: id,
+      nodeType: IndoorRoutingNodeType.room,
+      roomCode: roomCode,
+      transitionType: null,
+      level: properties['level']?.toString(),
+      center: center,
+      polygonPoints: rings.outerRing,
+      holePolygons: rings.holeRings,
+    );
+  }
+
   // Builds the graph adjacency list by checking which nodes should connect.
   Map<int, List<IndoorRoutingEdge>> buildAdjacencyList(
     List<IndoorRoutingNode> nodes,
   ) {
-    final adjacency = <int, List<IndoorRoutingEdge>>{};
-
-    for (final node in nodes) {
-      adjacency[node.id] = <IndoorRoutingEdge>[];
-    }
+    final adjacency = <int, List<IndoorRoutingEdge>>{
+      for (final node in nodes) node.id: <IndoorRoutingEdge>[],
+    };
 
     for (int i = 0; i < nodes.length; i++) {
       for (int j = i + 1; j < nodes.length; j++) {
-        final nodeA = nodes[i];
-        final nodeB = nodes[j];
-
-        final sameCorridorPolygon =
-            nodeA.nodeType == IndoorRoutingNodeType.corridor &&
-            nodeB.nodeType == IndoorRoutingNodeType.corridor &&
-            identical(nodeA.polygonPoints, nodeB.polygonPoints);
-
-        // If both nodes belong to the exact same corridor polygon,
-        // only connect them if the segment stays inside that corridor
-        // and outside all its holes.
-        if (sameCorridorPolygon) {
-          final inside = _segmentInsidePolygonWithHoles(
-            nodeA.center,
-            nodeB.center,
-            nodeA.polygonPoints,
-            nodeA.holePolygons,
-          );
-
-          if (inside) {
-            final edgeWeightMeters = latLngDistanceMeters(
-              nodeA.center,
-              nodeB.center,
-            );
-
-            adjacency[nodeA.id]!.add(
-              IndoorRoutingEdge(
-                toNodeId: nodeB.id,
-                weightMeters: edgeWeightMeters,
-              ),
-            );
-
-            adjacency[nodeB.id]!.add(
-              IndoorRoutingEdge(
-                toNodeId: nodeA.id,
-                weightMeters: edgeWeightMeters,
-              ),
-            );
-          }
-          continue;
-        }
-
-        if (!shouldCreateEdge(nodeA, nodeB)) {
-          continue;
-        }
-
-        final minimumSharedBoundaryMeters =
-            nodeA.nodeType == IndoorRoutingNodeType.room ||
-                nodeB.nodeType == IndoorRoutingNodeType.room
-            ? IndoorBoundaryAdjacency.minimumSharedBoundaryRoomToWalkableMeters
-            : IndoorBoundaryAdjacency
-                  .minimumSharedBoundaryWalkableToWalkableMeters;
-
-        final adjacent = boundaryAdjacency.polygonsAreAdjacentByBoundaryShare(
-          polygonA: nodeA.polygonPoints,
-          polygonB: nodeB.polygonPoints,
-          minimumSharedBoundaryMeters: minimumSharedBoundaryMeters,
-        );
-
-        if (!adjacent) {
-          continue;
-        }
-
-        final edgeWeightMeters = latLngDistanceMeters(
-          nodeA.center,
-          nodeB.center,
-        );
-
-        adjacency[nodeA.id]!.add(
-          IndoorRoutingEdge(toNodeId: nodeB.id, weightMeters: edgeWeightMeters),
-        );
-
-        adjacency[nodeB.id]!.add(
-          IndoorRoutingEdge(toNodeId: nodeA.id, weightMeters: edgeWeightMeters),
+        _connectNodePairIfNeeded(
+          nodeA: nodes[i],
+          nodeB: nodes[j],
+          adjacency: adjacency,
         );
       }
     }
 
     return adjacency;
+  }
+
+  void _connectNodePairIfNeeded({
+    required IndoorRoutingNode nodeA,
+    required IndoorRoutingNode nodeB,
+    required Map<int, List<IndoorRoutingEdge>> adjacency,
+  }) {
+    if (_areSameCorridorPolygon(nodeA, nodeB)) {
+      _connectCorridorAnchorsInsidePolygon(nodeA, nodeB, adjacency);
+      return;
+    }
+
+    if (!shouldCreateEdge(nodeA, nodeB)) {
+      return;
+    }
+
+    final minSharedBoundary = _minimumSharedBoundaryMeters(nodeA, nodeB);
+    final adjacent = boundaryAdjacency.polygonsAreAdjacentByBoundaryShare(
+      polygonA: nodeA.polygonPoints,
+      polygonB: nodeB.polygonPoints,
+      minimumSharedBoundaryMeters: minSharedBoundary,
+    );
+
+    if (!adjacent) {
+      return;
+    }
+
+    _addUndirectedEdge(adjacency, nodeA, nodeB);
+  }
+
+  bool _areSameCorridorPolygon(
+    IndoorRoutingNode nodeA,
+    IndoorRoutingNode nodeB,
+  ) {
+    return nodeA.nodeType == IndoorRoutingNodeType.corridor &&
+        nodeB.nodeType == IndoorRoutingNodeType.corridor &&
+        identical(nodeA.polygonPoints, nodeB.polygonPoints);
+  }
+
+  void _connectCorridorAnchorsInsidePolygon(
+    IndoorRoutingNode nodeA,
+    IndoorRoutingNode nodeB,
+    Map<int, List<IndoorRoutingEdge>> adjacency,
+  ) {
+    final inside = _segmentInsidePolygonWithHoles(
+      nodeA.center,
+      nodeB.center,
+      nodeA.polygonPoints,
+      nodeA.holePolygons,
+    );
+
+    if (!inside) {
+      return;
+    }
+
+    _addUndirectedEdge(adjacency, nodeA, nodeB);
+  }
+
+  double _minimumSharedBoundaryMeters(
+    IndoorRoutingNode nodeA,
+    IndoorRoutingNode nodeB,
+  ) {
+    final hasRoom =
+        nodeA.nodeType == IndoorRoutingNodeType.room ||
+        nodeB.nodeType == IndoorRoutingNodeType.room;
+
+    return hasRoom
+        ? IndoorBoundaryAdjacency.minimumSharedBoundaryRoomToWalkableMeters
+        : IndoorBoundaryAdjacency.minimumSharedBoundaryWalkableToWalkableMeters;
+  }
+
+  void _addUndirectedEdge(
+    Map<int, List<IndoorRoutingEdge>> adjacency,
+    IndoorRoutingNode nodeA,
+    IndoorRoutingNode nodeB,
+  ) {
+    final edgeWeightMeters = latLngDistanceMeters(nodeA.center, nodeB.center);
+
+    adjacency[nodeA.id]!.add(
+      IndoorRoutingEdge(toNodeId: nodeB.id, weightMeters: edgeWeightMeters),
+    );
+
+    adjacency[nodeB.id]!.add(
+      IndoorRoutingEdge(toNodeId: nodeA.id, weightMeters: edgeWeightMeters),
+    );
   }
 
   void _addCorridorNodes({
@@ -380,23 +422,9 @@ class IndoorFloorGraphBuilder {
     final parsedRings = <List<LatLng>>[];
 
     for (final ringRaw in coordinatesRaw) {
-      if (ringRaw is! List) continue;
-
-      final points = <LatLng>[];
-
-      for (final pointRaw in ringRaw) {
-        if (pointRaw is! List || pointRaw.length < 2) continue;
-
-        final lngRaw = pointRaw[0];
-        final latRaw = pointRaw[1];
-
-        if (lngRaw is! num || latRaw is! num) continue;
-
-        points.add(LatLng(latRaw.toDouble(), lngRaw.toDouble()));
-      }
-
-      if (points.length >= 3) {
-        parsedRings.add(ensureClosedPolygon(points));
+      final ring = _parseRing(ringRaw);
+      if (ring != null) {
+        parsedRings.add(ensureClosedPolygon(ring));
       }
     }
 
@@ -406,6 +434,36 @@ class IndoorFloorGraphBuilder {
       outerRing: parsedRings.first,
       holeRings: parsedRings.length > 1 ? parsedRings.sublist(1) : const [],
     );
+  }
+
+  List<LatLng>? _parseRing(dynamic ringRaw) {
+    if (ringRaw is! List) {
+      return null;
+    }
+
+    final points = <LatLng>[];
+    for (final pointRaw in ringRaw) {
+      final point = _parsePoint(pointRaw);
+      if (point != null) {
+        points.add(point);
+      }
+    }
+
+    return points.length >= 3 ? points : null;
+  }
+
+  LatLng? _parsePoint(dynamic pointRaw) {
+    if (pointRaw is! List || pointRaw.length < 2) {
+      return null;
+    }
+
+    final lngRaw = pointRaw[0];
+    final latRaw = pointRaw[1];
+    if (lngRaw is! num || latRaw is! num) {
+      return null;
+    }
+
+    return LatLng(latRaw.toDouble(), lngRaw.toDouble());
   }
 
   List<LatLng> ensureClosedPolygon(List<LatLng> polygon) {
@@ -451,4 +509,11 @@ class IndoorFloorGraphBuilder {
   double degToRad(double degrees) {
     return degrees * (math.pi / 180.0);
   }
+}
+
+class _ParsedFloorFeature {
+  final ({List<LatLng> outerRing, List<List<LatLng>> holeRings}) rings;
+  final Map<String, dynamic> properties;
+
+  const _ParsedFloorFeature({required this.rings, required this.properties});
 }

@@ -7,21 +7,70 @@ class IndoorDijkstra {
     required int startNodeId,
     required int endNodeId,
   }) {
-    if (adjacency.isEmpty) return null;
-    if (!adjacency.containsKey(startNodeId) ||
-        !adjacency.containsKey(endNodeId)) {
+    if (!_hasValidEndpoints(
+      adjacency: adjacency,
+      startNodeId: startNodeId,
+      endNodeId: endNodeId,
+    )) {
       return null;
     }
 
+    final distances = _initializeDistances(adjacency, startNodeId);
+    final previous = _initializePrevious(adjacency);
+
+    _runDijkstra(
+      adjacency: adjacency,
+      distances: distances,
+      previous: previous,
+      startNodeId: startNodeId,
+      endNodeId: endNodeId,
+    );
+
+    if (distances[endNodeId] == double.infinity) {
+      return null;
+    }
+
+    return _reconstructPath(
+      previous: previous,
+      startNodeId: startNodeId,
+      endNodeId: endNodeId,
+    );
+  }
+
+  bool _hasValidEndpoints({
+    required Map<int, List<IndoorRoutingEdge>> adjacency,
+    required int startNodeId,
+    required int endNodeId,
+  }) {
+    return adjacency.isNotEmpty &&
+        adjacency.containsKey(startNodeId) &&
+        adjacency.containsKey(endNodeId);
+  }
+
+  Map<int, double> _initializeDistances(
+    Map<int, List<IndoorRoutingEdge>> adjacency,
+    int startNodeId,
+  ) {
     final distances = <int, double>{
       for (final id in adjacency.keys) id: double.infinity,
     };
-    final previous = <int, int?>{};
-    for (final nodeId in adjacency.keys) {
-      previous[nodeId] = null;
-    }
     distances[startNodeId] = 0.0;
+    return distances;
+  }
 
+  Map<int, int?> _initializePrevious(
+    Map<int, List<IndoorRoutingEdge>> adjacency,
+  ) {
+    return <int, int?>{for (final nodeId in adjacency.keys) nodeId: null};
+  }
+
+  void _runDijkstra({
+    required Map<int, List<IndoorRoutingEdge>> adjacency,
+    required Map<int, double> distances,
+    required Map<int, int?> previous,
+    required int startNodeId,
+    required int endNodeId,
+  }) {
     final heap = _MinNodeHeap();
     heap.push((startNodeId, 0.0));
 
@@ -31,33 +80,73 @@ class IndoorDijkstra {
 
       final currentNodeId = current.$1;
       final currentDistance = current.$2;
-      if (currentDistance > (distances[currentNodeId] ?? double.infinity)) {
+
+      if (_isOutdatedHeapEntry(
+        currentNodeId: currentNodeId,
+        currentDistance: currentDistance,
+        distances: distances,
+      )) {
         continue;
       }
-      if (currentNodeId == endNodeId) break;
 
-      for (final edge
-          in adjacency[currentNodeId] ?? const <IndoorRoutingEdge>[]) {
-        final candidateDistance = currentDistance + edge.weightMeters;
-        if (candidateDistance < (distances[edge.toNodeId] ?? double.infinity)) {
-          distances[edge.toNodeId] = candidateDistance;
-          previous[edge.toNodeId] = currentNodeId;
-          heap.push((edge.toNodeId, candidateDistance));
-        }
+      if (currentNodeId == endNodeId) {
+        break;
       }
-    }
 
-    if (distances[endNodeId] == double.infinity) {
-      return null;
+      _relaxNeighbors(
+        currentNodeId: currentNodeId,
+        currentDistance: currentDistance,
+        adjacency: adjacency,
+        distances: distances,
+        previous: previous,
+        heap: heap,
+      );
     }
+  }
 
-    // Reconstruct the path from end back to start.
+  bool _isOutdatedHeapEntry({
+    required int currentNodeId,
+    required double currentDistance,
+    required Map<int, double> distances,
+  }) {
+    return currentDistance > (distances[currentNodeId] ?? double.infinity);
+  }
+
+  void _relaxNeighbors({
+    required int currentNodeId,
+    required double currentDistance,
+    required Map<int, List<IndoorRoutingEdge>> adjacency,
+    required Map<int, double> distances,
+    required Map<int, int?> previous,
+    required _MinNodeHeap heap,
+  }) {
+    for (final edge
+        in adjacency[currentNodeId] ?? const <IndoorRoutingEdge>[]) {
+      final candidateDistance = currentDistance + edge.weightMeters;
+      final knownDistance = distances[edge.toNodeId] ?? double.infinity;
+      if (candidateDistance >= knownDistance) {
+        continue;
+      }
+
+      distances[edge.toNodeId] = candidateDistance;
+      previous[edge.toNodeId] = currentNodeId;
+      heap.push((edge.toNodeId, candidateDistance));
+    }
+  }
+
+  List<int>? _reconstructPath({
+    required Map<int, int?> previous,
+    required int startNodeId,
+    required int endNodeId,
+  }) {
     final reversedPath = <int>[];
     int? cursor = endNodeId;
 
     while (cursor != null) {
       reversedPath.add(cursor);
-      if (cursor == startNodeId) break;
+      if (cursor == startNodeId) {
+        break;
+      }
       cursor = previous[cursor];
     }
 

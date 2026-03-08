@@ -97,6 +97,32 @@ void main() {
       const LatLng(0, 0),
     ];
 
+    test('finds boundary constrained path through anchors', () {
+      const entry = LatLng(0.00001, 0.000005);
+      const exit = LatLng(0.000035, 0.000055);
+
+      final path = builder.findBoundaryConstrainedCorridorPath(
+        entry: entry,
+        exit: exit,
+        corridorPolygon: corridor,
+      );
+
+      expect(path, isNotNull);
+      expect(path!.first, entry);
+      expect(path.last, exit);
+      expect(path.length, greaterThanOrEqualTo(2));
+    });
+
+    test('returns null boundary constrained path for invalid polygon', () {
+      final path = builder.findBoundaryConstrainedCorridorPath(
+        entry: const LatLng(0, 0),
+        exit: const LatLng(0.00001, 0.00001),
+        corridorPolygon: const [LatLng(0, 0), LatLng(0.00001, 0), LatLng(0, 0)],
+      );
+
+      expect(path, isNull);
+    });
+
     test('finds a one-bend path candidate when direct segment is blocked', () {
       final blockedRoom = <LatLng>[
         const LatLng(0.000015, 0.00002),
@@ -117,6 +143,28 @@ void main() {
       expect(bend, isNotNull);
     });
 
+    test('finds two-bend path when one bend is not enough', () {
+      final blockedRoom = <LatLng>[
+        const LatLng(0.000012, 0.000022),
+        const LatLng(0.000012, 0.000052),
+        const LatLng(0.000032, 0.000052),
+        const LatLng(0.000032, 0.000022),
+        const LatLng(0.000012, 0.000022),
+      ];
+
+      final pair = builder.findCorridorTwoBendPath(
+        const LatLng(0.00001, 0.000005),
+        const LatLng(0.000035, 0.000055),
+        corridor,
+        blockedRoomPolygons: [blockedRoom],
+        avoidBlockedRooms: true,
+      );
+
+      expect(pair, isNotNull);
+      expect(pair!.$1, isA<LatLng>());
+      expect(pair.$2, isA<LatLng>());
+    });
+
     test('builds boundary fallback path with entry and exit preserved', () {
       const entry = LatLng(0.00001, 0.000005);
       const exit = LatLng(0.000035, 0.000055);
@@ -131,6 +179,26 @@ void main() {
       expect(path!.first, entry);
       expect(path.last, exit);
       expect(path.length, greaterThanOrEqualTo(3));
+    });
+
+    test('buildBoundaryAnchors densifies long edges', () {
+      final anchors = builder.buildBoundaryAnchors(corridor);
+      expect(anchors.length, greaterThan(4));
+    });
+
+    test('nearestVertexIndex and ringPath respect direction', () {
+      final vertices = corridor.sublist(0, corridor.length - 1);
+
+      final nearest = builder.nearestVertexIndex(
+        const LatLng(0.000039, 0.000001),
+        vertices,
+      );
+      expect(nearest, 3);
+
+      final backward = builder.ringPath(vertices, 0, 2, forward: false);
+      expect(backward.first, vertices[0]);
+      expect(backward.last, vertices[2]);
+      expect(backward, [vertices[0], vertices[3], vertices[2]]);
     });
   });
 }

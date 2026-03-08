@@ -27,9 +27,7 @@ class IndoorCorridorPathBuilder {
     if (anchors.length < 3) return null;
 
     final graphPoints = <LatLng>[entry, exit, ...anchors];
-    final adjacency = <int, List<IndoorRoutingEdge>>{
-      for (int i = 0; i < graphPoints.length; i++) i: <IndoorRoutingEdge>[],
-    };
+    final adjacency = _initializeAdjacency(graphPoints.length);
 
     void addEdge(int a, int b) {
       final w = geometry.distanceMeters(graphPoints[a], graphPoints[b]);
@@ -37,39 +35,21 @@ class IndoorCorridorPathBuilder {
       adjacency[b]!.add(IndoorRoutingEdge(toNodeId: a, weightMeters: w));
     }
 
-    final base = 2;
+    const base = 2;
+    _connectAnchorRing(anchors: anchors, base: base, addEdge: addEdge);
+    _connectEntryAndExitToAnchors(
+      anchors: anchors,
+      base: base,
+      graphPoints: graphPoints,
+      corridorPolygon: corridorPolygon,
+      addEdge: addEdge,
+    );
 
-    for (int i = 0; i < anchors.length; i++) {
-      final a = base + i;
-      final b = base + ((i + 1) % anchors.length);
-      addEdge(a, b);
-    }
-
-    for (final source in const [0, 1]) {
-      for (int i = 0; i < anchors.length; i++) {
-        final anchorId = base + i;
-        if (geometry.segmentInsidePolygon(
-          graphPoints[source],
-          graphPoints[anchorId],
-          corridorPolygon,
-          minSamples: IndoorRouteGeometryTuning.segmentSamples,
-          sampleSpacingMeters:
-              IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-        )) {
-          addEdge(source, anchorId);
-        }
-      }
-    }
-
-    if (geometry.distanceMeters(entry, exit) <= 8.0 &&
-        geometry.segmentInsidePolygon(
-          entry,
-          exit,
-          corridorPolygon,
-          minSamples: IndoorRouteGeometryTuning.segmentSamples,
-          sampleSpacingMeters:
-              IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-        )) {
+    if (_canConnectEntryExitDirectly(
+      entry: entry,
+      exit: exit,
+      corridorPolygon: corridorPolygon,
+    )) {
       addEdge(0, 1);
     }
 
@@ -83,6 +63,69 @@ class IndoorCorridorPathBuilder {
     return idPath.map((id) => graphPoints[id]).toList(growable: false);
   }
 
+  Map<int, List<IndoorRoutingEdge>> _initializeAdjacency(int pointCount) {
+    return <int, List<IndoorRoutingEdge>>{
+      for (int i = 0; i < pointCount; i++) i: <IndoorRoutingEdge>[],
+    };
+  }
+
+  void _connectAnchorRing({
+    required List<LatLng> anchors,
+    required int base,
+    required void Function(int a, int b) addEdge,
+  }) {
+    for (int i = 0; i < anchors.length; i++) {
+      final a = base + i;
+      final b = base + ((i + 1) % anchors.length);
+      addEdge(a, b);
+    }
+  }
+
+  void _connectEntryAndExitToAnchors({
+    required List<LatLng> anchors,
+    required int base,
+    required List<LatLng> graphPoints,
+    required List<LatLng> corridorPolygon,
+    required void Function(int a, int b) addEdge,
+  }) {
+    for (final source in const [0, 1]) {
+      for (int i = 0; i < anchors.length; i++) {
+        final anchorId = base + i;
+        if (!_segmentInsideCorridorPolygon(
+          graphPoints[source],
+          graphPoints[anchorId],
+          corridorPolygon,
+        )) {
+          continue;
+        }
+        addEdge(source, anchorId);
+      }
+    }
+  }
+
+  bool _canConnectEntryExitDirectly({
+    required LatLng entry,
+    required LatLng exit,
+    required List<LatLng> corridorPolygon,
+  }) {
+    return geometry.distanceMeters(entry, exit) <= 8.0 &&
+        _segmentInsideCorridorPolygon(entry, exit, corridorPolygon);
+  }
+
+  bool _segmentInsideCorridorPolygon(
+    LatLng a,
+    LatLng b,
+    List<LatLng> corridorPolygon,
+  ) {
+    return geometry.segmentInsidePolygon(
+      a,
+      b,
+      corridorPolygon,
+      minSamples: IndoorRouteGeometryTuning.segmentSamples,
+      sampleSpacingMeters: IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
+    );
+  }
+
   LatLng? findCorridorBendPoint(
     LatLng entry,
     LatLng exit,
@@ -94,34 +137,16 @@ class IndoorCorridorPathBuilder {
     double bestScore = double.infinity;
 
     for (final candidate in corridorPolygon) {
-      if (geometry.areSameLatLng(candidate, entry) ||
-          geometry.areSameLatLng(candidate, exit)) {
+      if (!_isDistinctCandidate(candidate, entry, exit)) {
         continue;
       }
 
-      final entryOk = geometry.segmentInsideCorridor(
-        a: entry,
-        b: candidate,
+      if (!_isValidCorridorSegmentPath(
+        points: [entry, candidate, exit],
         corridorPolygon: corridorPolygon,
         blockedRoomPolygons: blockedRoomPolygons,
         avoidBlockedRooms: avoidBlockedRooms,
-        minSamples: IndoorRouteGeometryTuning.segmentSamples,
-        sampleSpacingMeters:
-            IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-      );
-
-      final exitOk = geometry.segmentInsideCorridor(
-        a: candidate,
-        b: exit,
-        corridorPolygon: corridorPolygon,
-        blockedRoomPolygons: blockedRoomPolygons,
-        avoidBlockedRooms: avoidBlockedRooms,
-        minSamples: IndoorRouteGeometryTuning.segmentSamples,
-        sampleSpacingMeters:
-            IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-      );
-
-      if (!entryOk || !exitOk) {
+      )) {
         continue;
       }
 
@@ -145,56 +170,30 @@ class IndoorCorridorPathBuilder {
     required List<List<LatLng>> blockedRoomPolygons,
     required bool avoidBlockedRooms,
   }) {
-    LatLng? bestA;
-    LatLng? bestB;
+    (LatLng, LatLng)? bestPair;
     double bestScore = double.infinity;
 
     for (final a in corridorPolygon) {
-      if (geometry.areSameLatLng(a, entry) || geometry.areSameLatLng(a, exit)) {
+      if (!_isDistinctCandidate(a, entry, exit)) {
         continue;
       }
 
       for (final b in corridorPolygon) {
-        if (geometry.areSameLatLng(b, entry) ||
-            geometry.areSameLatLng(b, exit) ||
-            geometry.areSameLatLng(a, b)) {
+        if (!_isDistinctTwoBendCandidate(
+          first: a,
+          second: b,
+          entry: entry,
+          exit: exit,
+        )) {
           continue;
         }
 
-        final firstOk = geometry.segmentInsideCorridor(
-          a: entry,
-          b: a,
+        if (!_isValidCorridorSegmentPath(
+          points: [entry, a, b, exit],
           corridorPolygon: corridorPolygon,
           blockedRoomPolygons: blockedRoomPolygons,
           avoidBlockedRooms: avoidBlockedRooms,
-          minSamples: IndoorRouteGeometryTuning.segmentSamples,
-          sampleSpacingMeters:
-              IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-        );
-
-        final secondOk = geometry.segmentInsideCorridor(
-          a: a,
-          b: b,
-          corridorPolygon: corridorPolygon,
-          blockedRoomPolygons: blockedRoomPolygons,
-          avoidBlockedRooms: avoidBlockedRooms,
-          minSamples: IndoorRouteGeometryTuning.segmentSamples,
-          sampleSpacingMeters:
-              IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-        );
-
-        final thirdOk = geometry.segmentInsideCorridor(
-          a: b,
-          b: exit,
-          corridorPolygon: corridorPolygon,
-          blockedRoomPolygons: blockedRoomPolygons,
-          avoidBlockedRooms: avoidBlockedRooms,
-          minSamples: IndoorRouteGeometryTuning.segmentSamples,
-          sampleSpacingMeters:
-              IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
-        );
-
-        if (!firstOk || !secondOk || !thirdOk) {
+        )) {
           continue;
         }
 
@@ -205,17 +204,50 @@ class IndoorCorridorPathBuilder {
 
         if (score < bestScore) {
           bestScore = score;
-          bestA = a;
-          bestB = b;
+          bestPair = (a, b);
         }
       }
     }
 
-    if (bestA == null || bestB == null) {
-      return null;
-    }
+    return bestPair;
+  }
 
-    return (bestA, bestB);
+  bool _isDistinctCandidate(LatLng candidate, LatLng entry, LatLng exit) {
+    return !geometry.areSameLatLng(candidate, entry) &&
+        !geometry.areSameLatLng(candidate, exit);
+  }
+
+  bool _isDistinctTwoBendCandidate({
+    required LatLng first,
+    required LatLng second,
+    required LatLng entry,
+    required LatLng exit,
+  }) {
+    return _isDistinctCandidate(second, entry, exit) &&
+        !geometry.areSameLatLng(first, second);
+  }
+
+  bool _isValidCorridorSegmentPath({
+    required List<LatLng> points,
+    required List<LatLng> corridorPolygon,
+    required List<List<LatLng>> blockedRoomPolygons,
+    required bool avoidBlockedRooms,
+  }) {
+    for (int i = 1; i < points.length; i++) {
+      if (!geometry.segmentInsideCorridor(
+        a: points[i - 1],
+        b: points[i],
+        corridorPolygon: corridorPolygon,
+        blockedRoomPolygons: blockedRoomPolygons,
+        avoidBlockedRooms: avoidBlockedRooms,
+        minSamples: IndoorRouteGeometryTuning.segmentSamples,
+        sampleSpacingMeters:
+            IndoorRouteGeometryTuning.segmentSampleSpacingMeters,
+      )) {
+        return false;
+      }
+    }
+    return true;
   }
 
   List<LatLng>? fallbackAlongCorridorBoundary({
