@@ -114,7 +114,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         ),
                       ),
                     ),
-                    Align(
+                    const Align(
                       alignment: Alignment.centerLeft,
                       child: BackButtonWidget(destinationPage: const SignInPage()),
                     ),
