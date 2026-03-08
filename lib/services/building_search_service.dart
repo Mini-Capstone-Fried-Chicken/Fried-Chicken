@@ -5,8 +5,19 @@ import '../data/search_suggestion.dart';
 import 'google_places_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+typedef BuildingMatcher = BuildingPolygon? Function(String normalizedQuery);
+
 /// Service for searching buildings using Google Places API and Concordia building data
 class BuildingSearchService {
+  static final List<BuildingMatcher> _exactBuildingMatchers = [
+    _findExactCodeMatch,
+    _findExactNameMatch,
+    _findExactSearchTermMatch,
+  ];
+
+  static final BuildingMatcher _partialBuildingMatcher =
+      _findPartialSearchTermMatch;
+
   /// Search for places using Google Places API with Concordia building check
   /// Returns a list of SearchResult objects
   static Future<List<SearchResult>> searchWithGooglePlaces(
@@ -71,26 +82,23 @@ class BuildingSearchService {
 
     final normalizedQuery = query.toLowerCase().trim();
 
-    final exactCodeMatch = _findExactCodeMatch(normalizedQuery);
-    if (exactCodeMatch != null) {
-      return exactCodeMatch;
-    }
-
-    final exactNameMatch = _findExactNameMatch(normalizedQuery);
-    if (exactNameMatch != null) {
-      return exactNameMatch;
-    }
-
-    final exactSearchTermMatch = _findExactSearchTermMatch(normalizedQuery);
-    if (exactSearchTermMatch != null) {
-      return exactSearchTermMatch;
+    for (final matcher in _exactBuildingMatchers) {
+      final match = matcher(normalizedQuery);
+      if (match != null) {
+        return match;
+      }
     }
 
     if (normalizedQuery.length < 3) {
       return null;
     }
 
-    return _findPartialSearchTermMatch(normalizedQuery);
+    final partialMatch = _partialBuildingMatcher(normalizedQuery);
+    if (partialMatch != null) {
+      return partialMatch;
+    }
+
+    return null;
   }
 
   static BuildingPolygon? _findExactCodeMatch(String normalizedQuery) {
