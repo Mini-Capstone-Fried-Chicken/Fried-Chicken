@@ -5,6 +5,28 @@ import 'package:campus_app/services/building_search_service.dart';
 
 void main() {
   group('Search Result Prioritization Tests', () {
+    test('searchBuilding exact-first flow works for short queries', () {
+      // Exact code match should work even when query length < 3
+      final exactCode = BuildingSearchService.searchBuilding('AD');
+      expect(exactCode, isNotNull);
+      expect(exactCode?.code, 'AD');
+
+      // Exact search-term match should also work when query length < 3
+      final exactSearchTerm = BuildingSearchService.searchBuilding('gm');
+      expect(exactSearchTerm, isNotNull);
+      expect(exactSearchTerm?.code, 'GM');
+    });
+
+    test('searchBuilding applies partial fallback only for 3+ chars', () {
+      // Not an exact match and too short for partial fallback
+      expect(BuildingSearchService.searchBuilding('zz'), isNull);
+
+      // Partial fallback allowed at 3+ chars
+      final partial = BuildingSearchService.searchBuilding('hal');
+      expect(partial, isNotNull);
+      expect(partial?.code, 'HALL');
+    });
+
     test('searchBuilding should only match exact code', () {
       // Should match
       expect(BuildingSearchService.searchBuilding('MB'), isNotNull);

@@ -93,6 +93,22 @@ void main() {
     });
 
     group('Building Search - Edge Cases', () {
+      test('Exact matching runs before partial-length guard', () {
+        // Exact match should work even for short query (< 3 chars)
+        final exactShort = BuildingSearchService.searchBuilding('AD');
+        expect(exactShort, isNotNull);
+        expect(exactShort?.code, 'AD');
+
+        // Non-exact short query should not use partial fallback
+        final shortNonExact = BuildingSearchService.searchBuilding('zz');
+        expect(shortNonExact, isNull);
+
+        // 3+ chars can use partial fallback
+        final partialAllowed = BuildingSearchService.searchBuilding('hal');
+        expect(partialAllowed, isNotNull);
+        expect(partialAllowed?.code, 'HALL');
+      });
+
       test('Search with empty string returns null', () {
         final result = BuildingSearchService.searchBuilding('');
         expect(result, isNull);
