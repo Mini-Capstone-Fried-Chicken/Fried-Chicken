@@ -13,43 +13,69 @@ class _ParsedFeature {
 class IndoorGeoJsonRenderer {
   IndoorGeoJsonRenderer._();
 
-  static Color _getAmenityColor(Map<String, dynamic> props) {
-    if (props['escalators'] == 'yes') {
-      return Colors.green;
-    } else if (props['highway'] == 'elevator') {
-      return Colors.orange;
-    } else if (props['highway'] == 'steps') {
-      return Colors.purple;
-    } else if (props['amenity'] == 'toilets') {
-      return Colors.blue;
-    } else if (props['amenity'] == 'drinking_water') {
-      return Colors.cyan;
-    } else if (props['indoor'] == 'corridor') {
-      return const Color.fromARGB(255, 232, 122, 149);
-    } else {
-      return const Color(0xFF800020);
-    }
-  }
-
-  static ({IconData icon, Color color, String type})? _getAmenityIcon(
+  static ({IconData icon, Color color, String type})? _amenityMetaFromProps(
     Map<String, dynamic> props,
   ) {
-    if (props['amenity'] == 'toilets') {
+    final amenity = props['amenity'];
+    final highway = props['highway'];
+    final escalators = props['escalators'];
+
+    if (amenity == 'toilets') {
       return (icon: Icons.wc, color: Colors.blue, type: 'toilet');
-    } else if (props['highway'] == 'elevator') {
+    }
+    if (highway == 'elevator') {
       return (icon: Icons.elevator, color: Colors.orange, type: 'elevator');
-    } else if (props['escalators'] == 'yes') {
+    }
+    if (escalators == 'yes') {
       return (icon: Icons.escalator, color: Colors.green, type: 'escalator');
-    } else if (props['highway'] == 'steps') {
+    }
+    if (highway == 'steps') {
       return (icon: Icons.stairs, color: Colors.purple, type: 'stairs');
-    } else if (props['amenity'] == 'drinking_water') {
+    }
+    if (amenity == 'drinking_water') {
       return (
         icon: Icons.water_drop,
         color: Colors.cyan,
         type: 'water_fountain',
       );
     }
+
     return null;
+  }
+
+  static Color _getAmenityColor(Map<String, dynamic> props) {
+    final amenityMeta = _amenityMetaFromProps(props);
+    if (amenityMeta != null) return amenityMeta.color;
+    if (props['indoor'] == 'corridor') {
+      return const Color.fromARGB(255, 232, 122, 149);
+    }
+    return const Color(0xFF800020);
+  }
+
+  static ({IconData icon, Color color, String type})? _getAmenityIcon(
+    Map<String, dynamic> props,
+  ) {
+    return _amenityMetaFromProps(props);
+  }
+
+  static Future<BitmapDescriptor> _bitmapDescriptorFromPicture(
+    ui.Picture picture,
+    int width,
+    int height,
+  ) async {
+    ui.Image? img;
+    ByteData? byteData;
+
+    try {
+      img = await picture.toImage(width, height);
+      byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      img?.dispose();
+      picture.dispose();
+    }
+
+    final Uint8List bytes = byteData!.buffer.asUint8List();
+    return BitmapDescriptor.bytes(bytes);
   }
 
   static Iterable<_ParsedFeature> _parsePolygonFeatures(
@@ -210,19 +236,7 @@ class IndoorGeoJsonRenderer {
     painter.paint(canvas, Offset.zero);
 
     final picture = recorder.endRecording();
-    ui.Image? img;
-    ByteData? byteData;
-
-    try {
-      img = await picture.toImage(width, height);
-      byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    } finally {
-      img?.dispose();
-      picture.dispose();
-    }
-
-    final Uint8List bytes = byteData!.buffer.asUint8List();
-    return BitmapDescriptor.bytes(bytes);
+    return _bitmapDescriptorFromPicture(picture, width, height);
   }
 
   static Future<BitmapDescriptor> _createIconBitmap(
@@ -263,19 +277,8 @@ class IndoorGeoJsonRenderer {
     textPainter.paint(canvas, Offset(iconX, iconY));
 
     final picture = recorder.endRecording();
-    ui.Image? img;
-    ByteData? byteData;
-
-    try {
-      img = await picture.toImage(size.toInt(), size.toInt());
-      byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    } finally {
-      img?.dispose();
-      picture.dispose();
-    }
-
-    final Uint8List bytes = byteData!.buffer.asUint8List();
-    return BitmapDescriptor.bytes(bytes);
+    final int px = size.toInt();
+    return _bitmapDescriptorFromPicture(picture, px, px);
   }
 
   static double polygonArea(List<LatLng> pts) {
