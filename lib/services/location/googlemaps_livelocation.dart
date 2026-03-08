@@ -20,6 +20,7 @@ import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../indoor_maps/indoor_floor_config.dart';
+import '../indoor_maps/indoor_geojson_renderer.dart';
 import 'package:campus_app/utils/geo.dart' as geo;
 import '../../shared/widgets/indoor_floor_dropdown.dart';
 import '../indoor_maps/indoor_map_controller.dart';
@@ -124,6 +125,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
+  Set<Marker> _amenityMarkers = {};
+  double _currentZoom = 18.0;
+  double _lastIconZoom = 18.0;
 
   Set<Polyline> _routePolylines = {};
 
@@ -204,6 +208,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorPolygons = {};
     _indoorGeoJson = null;
     _roomLabelMarkers = {};
+    _amenityMarkers = {};
   }
 
   Campus _campusFromPoint(LatLng p) {
@@ -252,7 +257,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Future<void> _loadIndoorFloor(String assetPath) async {
     try {
-      final result = await _indoorController.loadFloor(assetPath);
+      final result = await _indoorController.loadFloor(
+        assetPath,
+        zoom: _currentZoom,
+      );
       if (!mounted) return;
       setState(() {
         _showIndoor = true;
@@ -260,6 +268,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorPolygons = result.polygons;
         _indoorGeoJson = result.geoJson;
         _roomLabelMarkers = result.labels;
+        _amenityMarkers = result.amenityIcons;
+        _lastIconZoom = _currentZoom;
       });
     } catch (e) {
       if (!mounted) return;
@@ -267,6 +277,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         SnackBar(content: Text('Failed to load indoor floor: $e')),
       );
     }
+  }
+
+  Future<void> _reloadAmenityIconsForZoom() async {
+    if (_indoorGeoJson == null || !_showIndoor) return;
+
+    try {
+      final amenityIcons = await IndoorGeoJsonRenderer.createAmenityIcons(
+        _indoorGeoJson!,
+        zoom: _currentZoom,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _amenityMarkers = amenityIcons;
+        _lastIconZoom = _currentZoom;
+      });
+    } catch (e) {}
   }
 
   Future<void> _toggleIndoorMap() async {
@@ -2073,6 +2100,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onMapCreated: (c) => _mapController = c,
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
+                _currentZoom = pos.zoom;
                 if (_selectedBuildingCenter != null) _schedulePopupUpdate();
               },
               onCameraMoveStarted: () {
@@ -2081,11 +2109,20 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               },
               onCameraIdle: () {
                 _syncToggleWithCameraCenter();
+                if (_showIndoor &&
+                    (_currentZoom - _lastIconZoom).abs() >= 1.0) {
+                  _reloadAmenityIconsForZoom();
+                }
+
                 if (_selectedBuildingCenter == null) return;
                 setState(() => _cameraMoving = false);
                 _updatePopupOffset();
               },
-              markers: {..._createMarkers(), ..._roomLabelMarkers},
+              markers: {
+                ..._createMarkers(),
+                if (_showIndoor) ..._roomLabelMarkers,
+                if (_showIndoor) ..._amenityMarkers,
+              },
               circles: _createCircles(),
               polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
               polylines: _routePolylines,
@@ -2196,7 +2233,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onFloorChanged: _loadIndoorFloor,
             ),
 
-          if (selectedBuilding != null && popupPos != null)
+          if (!_showIndoor && selectedBuilding != null && popupPos != null)
             OutdoorBuildingPopup(
               building: selectedBuilding,
               position: popupPos,
