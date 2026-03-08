@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
-import '../../data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+
+import '../../data/search_suggestion.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -84,7 +85,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
   }
 
   void _onRoomFieldChanged() {
-    /// Force rebuild if room text changes externally
     if (mounted) setState(() {});
   }
 
@@ -120,6 +120,19 @@ class _MapSearchBarState extends State<MapSearchBar> {
         ? "Search anywhere"
         : "Search anywhere near ${widget.campusLabel}";
 
+    final indoorMode = widget.showRoomFields;
+    final effectiveOriginCode = indoorMode
+        ? widget.selectedBuildingCode
+        : widget.currentBuildingCode;
+    final effectiveDestinationCode = widget.selectedBuildingCode;
+
+    final showRooms = indoorMode
+        ? (effectiveDestinationCode?.isNotEmpty ?? false)
+        : (_isUserInConcordiaBuilding || _isConcordiaBuilding);
+
+    final originEnabled = indoorMode ? true : _isUserInConcordiaBuilding;
+    final destinationEnabled = indoorMode ? true : _isConcordiaBuilding;
+
     return TapRegion(
       onTapOutside: (_) {
         _focusNode.unfocus();
@@ -137,7 +150,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  /// Main search field
                   TextField(
                     controller: widget.controller,
                     focusNode: _focusNode,
@@ -152,20 +164,20 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     onSubmitted: widget.onSubmitted,
                     onChanged: (_) => _updateSuggestionsVisibility(),
                   ),
-                  if (_isUserInConcordiaBuilding || _isConcordiaBuilding)
+                  if (showRooms)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
                       ),
                       child: RoomFieldsSection(
-                        originBuildingCode: widget.currentBuildingCode,
-                        destinationBuildingCode: widget.selectedBuildingCode,
+                        originBuildingCode: effectiveOriginCode,
+                        destinationBuildingCode: effectiveDestinationCode,
                         originRoomController: widget.originRoomController,
                         destinationRoomController:
                             widget.destinationRoomController,
-                        originEnabled: _isUserInConcordiaBuilding,
-                        destinationEnabled: _isConcordiaBuilding,
+                        originEnabled: originEnabled,
+                        destinationEnabled: destinationEnabled,
                         onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
                         onDestinationRoomSubmitted:
                             widget.onDestinationRoomSubmitted,
@@ -175,8 +187,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
               ),
             ),
           ),
-
-          /// Suggestions dropdown
           if (_showSuggestions && _hasSuggestions)
             PointerInterceptor(
               child: Material(

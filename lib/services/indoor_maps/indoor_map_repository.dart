@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Maps building codes to their indoor map asset paths (by floor)
@@ -26,6 +27,14 @@ const Map<String, List<String>> _buildingAssetPaths = {
   'CC': ['assets/indoor_maps/geojson/CC/cc1.geojson.json'],
 };
 
+/// Handles building code aliases (ex: H -> HALL)
+const Map<String, String> _buildingCodeAliases = {'H': 'HALL'};
+
+String _normalizeBuildingCode(String code) {
+  final upper = code.toUpperCase().trim();
+  return _buildingCodeAliases[upper] ?? upper;
+}
+
 class IndoorMapRepository {
   Future<Map<String, dynamic>> loadGeoJsonAsset(String assetPath) async {
     final raw = await rootBundle.loadString(assetPath);
@@ -34,8 +43,8 @@ class IndoorMapRepository {
 
   @visibleForTesting
   List<String> getAssetPathsForBuilding(String buildingCode) {
-    final upperCode = buildingCode.toUpperCase();
-    return _buildingAssetPaths[upperCode] ?? [];
+    final code = _normalizeBuildingCode(buildingCode);
+    return _buildingAssetPaths[code] ?? [];
   }
 
   @visibleForTesting
@@ -43,11 +52,13 @@ class IndoorMapRepository {
     final rooms = <String>[];
     final features = geoJson['features'] as List?;
     if (features == null) return rooms;
+
     for (final feature in features) {
       try {
         final featureMap = feature as Map<String, dynamic>;
         final props = featureMap['properties'] as Map<String, dynamic>?;
         if (props == null) continue;
+
         final roomCode = props['ref']?.toString();
         if (roomCode != null && roomCode.isNotEmpty) {
           rooms.add(roomCode.toUpperCase());
@@ -63,6 +74,7 @@ class IndoorMapRepository {
   Future<List<String>> getRoomCodesForBuilding(String buildingCode) async {
     final assetPaths = getAssetPathsForBuilding(buildingCode);
     if (assetPaths.isEmpty) return [];
+
     final rooms = <String>{};
     for (final assetPath in assetPaths) {
       try {
@@ -107,14 +119,17 @@ class IndoorMapRepository {
   @visibleForTesting
   LatLng calculatePolygonCenter(List<List<double>> coordinates) {
     if (coordinates.isEmpty) return const LatLng(0, 0);
+
     double lat = 0;
     double lng = 0;
+
     for (final coord in coordinates) {
       if (coord.length >= 2) {
         lng += coord[0];
         lat += coord[1];
       }
     }
+
     final count = coordinates.length;
     return LatLng(lat / count, lng / count);
   }
