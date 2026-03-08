@@ -15,7 +15,7 @@ class BuildingSearchService {
     _findExactSearchTermMatch,
   ];
 
-  static final BuildingMatcher _partialBuildingMatcher =
+  static const BuildingMatcher _partialBuildingMatcher =
       _findPartialSearchTermMatch;
 
   /// Search for places using Google Places API with Concordia building check
