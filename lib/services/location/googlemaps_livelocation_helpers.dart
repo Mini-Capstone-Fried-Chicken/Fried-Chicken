@@ -3,10 +3,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 
-/// Helper functions for googlemaps_livelocation.dart
-/// Extracted for better testability
-
-/// Determines which campus a point belongs to based on distance
 Campus campusFromPoint(LatLng p) {
   final dSgw = Geolocator.distanceBetween(
     p.latitude,
@@ -28,8 +24,6 @@ Campus campusFromPoint(LatLng p) {
   return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
 }
 
-/// Validates a URL string for opening
-/// Returns null if invalid, otherwise returns the parsed URI
 Uri? validateUrl(String url) {
   if (url.trim().isEmpty) return null;
   return Uri.tryParse(url);
