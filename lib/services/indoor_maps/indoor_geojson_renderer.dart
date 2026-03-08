@@ -99,7 +99,6 @@ class IndoorGeoJsonRenderer {
           strokeWidth: 2,
           strokeColor: Colors.black,
           fillColor: fillColor.withOpacity(1.0),
-          zIndex: 20,
         ),
       );
     }
@@ -133,7 +132,6 @@ class IndoorGeoJsonRenderer {
           icon: icon,
           anchor: const Offset(0.5, 0.5),
           flat: true,
-          zIndex: 30,
           consumeTapEvents: false,
           infoWindow: InfoWindow.noText,
         ),
@@ -174,7 +172,6 @@ class IndoorGeoJsonRenderer {
           icon: icon,
           anchor: const Offset(0.5, 0.5),
           flat: true,
-          zIndex: 40,
           consumeTapEvents: false,
           infoWindow: InfoWindow(title: amenityInfo.type.toUpperCase()),
         ),
