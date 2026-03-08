@@ -284,6 +284,84 @@ void main() {
       });
     });
 
+    group('floorsForBuilding', () {
+      test('returns floors for HALL building', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('HALL');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 4);
+        expect(floors[0].label, '1');
+        expect(floors[1].label, '2');
+        expect(floors[2].label, '8');
+        expect(floors[3].label, '9');
+      });
+
+      test('returns floors for MB building', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('MB');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 2);
+        expect(floors[0].label, '1');
+        expect(floors[1].label, 'S2');
+      });
+
+      test('returns floors for VE building', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('VE');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 2);
+      });
+
+      test('returns floors for VL building', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('VL');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 2);
+      });
+
+      test('returns floors for CC building', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('CC');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 1);
+      });
+
+      test('returns empty list for unknown building', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('UNKNOWN');
+
+        expect(floors, isEmpty);
+      });
+
+      test('handles lowercase building code', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('hall');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 4);
+      });
+
+      test('handles building code with whitespace', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding(' MB ');
+
+        expect(floors, isNotEmpty);
+        expect(floors.length, 2);
+      });
+
+      test('returns empty list for empty string', () {
+        final controller = IndoorMapController();
+        final floors = controller.floorsForBuilding('');
+
+        expect(floors, isEmpty);
+      });
+    });
+
     group('IndoorLoadResult', () {
       test('can be created with all properties', () {
         final polygons = <Polygon>{};
