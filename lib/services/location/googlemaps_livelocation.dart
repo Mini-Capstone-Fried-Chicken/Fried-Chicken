@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/utils/geo.dart' as geo;
@@ -28,7 +27,7 @@ import '../google_places_service.dart';
 import '../indoor_maps/indoor_floor_config.dart';
 import '../indoor_maps/indoor_map_controller.dart';
 import '../indoor_maps/indoor_map_repository.dart';
-import '../indoors_routing/indoor_same_floor_router.dart';
+import 'indoor_route_service.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -57,23 +56,6 @@ Campus detectCampus(LatLng userLocation) {
   if (sgwDistance <= campusRadius) return Campus.sgw;
   if (loyolaDistance <= campusRadius) return Campus.loyola;
   return Campus.none;
-}
-
-@visibleForTesting
-Set<Polyline> buildIndoorRoutePolylines(List<LatLng> routePoints) {
-  if (routePoints.length < 2) {
-    return {};
-  }
-
-  return {
-    Polyline(
-      polylineId: const PolylineId('indoor_same_floor_route'),
-      points: routePoints,
-      color: const Color(0xFF0A7E4D),
-      width: 6,
-      zIndex: 50,
-    ),
-  };
 }
 
 @visibleForTesting
@@ -149,7 +131,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Set<Polyline> _routePolylines = {};
   Set<Polyline> _indoorRoutePolylines = {};
-  final IndoorSameFloorRouter _indoorSameFloorRouter = IndoorSameFloorRouter();
+  final IndoorRouteService _indoorRouteService = IndoorRouteService();
   String? _indoorOriginRoomCode;
   String? _indoorDestinationRoomCode;
   Marker? _originRoomMarker;
@@ -296,12 +278,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Marker _buildOriginRoomMarker(String roomCode, LatLng point) {
-    return Marker(
-      markerId: const MarkerId('origin_room'),
-      position: point,
-      infoWindow: InfoWindow(title: 'Room $roomCode'),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-    );
+    return _indoorRouteService.buildOriginRoomMarker(roomCode, point);
   }
 
   void _resetIndoorRouteState() {
@@ -314,112 +291,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorDurationText = null;
   }
 
-  String _metersText(double meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${meters.round()} m';
-  }
-
-  String _durationTextFromSeconds(int seconds) {
-    final mins = (seconds / 60).ceil();
-    return mins <= 1 ? '1 min' : '$mins min';
-  }
-
-  double _bearingDegrees(LatLng from, LatLng to) {
-    final lat1 = from.latitude * math.pi / 180.0;
-    final lat2 = to.latitude * math.pi / 180.0;
-    final dLon = (to.longitude - from.longitude) * math.pi / 180.0;
-
-    final y = math.sin(dLon) * math.cos(lat2);
-    final x =
-        math.cos(lat1) * math.sin(lat2) -
-        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    final brng = math.atan2(y, x) * 180.0 / math.pi;
-    return (brng + 360.0) % 360.0;
-  }
-
-  double _normalizeTurnDelta(double delta) {
-    var value = delta;
-    while (value > 180) value -= 360;
-    while (value < -180) value += 360;
-    return value;
-  }
-
   void _buildIndoorNavigationFromRoute(List<LatLng> routePoints) {
-    if (routePoints.length < 2) {
-      _indoorSteps = const [];
-      _indoorDistanceText = null;
-      _indoorDurationText = null;
-      return;
-    }
-
-    const walkingMetersPerSecond = 1.35;
-    final steps = <NavigationStep>[];
-    double totalMeters = 0;
-
-    for (var i = 1; i < routePoints.length; i++) {
-      final a = routePoints[i - 1];
-      final b = routePoints[i];
-      final meters = Geolocator.distanceBetween(
-        a.latitude,
-        a.longitude,
-        b.latitude,
-        b.longitude,
-      );
-      if (meters < 1.0) continue;
-      totalMeters += meters;
-
-      String instruction;
-      String? maneuver;
-      if (i == 1) {
-        instruction = 'Walk ahead';
-        maneuver = 'straight';
-      } else {
-        final prevA = routePoints[i - 2];
-        final prevB = routePoints[i - 1];
-        final previousBearing = _bearingDegrees(prevA, prevB);
-        final currentBearing = _bearingDegrees(a, b);
-        final turn = _normalizeTurnDelta(currentBearing - previousBearing);
-
-        if (turn > 25 && turn < 140) {
-          instruction = 'Turn right';
-          maneuver = 'turn-right';
-        } else if (turn < -25 && turn > -140) {
-          instruction = 'Turn left';
-          maneuver = 'turn-left';
-        } else if (turn.abs() >= 140) {
-          instruction = 'Make a U-turn';
-          maneuver = 'uturn-right';
-        } else {
-          instruction = 'Continue straight';
-          maneuver = 'straight';
-        }
-      }
-
-      final stepSeconds = (meters / walkingMetersPerSecond).round();
-      steps.add(
-        NavigationStep(
-          instruction: instruction,
-          travelMode: 'walking',
-          distanceText: _metersText(meters),
-          durationText: _durationTextFromSeconds(stepSeconds),
-          maneuver: maneuver,
-          points: [a, b],
-        ),
-      );
-    }
-
-    final totalSeconds = (totalMeters / walkingMetersPerSecond).round();
-    _indoorSteps = [
-      ...steps,
-      const NavigationStep(
-        instruction: 'Arrive at your destination room',
-        travelMode: 'walking',
-      ),
-    ];
-    _indoorDistanceText = _metersText(totalMeters);
-    _indoorDurationText = _durationTextFromSeconds(totalSeconds);
+    final summary = _indoorRouteService.buildIndoorNavigation(routePoints);
+    _indoorSteps = summary.steps;
+    _indoorDistanceText = summary.distanceText;
+    _indoorDurationText = summary.durationText;
   }
 
   void _openIndoorDirections() {
@@ -478,19 +354,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (geoJson == null) {
       return null;
     }
-    return _indoorSameFloorRouter.roomCenterOnFloor(
+    return _indoorRouteService.findRoomCenterOnFloor(
       floorGeoJson: geoJson,
       roomCode: roomCode,
     );
   }
 
   Marker _buildDestinationRoomMarker(String roomCode, LatLng point) {
-    return Marker(
-      markerId: const MarkerId('destination_room'),
-      position: point,
-      infoWindow: InfoWindow(title: 'Room $roomCode'),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-    );
+    return _indoorRouteService.buildDestinationRoomMarker(roomCode, point);
   }
 
   Future<void> _rebuildIndoorSameFloorRoute({
@@ -521,7 +392,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       return;
     }
 
-    final routePoints = _indoorSameFloorRouter.findShortestPath(
+    final routePoints = _indoorRouteService.findSameFloorPath(
       floorGeoJson: _indoorGeoJson!,
       originRoomCode: origin,
       destinationRoomCode: destination,
@@ -550,7 +421,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _buildIndoorNavigationFromRoute(routePoints);
 
     setState(() {
-      _indoorRoutePolylines = buildIndoorRoutePolylines(routePoints);
+      _indoorRoutePolylines = _indoorRouteService.buildIndoorRoutePolylines(
+        routePoints,
+      );
     });
   }
 
@@ -2576,9 +2449,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 destinationBuildingCode: _routeDestinationBuildingCode,
                 isConcordiaBuilding: (buildingCode) {
                   return buildingPolygons.any(
-                    (b) =>
-                        (b.code ?? '').toUpperCase() ==
-                        buildingCode.toUpperCase(),
+                    (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
                   );
                 },
               ),
@@ -2631,9 +2502,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               userLocation: _currentLocation,
               isConcordiaBuilding: (buildingCode) {
                 return buildingPolygons.any(
-                  (b) =>
-                      (b.code ?? '').toUpperCase() ==
-                      buildingCode.toUpperCase(),
+                  (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
                 );
               },
               showIndoor: _showIndoor,

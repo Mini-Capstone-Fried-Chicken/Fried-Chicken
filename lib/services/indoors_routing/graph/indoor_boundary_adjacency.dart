@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import 'indoor_routing_models.dart';
+import '../core/indoor_routing_models.dart';
 
 // Handles the geometry logic used to decide whether 2 polygons
 // should be considered connected in the routing graph.

@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../../utils/geo.dart' as geo;
+import '../../../utils/geo.dart' as geo;
+import '../core/indoor_routing_models.dart';
 import 'indoor_boundary_adjacency.dart';
-import 'indoor_routing_models.dart';
 
 // Converts floor GeoJSON into indoor routing nodes + edges.
 class IndoorFloorGraphBuilder {
