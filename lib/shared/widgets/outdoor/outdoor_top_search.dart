@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../../../shared/widgets/map_search_bar.dart';
-import '../../../shared/widgets/indoor_floor_dropdown.dart';
-import '../../../services/indoor_maps/indoor_floor_config.dart';
 import '../../../data/search_suggestion.dart';
+import '../../../services/indoor_maps/indoor_floor_config.dart';
+import '../../../shared/widgets/indoor_floor_dropdown.dart';
+import '../../../shared/widgets/map_search_bar.dart';
 
 class OutdoorTopSearch extends StatelessWidget {
   final String campusLabel;
@@ -22,9 +22,10 @@ class OutdoorTopSearch extends StatelessWidget {
 
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
-  final void Function(String buildingCode, String roomCode) onOriginRoomSubmitted;
   final void Function(String buildingCode, String roomCode)
-      onDestinationRoomSubmitted;
+  onOriginRoomSubmitted;
+  final void Function(String buildingCode, String roomCode)
+  onDestinationRoomSubmitted;
 
   final String? selectedBuildingCode;
   final String? currentBuildingCode;
@@ -76,9 +77,13 @@ class OutdoorTopSearch extends StatelessWidget {
             onOriginRoomSubmitted: onOriginRoomSubmitted,
             onDestinationRoomSubmitted: onDestinationRoomSubmitted,
             selectedBuildingCode: selectedBuildingCode,
-            currentBuildingCode: currentBuildingCode,
+            currentBuildingCode: showIndoor
+                ? selectedBuildingCode
+                : currentBuildingCode,
             userLocation: userLocation,
             isConcordiaBuilding: isConcordiaBuilding,
+            showRoomFields:
+                showIndoor && (selectedBuildingCode?.isNotEmpty ?? false),
           ),
           if (showIndoor && floors.isNotEmpty) ...[
             const SizedBox(height: 10),
