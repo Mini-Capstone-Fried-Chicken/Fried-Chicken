@@ -92,10 +92,10 @@ class OutdoorMapPage extends StatefulWidget {
   });
 
   @override
-  State<OutdoorMapPage> createState() => _OutdoorMapPageState();
+  State<OutdoorMapPage> createState() => OutdoorMapPageState();
 }
 
-class _OutdoorMapPageState extends State<OutdoorMapPage> {
+class OutdoorMapPageState extends State<OutdoorMapPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _originRoomController = TextEditingController();
   final TextEditingController _destinationRoomController =
@@ -205,7 +205,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _roomLabelMarkers = {};
   }
 
-  Campus _campusFromPoint(LatLng p) {
+  @visibleForTesting
+  Campus campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
       p.latitude,
       p.longitude,
@@ -226,7 +227,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
   }
 
-  Future<void> _onOriginRoomSubmitted(
+  @visibleForTesting
+  Future<void> onOriginRoomSubmitted(
     String buildingCode,
     String roomCode,
   ) async {
@@ -253,7 +255,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       }
     }
 
-    final newCampus = _campusFromPoint(center);
+    final newCampus = campusFromPoint(center);
 
     if (newCampus == _selectedCampus) return;
 
@@ -262,7 +264,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     });
   }
 
-  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+  @visibleForTesting
+  bool isPointInPolygon(LatLng point, List<LatLng> polygon) {
     return geo.pointInPolygon(point, polygon);
   }
 
@@ -336,7 +339,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     controller.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
   }
 
-  Future<void> _openLink(String url) async {
+  @visibleForTesting
+  Future<void> openLink(String url) async {
     if (url.trim().isEmpty) return;
 
     final uri = Uri.tryParse(url);
@@ -1673,7 +1677,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   BuildingPolygon? _findBuildingAtLocation(LatLng location) {
     for (final building in buildingPolygons) {
-      if (_isPointInPolygon(location, building.points)) {
+      if (isPointInPolygon(location, building.points)) {
         return building;
       }
     }
@@ -2140,7 +2144,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 destinationSuggestions: _routeDestinationSuggestions,
                 originRoomController: _originRoomController,
                 destinationRoomController: _destinationRoomController,
-                onOriginRoomSubmitted: _onOriginRoomSubmitted,
+                onOriginRoomSubmitted: onOriginRoomSubmitted,
                 onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
                 originBuildingCode: _routeOriginBuildingCode,
                 destinationBuildingCode: _routeDestinationBuildingCode,
@@ -2194,7 +2198,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onFocus: _hideBuildingPopup,
               originRoomController: _originRoomController,
               destinationRoomController: _destinationRoomController,
-              onOriginRoomSubmitted: _onOriginRoomSubmitted,
+              onOriginRoomSubmitted: onOriginRoomSubmitted,
               onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
               selectedBuildingCode: _selectedBuildingPoly?.code,
               currentBuildingCode: _currentBuildingCode,
@@ -2221,7 +2225,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onClose: _closePopup,
               onIndoorMap: _toggleIndoorMap,
               onGetDirections: _getDirections,
-              onOpenLink: _openLink,
+              onOpenLink: openLink,
               isLoggedIn: widget.isLoggedIn,
             ),
 

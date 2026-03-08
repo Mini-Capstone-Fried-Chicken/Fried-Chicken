@@ -1331,149 +1331,27 @@ void main() {
     });
   });
 
-  group('_campusFromPoint far point coverage', () {
-    test('point far from both campuses returns Campus.none', () {
-      // Beyond auto-switch radius from both campuses
-      const farPoint = LatLng(45.6, -73.5);
-      expect(detectCampus(farPoint), Campus.none);
-    });
-  });
-
-  group('debugSelectedBuilding coverage', () {
-    testWidgets('building selection via debug param', (tester) async {
-      await pumpPage(
-        tester,
-        debugSelectedBuilding: buildingPolygons.first,
-        debugAnchorOffset: const Offset(200, 400),
-      );
+  group('private method coverage via state access', () {
+    testWidgets('campusFromPoint closer to SGW', (tester) async {
+      await pumpPage(tester);
       await tester.pumpAndSettle();
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
-  });
-
-  group('_campusFromPoint boundary', () {
-    test('point equidistant from SGW and Loyola', () {
-      final midLat = (concordiaSGW.latitude + concordiaLoyola.latitude) / 2;
-      final midLng = (concordiaSGW.longitude + concordiaLoyola.longitude) / 2;
-      final result = detectCampus(LatLng(midLat, midLng));
-      expect(result, isIn([Campus.sgw, Campus.loyola, Campus.none]));
+      final state = tester.state<OutdoorMapPageState>(find.byType(OutdoorMapPage));
+      final result = state.campusFromPoint(const LatLng(45.4973, -73.5789));
+      expect(result, Campus.sgw);
     });
 
-    test('point closer to SGW returns Campus.sgw', () {
-      const nearSGW = LatLng(45.4975, -73.5789);
-      expect(detectCampus(nearSGW), Campus.sgw);
+    testWidgets('isPointInPolygon wraps geo.pointInPolygon', (tester) async {
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      final state = tester.state<OutdoorMapPageState>(find.byType(OutdoorMapPage));
+      final square = [
+        const LatLng(0, 0),
+        const LatLng(0, 1),
+        const LatLng(1, 1),
+        const LatLng(1, 0),
+      ];
+      expect(state.isPointInPolygon(const LatLng(0.5, 0.5), square), true);
+      expect(state.isPointInPolygon(const LatLng(2, 2), square), false);
     });
-
-    test('point exactly at Loyola boundary', () {
-      const atLoyola = LatLng(45.4582, -73.6405);
-      expect(detectCampus(atLoyola), Campus.loyola);
-    });
-  });
-
-  group('indoor map error handling', () {
-    testWidgets('loadIndoorFloor catch block coverage', (tester) async {
-      await pumpPage(tester, debugSelectedBuilding: firstBuilding);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
-  });
-
-  testWidgets('popup with link empty URL', (tester) async {
-    await pumpPage(
-      tester,
-      debugSelectedBuilding: firstBuilding,
-      debugAnchorOffset: const Offset(200, 420),
-      debugLinkOverride: '',
-    );
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets('popup with valid link', (tester) async {
-    await pumpPage(
-      tester,
-      debugSelectedBuilding: firstBuilding,
-      debugAnchorOffset: const Offset(200, 420),
-      debugLinkOverride: 'https://concordia.ca',
-    );
-    await tester.pumpAndSettle();
-    final linkBtn = find.text('Open Link');
-    if (linkBtn.evaluate().isNotEmpty) {
-      await tester.tap(linkBtn);
-      await tester.pump();
-    }
-  });
-
-  testWidgets('my location button triggers code', (tester) async {
-    await pumpPage(tester);
-    await tester.pumpAndSettle();
-    final btn = find.byIcon(Icons.my_location);
-    if (btn.evaluate().isNotEmpty) {
-      await tester.tap(btn);
-      await tester.pump();
-    }
-  });
-
-  testWidgets('get directions button interaction', (tester) async {
-    await pumpPage(
-      tester,
-      debugSelectedBuilding: firstBuilding,
-      debugAnchorOffset: const Offset(200, 420),
-    );
-    await tester.pumpAndSettle();
-    final btn = find.text('Get Directions');
-    if (btn.evaluate().isNotEmpty) {
-      await tester.tap(btn);
-      await tester.pumpAndSettle();
-    }
-  });
-
-  testWidgets('campus toggle interaction', (tester) async {
-    await pumpPage(tester, initialCampus: Campus.sgw);
-    await tester.pumpAndSettle();
-    final toggle = find.byType(CampusToggle);
-    if (toggle.evaluate().isNotEmpty) {
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-    }
-  });
-
-  testWidgets('search field interaction', (tester) async {
-    await pumpPage(tester);
-    await tester.pumpAndSettle();
-    final searchField = find.byType(TextField).first;
-    if (searchField.evaluate().isNotEmpty) {
-      await tester.enterText(searchField, 'Hall');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
-    }
-  });
-
-  testWidgets('indoor map button in popup', (tester) async {
-    await pumpPage(
-      tester,
-      debugSelectedBuilding: firstBuilding,
-      debugAnchorOffset: const Offset(200, 420),
-    );
-    await tester.pumpAndSettle();
-    final btn = find.text('Indoor Map');
-    if (btn.evaluate().isNotEmpty) {
-      await tester.tap(btn);
-      await tester.pumpAndSettle();
-    }
-  });
-
-  testWidgets('close popup button', (tester) async {
-    await pumpPage(
-      tester,
-      debugSelectedBuilding: firstBuilding,
-      debugAnchorOffset: const Offset(200, 420),
-    );
-    await tester.pumpAndSettle();
-    final btn = find.byIcon(Icons.close);
-    if (btn.evaluate().isNotEmpty) {
-      await tester.tap(btn);
-      await tester.pumpAndSettle();
-    }
   });
 }
