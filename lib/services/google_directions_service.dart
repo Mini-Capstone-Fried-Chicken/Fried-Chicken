@@ -51,30 +51,40 @@ class DirectionsRouteSegment {
   });
 }
 
+// Internal data class — holds the transit-specific fields parsed from steps
+class _TransitStepInfo {
+  final String? vehicleType;
+  final String? lineColorHex;
+  final bool hasBus;
+
+  const _TransitStepInfo({
+    this.vehicleType,
+    this.lineColorHex,
+    required this.hasBus,
+  });
+}
+
 /// Service for getting directions using Google Maps Directions API
 class GoogleDirectionsService {
   static const String _apiKey = String.fromEnvironment(
     'GOOGLE_DIRECTIONS_API_KEY',
-    defaultValue: '', // Use empty string if not provided for safety
+    defaultValue: '',
   );
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api';
 
-  /// HTTP client for making requests (injectable for testing)
   final http.Client _client;
 
-  /// Default singleton instance
   static final GoogleDirectionsService instance = GoogleDirectionsService();
 
-  /// Constructor with optional HTTP client injection
   GoogleDirectionsService({http.Client? client})
-    : _client = client ?? http.Client();
+      : _client = client ?? http.Client();
 
-  /// Get route polyline points from origin to destination
-  /// Returns null if route cannot be found
+  // ---------------------------------------------------------------------------
+
   Future<List<LatLng>?> getRoute({
     required LatLng origin,
     required LatLng destination,
-    String mode = 'walking', // walking, driving, bicycling, transit
+    String mode = 'walking',
   }) async {
     final route = await getRouteDetails(
       origin: origin,
@@ -84,148 +94,155 @@ class GoogleDirectionsService {
     return route?.points;
   }
 
-  /// Get route details from origin to destination.
-  /// Returns decoded polyline points and leg duration text when available.
+  //Helpers extracted to reduce cognitive complexity of getRouteDetails
+
+  /// Builds and fires the Directions API request; returns the decoded JSON body or null on a non-200 response.
+  Future<Map<String, dynamic>?> _fetchDirectionsJson({
+    required LatLng origin,
+    required LatLng destination,
+    required String mode,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/directions/json').replace(
+      queryParameters: {
+        'origin': '${origin.latitude},${origin.longitude}',
+        'destination': '${destination.latitude},${destination.longitude}',
+        'mode': mode,
+        'key': _apiKey,
+      },
+    );
+    print(
+      'Fetching directions from ${origin.latitude},${origin.longitude} '
+      'to ${destination.latitude},${destination.longitude}',
+    );
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      print('Directions API request failed with status: ${response.statusCode}');
+      return null;
+    }
+    return json.decode(response.body) as Map<String, dynamic>;
+  }
+
+  /// Extracts the first route map from a decoded Directions API body, or returns null when the status is not OK or no routes are present.
+  Map<String, dynamic>? _firstRouteOrNull(Map<String, dynamic> data) {
+    if (data['status'] != 'OK') {
+      print('Directions API returned status: ${data['status']}');
+      return null;
+    }
+    final routes = data['routes'] as List<dynamic>;
+    if (routes.isEmpty) {
+      print('No routes found in response');
+      return null;
+    }
+    return routes[0] as Map<String, dynamic>;
+  }
+
+  /// Scans a list of raw step maps and returns the combined transit metadata
+  static _TransitStepInfo _extractTransitStepInfo(List<dynamic> steps) {
+    const railTypes = {
+      'SUBWAY', 'METRO_RAIL', 'HEAVY_RAIL', 'COMMUTER_TRAIN',
+      'RAIL', 'TRAM', 'LIGHT_RAIL', 'MONORAIL',
+    };
+
+    String? vehicleType;
+    String? lineColorHex;
+    bool hasBus = false;
+
+    for (final rawStep in steps) {
+      final step = rawStep as Map<String, dynamic>;
+      if (step['travel_mode'] != 'TRANSIT') continue;
+
+      final transitDetails = step['transit_details'] as Map<String, dynamic>?;
+      final line = transitDetails?['line'] as Map<String, dynamic>?;
+      final vehicle = line?['vehicle'] as Map<String, dynamic>?;
+      final type = (vehicle?['type'] as String?)?.toUpperCase();
+
+      if (type == 'BUS') hasBus = true;
+
+      if (type != null && railTypes.contains(type)) {
+        vehicleType ??= type;
+        lineColorHex ??= line?['color'] as String?;
+      }
+
+      vehicleType ??= type;
+    }
+
+    return _TransitStepInfo(
+      vehicleType: vehicleType,
+      lineColorHex: lineColorHex,
+      hasBus: hasBus,
+    );
+  }
+
+  /// Parses duration, distance, navigation steps, and transit metadata out of the first leg of a route.
+  Map<String, dynamic> _parseLeg(
+    Map<String, dynamic> leg,
+    String mode,
+  ) {
+    final duration = leg['duration'] as Map<String, dynamic>?;
+    final distance = leg['distance'] as Map<String, dynamic>?;
+    final steps = leg['steps'] as List<dynamic>? ?? [];
+
+    final transitInfo = _extractTransitStepInfo(steps);
+
+    return {
+      'durationText': duration?['text'] as String?,
+      'durationSeconds': duration?['value'] as int?,
+      'distanceText': distance?['text'] as String?,
+      'transitVehicleType': transitInfo.vehicleType,
+      'transitLineColorHex': transitInfo.lineColorHex,
+      'transitHasBus': transitInfo.hasBus,
+      'navSteps': _extractNavigationSteps(steps),
+      'transitSegments':
+          mode == 'transit' ? _extractTransitSegments(steps) : <DirectionsRouteSegment>[],
+    };
+  }
+
+
   Future<DirectionsRouteResult?> getRouteDetails({
     required LatLng origin,
     required LatLng destination,
-    String mode = 'walking', // walking, driving, bicycling, transit
+    String mode = 'walking',
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/directions/json').replace(
-        queryParameters: {
-          'origin': '${origin.latitude},${origin.longitude}',
-          'destination': '${destination.latitude},${destination.longitude}',
-          'mode': mode,
-          'key': _apiKey,
-        },
+      final body = await _fetchDirectionsJson(
+        origin: origin,
+        destination: destination,
+        mode: mode,
       );
+      if (body == null) return null;
 
-      print(
-        'Fetching directions from ${origin.latitude},${origin.longitude} to ${destination.latitude},${destination.longitude}',
-      );
+      final route = _firstRouteOrNull(body);
+      if (route == null) return null;
 
-      final response = await _client.get(uri);
+      final overviewPolyline = route['overview_polyline'] as Map<String, dynamic>;
+      final decodedPoints = _decodePolyline(overviewPolyline['points'] as String);
+      print('Successfully decoded ${decodedPoints.length} points for route');
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-
-        if (data['status'] == 'OK') {
-          final routes = data['routes'] as List<dynamic>;
-
-          if (routes.isNotEmpty) {
-            final route = routes[0] as Map<String, dynamic>;
-            final overviewPolyline =
-                route['overview_polyline'] as Map<String, dynamic>;
-            final points = overviewPolyline['points'] as String;
-            final legs = route['legs'] as List<dynamic>?;
-            String? durationText;
-            String? distanceText;
-            int? durationSeconds;
-            String? transitVehicleType;
-            String? transitLineColorHex;
-            bool transitHasBus = false;
-            List<DirectionsRouteSegment> transitSegments = [];
-            List<NavigationStep> navSteps = [];
-
-            if (legs != null && legs.isNotEmpty) {
-              final firstLeg = legs[0] as Map<String, dynamic>;
-              final duration = firstLeg['duration'] as Map<String, dynamic>?;
-              durationText = duration?['text'] as String?;
-              durationSeconds = duration?['value'] as int?;
-              final distance = firstLeg['distance'] as Map<String, dynamic>?;
-              distanceText = distance?['text'] as String?;
-              final steps = firstLeg['steps'] as List<dynamic>?;
-
-              if (steps != null) {
-                navSteps = _extractNavigationSteps(steps);
-                const railTypes = {
-                  'SUBWAY',
-                  'METRO_RAIL',
-                  'HEAVY_RAIL',
-                  'COMMUTER_TRAIN',
-                  'RAIL',
-                  'TRAM',
-                  'LIGHT_RAIL',
-                  'MONORAIL',
-                };
-                for (final rawStep in steps) {
-                  final step = rawStep as Map<String, dynamic>;
-                  final travelMode = step['travel_mode'] as String?;
-                  final polyline = step['polyline'] as Map<String, dynamic>?;
-                  final encoded = polyline?['points'] as String?;
-                  final stepPoints = (encoded != null && encoded.isNotEmpty)
-                      ? _decodePolyline(encoded)
-                      : <LatLng>[];
-                  if (travelMode != 'TRANSIT') continue;
-
-                  final transitDetails =
-                      step['transit_details'] as Map<String, dynamic>?;
-                  final line = transitDetails?['line'] as Map<String, dynamic>?;
-                  final vehicle = line?['vehicle'] as Map<String, dynamic>?;
-
-                  final rawType = vehicle?['type'] as String?;
-                  final vehicleType = rawType?.toUpperCase();
-
-                  if (vehicleType == 'BUS') {
-                    transitHasBus = true;
-                  }
-
-                  if (vehicleType != null && railTypes.contains(vehicleType)) {
-                    transitVehicleType ??= vehicleType;
-                    transitLineColorHex ??= line?['color'] as String?;
-                  }
-
-                  if (transitVehicleType == null) {
-                    transitVehicleType = vehicleType;
-                  }
-                }
-
-                if (mode == 'transit') {
-                  transitSegments = _extractTransitSegments(steps);
-                }
-              }
-            }
-
-            // Decode the polyline
-            final decodedPoints = _decodePolyline(points);
-            print(
-              'Successfully decoded ${decodedPoints.length} points for route',
-            );
-
-            return DirectionsRouteResult(
-              points: decodedPoints,
-              durationText: durationText,
-              distanceText: distanceText,
-              durationSeconds: durationSeconds,
-              transitVehicleType: transitVehicleType,
-              transitLineColorHex: transitLineColorHex,
-              transitHasBus: transitHasBus,
-              transitSegments: transitSegments,
-              steps: navSteps,
-            );
-          } else {
-            print('No routes found in response');
-            return null;
-          }
-        } else {
-          print('Directions API returned status: ${data['status']}');
-          return null;
-        }
-      } else {
-        print(
-          'Directions API request failed with status: ${response.statusCode}',
-        );
-        return null;
+      final legs = route['legs'] as List<dynamic>?;
+      if (legs == null || legs.isEmpty) {
+        return DirectionsRouteResult(points: decodedPoints, durationText: null);
       }
+
+      final leg = _parseLeg(legs[0] as Map<String, dynamic>, mode);
+
+      return DirectionsRouteResult(
+        points: decodedPoints,
+        durationText: leg['durationText'] as String?,
+        distanceText: leg['distanceText'] as String?,
+        durationSeconds: leg['durationSeconds'] as int?,
+        transitVehicleType: leg['transitVehicleType'] as String?,
+        transitLineColorHex: leg['transitLineColorHex'] as String?,
+        transitHasBus: leg['transitHasBus'] as bool,
+        transitSegments:
+            leg['transitSegments'] as List<DirectionsRouteSegment>,
+        steps: leg['navSteps'] as List<NavigationStep>,
+      );
     } catch (e) {
       print('Error getting directions: $e');
       return null;
     }
   }
 
-  /// Decode Google Maps encoded polyline string
-  /// Based on Google's polyline encoding algorithm
   static List<LatLng> _decodePolyline(String encoded) {
     List<LatLng> points = [];
     int index = 0;
@@ -273,20 +290,14 @@ class GoogleDirectionsService {
     for (final rawStep in steps) {
       final step = rawStep as Map<String, dynamic>;
       final travelMode = step['travel_mode'] as String?;
-      if (travelMode != 'TRANSIT' && travelMode != 'WALKING') {
-        continue;
-      }
+      if (travelMode != 'TRANSIT' && travelMode != 'WALKING') continue;
 
       final polyline = step['polyline'] as Map<String, dynamic>?;
       final encoded = polyline?['points'] as String?;
-      if (encoded == null || encoded.isEmpty) {
-        continue;
-      }
+      if (encoded == null || encoded.isEmpty) continue;
 
       final duration = step['duration'] as Map<String, dynamic>?;
       final distance = step['distance'] as Map<String, dynamic>?;
-      final durationText = duration?['text'] as String?;
-      final distanceText = distance?['text'] as String?;
 
       String? transitVehicleType;
       String? transitLineColorHex;
@@ -309,8 +320,8 @@ class GoogleDirectionsService {
         DirectionsRouteSegment(
           points: _decodePolyline(encoded),
           travelMode: travelMode ?? 'WALKING',
-          durationText: durationText,
-          distanceText: distanceText,
+          durationText: duration?['text'] as String?,
+          distanceText: distance?['text'] as String?,
           transitVehicleType: transitVehicleType,
           transitLineColorHex: transitLineColorHex,
           transitLineShortName: transitLineShortName,
@@ -341,13 +352,8 @@ class GoogleDirectionsService {
 
       final distance = step['distance'] as Map<String, dynamic>?;
       final duration = step['duration'] as Map<String, dynamic>?;
-
-      final distanceText = distance?['text'] as String?;
-      final durationText = duration?['text'] as String?;
-
       final maneuver = step['maneuver'] as String?;
 
-      // Transit details if present
       String? transitVehicleType;
       String? transitLineShortName;
       String? transitLineName;
@@ -357,27 +363,21 @@ class GoogleDirectionsService {
         final transitDetails = step['transit_details'] as Map<String, dynamic>?;
         final line = transitDetails?['line'] as Map<String, dynamic>?;
         final vehicle = line?['vehicle'] as Map<String, dynamic>?;
-
         transitVehicleType = (vehicle?['type'] as String?)?.toUpperCase();
         transitLineShortName = line?['short_name'] as String?;
         transitLineName = line?['name'] as String?;
         transitHeadsign = transitDetails?['headsign'] as String?;
       }
 
-      // Skip empty instructions (sometimes happens)
-      if (instruction.trim().isEmpty && travelMode != 'transit') {
-        continue;
-      }
+      if (instruction.trim().isEmpty && travelMode != 'transit') continue;
 
       out.add(
         NavigationStep(
-          instruction: instruction.trim().isEmpty
-              ? 'Continue'
-              : instruction.trim(),
+          instruction: instruction.trim().isEmpty ? 'Continue' : instruction.trim(),
           travelMode: travelMode,
           points: stepPoints,
-          distanceText: distanceText,
-          durationText: durationText,
+          distanceText: distance?['text'] as String?,
+          durationText: duration?['text'] as String?,
           maneuver: maneuver,
           transitVehicleType: transitVehicleType,
           transitLineShortName: transitLineShortName,
