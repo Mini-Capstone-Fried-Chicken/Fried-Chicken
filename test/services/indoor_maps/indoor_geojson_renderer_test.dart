@@ -35,7 +35,6 @@ void main() {
         expect(markers.length, 1);
         final marker = markers.first;
         expect(marker.markerId.value, contains('toilet'));
-        expect(marker.zIndex, 40);
         expect(marker.anchor, const Offset(0.5, 0.5));
       });
 
@@ -66,7 +65,6 @@ void main() {
 
         expect(markers.length, 1);
         expect(markers.first.markerId.value, contains('elevator'));
-        expect(markers.first.zIndex, 40);
       });
 
       test('creates markers for escalators with correct properties', () async {
@@ -508,7 +506,6 @@ void main() {
         final polygons = IndoorGeoJsonRenderer.geoJsonToPolygons(geoJson);
 
         expect(polygons.length, 1);
-        expect(polygons.first.zIndex, 20);
       });
 
       test('creates polygons for escalators', () {

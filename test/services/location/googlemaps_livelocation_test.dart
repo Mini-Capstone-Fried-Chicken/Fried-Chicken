@@ -1329,5 +1329,24 @@ void main() {
       expect(concordiaLoyola.longitude, inInclusiveRange(-74, -73));
     });
   });
-}
 
+  group('_campusFromPoint far point coverage', () {
+    test('point far from both campuses returns Campus.none', () {
+      // Beyond auto-switch radius from both campuses
+      const farPoint = LatLng(45.6, -73.5);
+      expect(detectCampus(farPoint), Campus.none);
+    });
+  });
+
+  group('debugSelectedBuilding coverage', () {
+    testWidgets('building selection via debug param', (tester) async {
+      await pumpPage(
+        tester,
+        debugSelectedBuilding: buildingPolygons.first,
+        debugAnchorOffset: const Offset(200, 400),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
+    });
+  });
+}
