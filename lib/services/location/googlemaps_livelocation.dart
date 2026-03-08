@@ -31,6 +31,7 @@ import '../../shared/widgets/outdoor/outdoor_map_view.dart';
 import '../indoor_maps/indoor_map_repository.dart';
 import '../../shared/widgets/outdoor/outdoor_top_search.dart';
 import '../../services/concordia_shuttle_service.dart';
+import 'googlemaps_livelocation_helpers.dart' as helpers;
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -206,24 +207,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Campus _campusFromPoint(LatLng p) {
-    final dSgw = Geolocator.distanceBetween(
-      p.latitude,
-      p.longitude,
-      concordiaSGW.latitude,
-      concordiaSGW.longitude,
-    );
-
-    final dLoy = Geolocator.distanceBetween(
-      p.latitude,
-      p.longitude,
-      concordiaLoyola.latitude,
-      concordiaLoyola.longitude,
-    );
-
-    final minDist = dSgw < dLoy ? dSgw : dLoy;
-    if (minDist > campusAutoSwitchRadius) return Campus.none;
-
-    return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
+    return helpers.campusFromPoint(p);
   }
 
   Future<void> _onOriginRoomSubmitted(
