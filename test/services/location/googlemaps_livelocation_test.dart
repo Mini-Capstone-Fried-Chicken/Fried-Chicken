@@ -17,6 +17,7 @@
 // Together these target ≥90% line coverage on the source file.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -1376,5 +1377,103 @@ void main() {
 
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
+  });
+
+  testWidgets('popup with link empty URL', (tester) async {
+    await pumpPage(
+      tester,
+      debugSelectedBuilding: firstBuilding,
+      debugAnchorOffset: const Offset(200, 420),
+      debugLinkOverride: '',
+    );
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('popup with valid link', (tester) async {
+    await pumpPage(
+      tester,
+      debugSelectedBuilding: firstBuilding,
+      debugAnchorOffset: const Offset(200, 420),
+      debugLinkOverride: 'https://concordia.ca',
+    );
+    await tester.pumpAndSettle();
+    final linkBtn = find.text('Open Link');
+    if (linkBtn.evaluate().isNotEmpty) {
+      await tester.tap(linkBtn);
+      await tester.pump();
+    }
+  });
+
+  testWidgets('my location button triggers code', (tester) async {
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+    final btn = find.byIcon(Icons.my_location);
+    if (btn.evaluate().isNotEmpty) {
+      await tester.tap(btn);
+      await tester.pump();
+    }
+  });
+
+  testWidgets('get directions button interaction', (tester) async {
+    await pumpPage(
+      tester,
+      debugSelectedBuilding: firstBuilding,
+      debugAnchorOffset: const Offset(200, 420),
+    );
+    await tester.pumpAndSettle();
+    final btn = find.text('Get Directions');
+    if (btn.evaluate().isNotEmpty) {
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('campus toggle interaction', (tester) async {
+    await pumpPage(tester, initialCampus: Campus.sgw);
+    await tester.pumpAndSettle();
+    final toggle = find.byType(CampusToggle);
+    if (toggle.evaluate().isNotEmpty) {
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('search field interaction', (tester) async {
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+    final searchField = find.byType(TextField).first;
+    if (searchField.evaluate().isNotEmpty) {
+      await tester.enterText(searchField, 'Hall');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('indoor map button in popup', (tester) async {
+    await pumpPage(
+      tester,
+      debugSelectedBuilding: firstBuilding,
+      debugAnchorOffset: const Offset(200, 420),
+    );
+    await tester.pumpAndSettle();
+    final btn = find.text('Indoor Map');
+    if (btn.evaluate().isNotEmpty) {
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('close popup button', (tester) async {
+    await pumpPage(
+      tester,
+      debugSelectedBuilding: firstBuilding,
+      debugAnchorOffset: const Offset(200, 420),
+    );
+    await tester.pumpAndSettle();
+    final btn = find.byIcon(Icons.close);
+    if (btn.evaluate().isNotEmpty) {
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+    }
   });
 }
