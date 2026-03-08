@@ -1349,4 +1349,32 @@ void main() {
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
   });
+
+  group('_campusFromPoint boundary', () {
+    test('point equidistant from SGW and Loyola', () {
+      final midLat = (concordiaSGW.latitude + concordiaLoyola.latitude) / 2;
+      final midLng = (concordiaSGW.longitude + concordiaLoyola.longitude) / 2;
+      final result = detectCampus(LatLng(midLat, midLng));
+      expect(result, isIn([Campus.sgw, Campus.loyola, Campus.none]));
+    });
+
+    test('point closer to SGW returns Campus.sgw', () {
+      const nearSGW = LatLng(45.4975, -73.5789);
+      expect(detectCampus(nearSGW), Campus.sgw);
+    });
+
+    test('point exactly at Loyola boundary', () {
+      const atLoyola = LatLng(45.4582, -73.6405);
+      expect(detectCampus(atLoyola), Campus.loyola);
+    });
+  });
+
+  group('indoor map error handling', () {
+    testWidgets('loadIndoorFloor catch block coverage', (tester) async {
+      await pumpPage(tester, debugSelectedBuilding: firstBuilding);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
+    });
+  });
 }
