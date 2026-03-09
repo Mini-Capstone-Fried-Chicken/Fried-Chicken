@@ -48,11 +48,11 @@ class NavigationStep {
   }
 
   String get transitLabel {
-    final line = (transitLineShortName?.trim().isNotEmpty == true)
-        ? transitLineShortName!.trim()
-        : (transitLineName?.trim().isNotEmpty == true
-              ? transitLineName!.trim()
-              : null);
+    final fallbackLineName =
+    transitLineName?.trim().isNotEmpty == true ? transitLineName!.trim() : null;
+    final line = transitLineShortName?.trim().isNotEmpty == true
+    ? transitLineShortName!.trim()
+    : fallbackLineName;
 
     if (line == null) return 'Transit';
     final vehicle = transitVehicleType?.toUpperCase();
@@ -404,9 +404,10 @@ class NavigationNextStepHeader extends StatelessWidget {
     const burgundy = Color(0xFF76263D);
 
     final step = nextStep;
-    final primary = step == null
-        ? 'Continue'
-        : (step.travelMode == 'transit' ? step.transitLabel : step.instruction);
+    final stepText = step != null
+    ? (step.travelMode == 'transit' ? step.transitLabel : step.instruction)
+    : null;
+    final primary = stepText ?? 'Continue';
 
     final secondaryParts = <String>[];
     if (step != null &&
