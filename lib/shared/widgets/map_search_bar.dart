@@ -186,6 +186,9 @@ class _MapSearchBarState extends State<MapSearchBar> {
             itemCount: widget.suggestions!.length,
             itemBuilder: (context, index) {
               final suggestion = widget.suggestions![index];
+              final subtitleColor = suggestion.isConcordiaBuilding
+                ? burgundy.withOpacity(0.7)
+                : Colors.grey[600];
               return ListTile(
                 leading: Icon(
                   suggestion.isConcordiaBuilding ? Icons.school : Icons.place,
@@ -194,16 +197,11 @@ class _MapSearchBarState extends State<MapSearchBar> {
                 ),
                 title: Text(suggestion.name),
                 subtitle: suggestion.subtitle != null
-                    ? Text(
-                        suggestion.subtitle!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: suggestion.isConcordiaBuilding
-                              ? burgundy.withOpacity(0.7)
-                              : Colors.grey[600],
-                        ),
-                      )
-                    : null,
+                  ? Text(
+                      suggestion.subtitle!,
+                      style: TextStyle(fontSize: 12, color: subtitleColor),
+                    )
+                  : null,
                 dense: true,
                 onTap: () => _selectSuggestion(suggestion),
               );

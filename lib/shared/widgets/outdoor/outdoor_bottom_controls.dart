@@ -21,6 +21,11 @@ class OutdoorBottomControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final campusLabel = currentCampus == Campus.sgw
+      ? 'SGW Campus'
+      : currentCampus == Campus.loyola
+          ? 'Loyola Campus'
+          : 'Off Campus';
     return Positioned(
       bottom: 70,
       left: 20,
@@ -39,13 +44,7 @@ class OutdoorBottomControls extends StatelessWidget {
               heroTag: 'campus_button',
               onPressed: onGoToMyLocation,
               icon: const Icon(Icons.school),
-              label: Text(
-                currentCampus == Campus.sgw
-                    ? 'SGW Campus'
-                    : currentCampus == Campus.loyola
-                        ? 'Loyola Campus'
-                        : 'Off Campus',
-              ),
+              label: Text(campusLabel),
             ),
           ],
         ),
