@@ -7,8 +7,8 @@ class SavedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: const Center(
-        child: const Text("Saved Screen"),
+      body: Center(
+        child: Text("Saved Screen"),
       ),
     );
   }
