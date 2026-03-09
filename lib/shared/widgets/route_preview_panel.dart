@@ -488,11 +488,13 @@ class RouteTravelModeBar extends StatelessWidget {
     const burgundy = Color(0xFF76263D);
     final selectedLabel = selectedTravelMode.label;
     final selectedDuration = modeDurations[selectedTravelMode.apiValue];
-    final durationLabel = isLoadingDurations
-        ? '...'
-        : (selectedDuration?.trim().isNotEmpty == true
-              ? selectedDuration!
-              : 'N/A');
+    // final durationLabel = isLoadingDurations
+    //     ? '...'
+    //     : (selectedDuration?.trim().isNotEmpty == true
+    //           ? selectedDuration!
+    //           : 'N/A');
+    final resolvedDuration = selectedDuration?.trim().isNotEmpty == true ? selectedDuration! : 'N/A';
+    final durationLabel = isLoadingDurations ? '...' : resolvedDuration;
 
     final durationParts = _splitDuration(durationLabel);
 
