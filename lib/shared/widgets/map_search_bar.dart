@@ -90,18 +90,14 @@ class _MapSearchBarState extends State<MapSearchBar> {
 
   void _updateSuggestionsVisibility() {
     final shouldShow = _focusNode.hasFocus && _hasSuggestions;
-
     if (_showSuggestions == shouldShow) return;
-
     setState(() {
       _showSuggestions = shouldShow;
     });
   }
 
   void _onFocusChange() {
-    if (_focusNode.hasFocus) {
-      widget.onFocus?.call();
-    }
+    if (_focusNode.hasFocus) widget.onFocus?.call();
     _updateSuggestionsVisibility();
   }
 
@@ -114,24 +110,129 @@ class _MapSearchBarState extends State<MapSearchBar> {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Helpers extracted to reduce cognitive complexity of build
+  // ---------------------------------------------------------------------------
+
+  /// Builds the burgundy search card, including the optional room fields row.
+  Widget _buildSearchCard({
+    required String hint,
+    required bool showRooms,
+    required String? effectiveOriginCode,
+    required String? effectiveDestinationCode,
+    required bool originEnabled,
+    required bool destinationEnabled,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Material(
+        elevation: 4,
+        borderRadius: BorderRadius.circular(8),
+        color: burgundy,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onSubmitted: widget.onSubmitted,
+              onChanged: (_) => _updateSuggestionsVisibility(),
+            ),
+            if (showRooms)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: RoomFieldsSection(
+                  originBuildingCode: effectiveOriginCode,
+                  destinationBuildingCode: effectiveDestinationCode,
+                  originRoomController: widget.originRoomController,
+                  destinationRoomController: widget.destinationRoomController,
+                  originEnabled: originEnabled,
+                  destinationEnabled: destinationEnabled,
+                  onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
+                  onDestinationRoomSubmitted: widget.onDestinationRoomSubmitted,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the dropdown suggestions list shown below the search card.
+  Widget _buildSuggestionsList() {
+    return PointerInterceptor(
+      child: Material(
+        elevation: 4,
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
+          ),
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: widget.suggestions!.length,
+            itemBuilder: (context, index) {
+              final suggestion = widget.suggestions![index];
+              return ListTile(
+                leading: Icon(
+                  suggestion.isConcordiaBuilding ? Icons.school : Icons.place,
+                  color: suggestion.isConcordiaBuilding ? burgundy : Colors.grey,
+                  size: 20,
+                ),
+                title: Text(suggestion.name),
+                subtitle: suggestion.subtitle != null
+                    ? Text(
+                        suggestion.subtitle!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: suggestion.isConcordiaBuilding
+                              ? burgundy.withOpacity(0.7)
+                              : Colors.grey[600],
+                        ),
+                      )
+                    : null,
+                dense: true,
+                onTap: () => _selectSuggestion(suggestion),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
-    final String hint = widget.campusLabel.trim().isEmpty
-        ? "Search anywhere"
-        : "Search anywhere near ${widget.campusLabel}";
+    final hint = widget.campusLabel.trim().isEmpty
+        ? 'Search anywhere'
+        : 'Search anywhere near ${widget.campusLabel}';
 
     final indoorMode = widget.showRoomFields;
-    final effectiveOriginCode = indoorMode
-        ? widget.selectedBuildingCode
-        : widget.currentBuildingCode;
+    final effectiveOriginCode =
+        indoorMode ? widget.selectedBuildingCode : widget.currentBuildingCode;
     final effectiveDestinationCode = widget.selectedBuildingCode;
 
     final showRooms = indoorMode
         ? (effectiveDestinationCode?.isNotEmpty ?? false)
         : (_isUserInConcordiaBuilding || _isConcordiaBuilding);
 
-    final originEnabled = indoorMode ? true : _isUserInConcordiaBuilding;
-    final destinationEnabled = indoorMode ? true : _isConcordiaBuilding;
+    final originEnabled = indoorMode || _isUserInConcordiaBuilding;
+    final destinationEnabled = indoorMode || _isConcordiaBuilding;
 
     return TapRegion(
       onTapOutside: (_) {
@@ -141,102 +242,15 @@ class _MapSearchBarState extends State<MapSearchBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(8),
-              color: burgundy,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: widget.controller,
-                    focusNode: _focusNode,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: hint,
-                      hintStyle: const TextStyle(color: Colors.white70),
-                      prefixIcon: const Icon(Icons.search, color: Colors.white),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onSubmitted: widget.onSubmitted,
-                    onChanged: (_) => _updateSuggestionsVisibility(),
-                  ),
-                  if (showRooms)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: RoomFieldsSection(
-                        originBuildingCode: effectiveOriginCode,
-                        destinationBuildingCode: effectiveDestinationCode,
-                        originRoomController: widget.originRoomController,
-                        destinationRoomController:
-                            widget.destinationRoomController,
-                        originEnabled: originEnabled,
-                        destinationEnabled: destinationEnabled,
-                        onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
-                        onDestinationRoomSubmitted:
-                            widget.onDestinationRoomSubmitted,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          _buildSearchCard(
+            hint: hint,
+            showRooms: showRooms,
+            effectiveOriginCode: effectiveOriginCode,
+            effectiveDestinationCode: effectiveDestinationCode,
+            originEnabled: originEnabled,
+            destinationEnabled: destinationEnabled,
           ),
-          if (_showSuggestions && _hasSuggestions)
-            PointerInterceptor(
-              child: Material(
-                elevation: 4,
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: widget.suggestions!.length,
-                    itemBuilder: (context, index) {
-                      final suggestion = widget.suggestions![index];
-
-                      return ListTile(
-                        leading: Icon(
-                          suggestion.isConcordiaBuilding
-                              ? Icons.school
-                              : Icons.place,
-                          color: suggestion.isConcordiaBuilding
-                              ? burgundy
-                              : Colors.grey,
-                          size: 20,
-                        ),
-                        title: Text(suggestion.name),
-                        subtitle: suggestion.subtitle != null
-                            ? Text(
-                                suggestion.subtitle!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: suggestion.isConcordiaBuilding
-                                      ? burgundy.withOpacity(0.7)
-                                      : Colors.grey[600],
-                                ),
-                              )
-                            : null,
-                        dense: true,
-                        onTap: () => _selectSuggestion(suggestion),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+          if (_showSuggestions && _hasSuggestions) _buildSuggestionsList(),
         ],
       ),
     );

@@ -4,31 +4,18 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../core/indoor_routing_models.dart';
 
-// Handles the geometry logic used to decide whether 2 polygons
-// should be considered connected in the routing graph.
 class IndoorBoundaryAdjacency {
-  // Small tolerance for minor GeoJSON inaccuracies.
   static const double adjacencyEpsilonMeters = 0.25;
-
-  // How often to sample along a polygon edge when estimating shared boundary.
   static const double boundarySampleStepMeters = 0.30;
-
-  // Minimum shared boundary required for room <-> walkable connections.
   static const double minimumSharedBoundaryRoomToWalkableMeters = 0.80;
-
-  // Minimum shared boundary required for walkable <-> walkable connections.
   static const double minimumSharedBoundaryWalkableToWalkableMeters = 1.20;
 
-  // Main adjacency check:
-  // returns true if the 2 polygons share enough boundary to be connected.
   bool polygonsAreAdjacentByBoundaryShare({
     required List<LatLng> polygonA,
     required List<LatLng> polygonB,
     required double minimumSharedBoundaryMeters,
   }) {
-    if (polygonA.length < 3 || polygonB.length < 3) {
-      return false;
-    }
+    if (polygonA.length < 3 || polygonB.length < 3) return false;
 
     final referenceLat =
         (polygonA.first.latitude + polygonB.first.latitude) / 2.0;
@@ -40,7 +27,6 @@ class IndoorBoundaryAdjacency {
       referenceLat: referenceLat,
       referenceLng: referenceLng,
     );
-
     final localPolygonB = convertPolygonToLocalMeters(
       polygon: polygonB,
       referenceLat: referenceLat,
@@ -62,17 +48,12 @@ class IndoorBoundaryAdjacency {
     return sharedBoundaryMeters >= minimumSharedBoundaryMeters;
   }
 
-  // Returns a point near the middle of the longest shared boundary segment.
-  // This gives a better visual "portal" between adjacent polygons than using
-  // polygon centers only.
   LatLng? sharedBoundaryMidpoint({
     required List<LatLng> polygonA,
     required List<LatLng> polygonB,
     required double minimumSharedBoundaryMeters,
   }) {
-    if (polygonA.length < 3 || polygonB.length < 3) {
-      return null;
-    }
+    if (polygonA.length < 3 || polygonB.length < 3) return null;
 
     final referenceLat =
         (polygonA.first.latitude + polygonB.first.latitude) / 2.0;
@@ -97,14 +78,8 @@ class IndoorBoundaryAdjacency {
       return null;
     }
 
-    final runA = longestTouchingRunOneWay(
-      sourcePolygon: localA,
-      targetPolygon: localB,
-    );
-    final runB = longestTouchingRunOneWay(
-      sourcePolygon: localB,
-      targetPolygon: localA,
-    );
+    final runA = _longestTouchingRunOneWay(sourcePolygon: localA, targetPolygon: localB);
+    final runB = _longestTouchingRunOneWay(sourcePolygon: localB, targetPolygon: localA);
 
     _TouchRunLocal? bestRun;
     if (runA == null) {
@@ -120,7 +95,6 @@ class IndoorBoundaryAdjacency {
     }
 
     final midpoint = interpolateLocalPoints(bestRun.start, bestRun.end, 0.5);
-
     return localMetersToLatLng(
       localPoint: midpoint,
       referenceLat: referenceLat,
@@ -128,8 +102,6 @@ class IndoorBoundaryAdjacency {
     );
   }
 
-  // Computes the largest shared boundary length between 2 polygons.
-  // Done both ways to reduce asymmetry from edge sampling.
   double maxSharedBoundaryMeters({
     required List<LocalPointMeters> localPolygonA,
     required List<LocalPointMeters> localPolygonB,
@@ -138,31 +110,46 @@ class IndoorBoundaryAdjacency {
       sourcePolygon: localPolygonA,
       targetPolygon: localPolygonB,
     );
-
     final sharedBtoA = maxSharedBoundaryMetersOneWay(
       sourcePolygon: localPolygonB,
       targetPolygon: localPolygonA,
     );
-
     return math.max(sharedAtoB, sharedBtoA);
   }
 
-  // Measures how much of sourcePolygon's boundary is continuously close
-  // to the targetPolygon boundary.
   double maxSharedBoundaryMetersOneWay({
     required List<LocalPointMeters> sourcePolygon,
     required List<LocalPointMeters> targetPolygon,
   }) {
-    final run = longestTouchingRunOneWay(
+    final run = _longestTouchingRunOneWay(
       sourcePolygon: sourcePolygon,
       targetPolygon: targetPolygon,
     );
     return run?.lengthMeters ?? 0.0;
   }
 
-  // Finds the longest continuous touching run from one polygon boundary
-  // against another polygon boundary.
-  _TouchRunLocal? longestTouchingRunOneWay({
+  // Helper extracted to reduce cognitive complexity of _longestTouchingRunOneWay
+
+  /// Returns the longer of [current] and a new candidate run ending at
+  /// [currentPoint] with the accumulated [runLength].
+  /// Returns [current] unchanged when [runLength] is not an improvement.
+  _TouchRunLocal _bestRun(
+    _TouchRunLocal? current,
+    LocalPointMeters runStart,
+    LocalPointMeters currentPoint,
+    double runLength,
+  ) {
+    if (current == null || runLength > current.lengthMeters) {
+      return _TouchRunLocal(
+        start: runStart,
+        end: currentPoint,
+        lengthMeters: runLength,
+      );
+    }
+    return current;
+  }
+
+  _TouchRunLocal? _longestTouchingRunOneWay({
     required List<LocalPointMeters> sourcePolygon,
     required List<LocalPointMeters> targetPolygon,
   }) {
@@ -185,32 +172,18 @@ class IndoorBoundaryAdjacency {
 
       var previousPoint = segmentStart;
       LocalPointMeters? runStart =
-          pointTouchesPolygonBoundary(previousPoint, target)
-          ? previousPoint
-          : null;
+          pointTouchesPolygonBoundary(previousPoint, target) ? previousPoint : null;
       double runLength = 0.0;
 
       for (int s = 1; s <= sampleCount; s++) {
-        final t = s / sampleCount;
-        final currentPoint = interpolateLocalPoints(
-          segmentStart,
-          segmentEnd,
-          t,
-        );
+        final currentPoint = interpolateLocalPoints(segmentStart, segmentEnd, s / sampleCount);
         final touches = pointTouchesPolygonBoundary(currentPoint, target);
         final interval = distanceLocalPoints(previousPoint, currentPoint);
 
         if (touches) {
           runStart ??= previousPoint;
           runLength += interval;
-
-          if (bestRun == null || runLength > bestRun.lengthMeters) {
-            bestRun = _TouchRunLocal(
-              start: runStart,
-              end: currentPoint,
-              lengthMeters: runLength,
-            );
-          }
+          bestRun = _bestRun(bestRun, runStart, currentPoint, runLength);
         } else {
           runStart = null;
           runLength = 0.0;
@@ -223,47 +196,36 @@ class IndoorBoundaryAdjacency {
     return bestRun;
   }
 
-  // Checks whether a sampled point is close enough to the target boundary.
   bool pointTouchesPolygonBoundary(
     LocalPointMeters point,
     List<LocalPointMeters> polygon,
   ) {
-    final distance = minimumDistanceFromPointToPolygonBoundaryMeters(
-      point: point,
-      polygon: polygon,
-    );
-
-    return distance <= adjacencyEpsilonMeters;
+    return minimumDistanceFromPointToPolygonBoundaryMeters(
+          point: point,
+          polygon: polygon,
+        ) <=
+        adjacencyEpsilonMeters;
   }
 
-  // Returns the minimum distance from a point to any edge of a polygon.
   double minimumDistanceFromPointToPolygonBoundaryMeters({
     required LocalPointMeters point,
     required List<LocalPointMeters> polygon,
   }) {
     final closedPolygon = ensureClosedLocalPolygon(polygon);
-
     double minimumDistance = double.infinity;
 
     for (int i = 0; i < closedPolygon.length - 1; i++) {
-      final segmentStart = closedPolygon[i];
-      final segmentEnd = closedPolygon[i + 1];
-
       final distance = distancePointToSegmentMeters(
         point: point,
-        segmentStart: segmentStart,
-        segmentEnd: segmentEnd,
+        segmentStart: closedPolygon[i],
+        segmentEnd: closedPolygon[i + 1],
       );
-
-      if (distance < minimumDistance) {
-        minimumDistance = distance;
-      }
+      if (distance < minimumDistance) minimumDistance = distance;
     }
 
     return minimumDistance;
   }
 
-  // Standard point-to-segment distance in local XY meter space.
   double distancePointToSegmentMeters({
     required LocalPointMeters point,
     required LocalPointMeters segmentStart,
@@ -289,20 +251,16 @@ class IndoorBoundaryAdjacency {
     return distanceLocalPoints(point, closestPoint);
   }
 
-  // Converts lat/lng polygon points into local XY meter coordinates.
-  // This makes distance and boundary calculations much easier.
   List<LocalPointMeters> convertPolygonToLocalMeters({
     required List<LatLng> polygon,
     required double referenceLat,
     required double referenceLng,
   }) {
     final referenceLatRadians = degToRad(referenceLat);
-
     final xMetersPerDegree = 111320.0 * math.cos(referenceLatRadians);
     const yMetersPerDegree = 111132.0;
 
     final localPolygon = <LocalPointMeters>[];
-
     for (final point in polygon) {
       localPolygon.add(
         LocalPointMeters(
@@ -315,7 +273,6 @@ class IndoorBoundaryAdjacency {
     return ensureClosedLocalPolygon(localPolygon);
   }
 
-  // Converts local XY meters back into LatLng.
   LatLng localMetersToLatLng({
     required LocalPointMeters localPoint,
     required double referenceLat,
@@ -331,10 +288,8 @@ class IndoorBoundaryAdjacency {
     );
   }
 
-  // Builds a bounding box around a polygon in local XY space.
   PolygonBoundsMeters buildPolygonBounds(List<LocalPointMeters> polygon) {
     final closed = ensureClosedLocalPolygon(polygon);
-
     double minX = closed.first.x;
     double minY = closed.first.y;
     double maxX = closed.first.x;
@@ -350,7 +305,6 @@ class IndoorBoundaryAdjacency {
     return PolygonBoundsMeters(minX: minX, minY: minY, maxX: maxX, maxY: maxY);
   }
 
-  // Checks whether 2 bounding boxes overlap, allowing for a small tolerance.
   bool boundsOverlapWithTolerance(
     PolygonBoundsMeters a,
     PolygonBoundsMeters b,
@@ -363,19 +317,11 @@ class IndoorBoundaryAdjacency {
     return true;
   }
 
-  // Ensures the local polygon is explicitly closed.
-  List<LocalPointMeters> ensureClosedLocalPolygon(
-    List<LocalPointMeters> polygon,
-  ) {
+  List<LocalPointMeters> ensureClosedLocalPolygon(List<LocalPointMeters> polygon) {
     if (polygon.isEmpty) return polygon;
-
     final first = polygon.first;
     final last = polygon.last;
-
-    if (areSameLocalPoint(first, last)) {
-      return polygon;
-    }
-
+    if (areSameLocalPoint(first, last)) return polygon;
     return [...polygon, first];
   }
 
@@ -383,7 +329,6 @@ class IndoorBoundaryAdjacency {
     return (a.x - b.x).abs() < 1e-9 && (a.y - b.y).abs() < 1e-9;
   }
 
-  // Linear interpolation between 2 local points.
   LocalPointMeters interpolateLocalPoints(
     LocalPointMeters start,
     LocalPointMeters end,
@@ -401,9 +346,7 @@ class IndoorBoundaryAdjacency {
     return math.sqrt(dx * dx + dy * dy);
   }
 
-  double degToRad(double degrees) {
-    return degrees * (math.pi / 180.0);
-  }
+  double degToRad(double degrees) => degrees * (math.pi / 180.0);
 }
 
 class _TouchRunLocal {
