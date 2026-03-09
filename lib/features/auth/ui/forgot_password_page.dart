@@ -99,9 +99,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
           child: Column(
             children: <Widget>[
               const SizedBox(height: 20),
-              Padding(
+              const Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                child: Stack(
+                const child: Stack(
                   alignment: Alignment.center,
                   children: [
                     const Center(
