@@ -75,7 +75,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     setState(() => isLoading = true);
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      
+
       setState(() => emailSent = true);
       _showMessage(
         "Password reset link sent! Check your email.",
@@ -100,11 +100,11 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             children: <Widget>[
               const SizedBox(height: 20),
               const Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                const child: Stack(
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Center(
+                    Center(
                       child: Text(
                         "Forgot Password?",
                         style: TextStyle(
@@ -114,7 +114,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         ),
                       ),
                     ),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: BackButtonWidget(destinationPage: SignInPage()),
                     ),
