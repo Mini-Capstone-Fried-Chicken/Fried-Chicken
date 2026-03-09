@@ -404,10 +404,10 @@ class NavigationNextStepHeader extends StatelessWidget {
     const burgundy = Color(0xFF76263D);
 
     final step = nextStep;
-    final stepText = step != null
-    ? (step.travelMode == 'transit' ? step.transitLabel : step.instruction)
-    : null;
-    final primary = stepText ?? 'Continue';
+    final stepLabel = step != null && step.travelMode == 'transit'
+    ? step.transitLabel
+    : step?.instruction;
+    final primary = stepLabel ?? 'Continue';
 
     final secondaryParts = <String>[];
     if (step != null &&
