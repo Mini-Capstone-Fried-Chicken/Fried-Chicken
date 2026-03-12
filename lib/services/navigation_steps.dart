@@ -112,7 +112,7 @@ class NavigationStepsSheet extends StatelessWidget {
               height: 4,
               width: 44,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -252,8 +252,8 @@ class _StepTile extends StatelessWidget {
 
     final icon = _iconFor(step);
     final iconBg = step.travelMode == 'transit'
-        ? Colors.black.withOpacity(0.06)
-        : burgundy.withOpacity(0.12);
+        ? Colors.black.withValues(alpha: 0.06)
+        : burgundy.withValues(alpha: 0.12);
     final iconColor = step.travelMode == 'transit' ? Colors.black87 : burgundy;
 
     // For transit steps, prefer a transit label + headsign line.
@@ -275,10 +275,10 @@ class _StepTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -324,7 +324,7 @@ class _StepTile extends StatelessWidget {
                           line,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black.withOpacity(0.60),
+                            color: Colors.black.withValues(alpha: 0.6),
                             height: 1.15,
                           ),
                         ),
@@ -432,7 +432,7 @@ class NavigationNextStepHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
+                color: Colors.black.withValues(alpha: 0.25),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -448,7 +448,7 @@ class NavigationNextStepHeader extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.14),
+                    color: Colors.white.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.navigation, color: Colors.white),

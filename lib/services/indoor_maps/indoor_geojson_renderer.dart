@@ -57,7 +57,7 @@ class IndoorGeoJsonRenderer {
           points: points,
           strokeWidth: 2,
           strokeColor: Colors.black,
-          fillColor: fillColor.withOpacity(1.0),
+          fillColor: fillColor.withValues(alpha: 1.0),
           zIndex: 20,
         ),
       );
@@ -113,7 +113,7 @@ class IndoorGeoJsonRenderer {
           icon: icon,
           anchor: const Offset(0.5, 0.5),
           flat: true,
-          zIndex: 30,
+          zIndexInt: 30,
           consumeTapEvents: false,
           infoWindow: InfoWindow.noText,
         ),

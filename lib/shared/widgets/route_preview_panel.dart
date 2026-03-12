@@ -211,7 +211,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -248,7 +248,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 decoration: InputDecoration(
                                   hintText: 'Starting location',
                                   hintStyle: TextStyle(
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
@@ -303,7 +303,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 decoration: InputDecoration(
                                   hintText: 'Choose destination',
                                   hintStyle: TextStyle(
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
@@ -402,7 +402,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -501,7 +501,7 @@ class RouteTravelModeBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -554,9 +554,8 @@ class RouteTravelModeBar extends StatelessWidget {
                     : onStart,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
-                  backgroundColor: Colors.white.withOpacity(
-                    (isNavigating ||
-                            selectedTravelMode == RouteTravelMode.shuttle)
+                  backgroundColor: Colors.white.withValues(
+                    alpha: (isNavigating || selectedTravelMode == RouteTravelMode.shuttle)
                         ? 0.10
                         : 0.18,
                   ),
@@ -718,7 +717,7 @@ class RouteTravelModeBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.white.withOpacity(0.15)
+              ? Colors.white.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
