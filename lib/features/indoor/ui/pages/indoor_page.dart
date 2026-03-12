@@ -111,13 +111,13 @@ class IndoorPage extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: isClassroom
-                ? Colors.red.withOpacity(0.25)
-                : Colors.blue.withOpacity(0.20),
+                ? Colors.red.withValues(alpha: 0.25)
+                : Colors.blue.withValues(alpha: 0.20),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: isClassroom
-                  ? Colors.red.withOpacity(0.7)
-                  : Colors.blue.withOpacity(0.7),
+                  ? Colors.red.withValues(alpha: 0.07)
+                  : Colors.blue.withValues(alpha: 0.07),
               width: 1.5,
             ),
           ),
@@ -130,7 +130,7 @@ class IndoorPage extends StatelessWidget {
     if (!flip) return child;
     return Transform(
       alignment: Alignment.center,
-      transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
+      transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
       child: child,
     );
   }
