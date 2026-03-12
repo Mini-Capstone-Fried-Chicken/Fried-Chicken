@@ -81,14 +81,14 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.92),
+                          color: Colors.white.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(color: Colors.black12),
                           boxShadow: [
                             BoxShadow(
                               blurRadius: 10,
                               offset: const Offset(0, 4),
-                              color: Colors.black.withOpacity(0.12),
+                              color: Colors.black.withValues(alpha: 0.92),
                             ),
                           ],
                         ),
@@ -214,7 +214,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             BoxShadow(
               blurRadius: 18,
               offset: const Offset(0, 8),
-              color: Colors.black.withOpacity(0.12),
+              color: Colors.black.withValues(alpha: 0.12),
             ),
           ],
         ),
