@@ -1234,7 +1234,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1354,11 +1354,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   /// Shuttle stop marker icon
   Future<void> _createShuttleStopIcon() async {
-    _shuttleStopIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(600, 600)),
-      'assets/images/shuttle_icon.png',
-    );
-  }
+  _shuttleStopIcon = await BitmapDescriptor.fromAssetImage(
+    const ImageConfiguration(size: Size(600, 600)),
+    'assets/images/shuttle_icon.png',
+  );
+}
 
   /// Walking time + 4 next buses
   Future<void> _fetchShuttleInfo() async {
@@ -1798,16 +1798,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final isSelected = _selectedBuildingPoly?.code == b.code;
 
       final strokeColor = isSelected
-          ? selectedBlue.withOpacity(0.95)
+          ? selectedBlue.withValues(alpha: 0.95)
           : isCurrent
-          ? Colors.blue.withOpacity(0.8)
-          : burgundy.withOpacity(0.55);
+          ? Colors.blue.withValues(alpha: 0.8)
+          : burgundy.withValues(alpha: 0.55);
 
       final fillColor = isSelected
-          ? selectedBlue.withOpacity(0.25)
+          ? selectedBlue.withValues(alpha: 0.25)
           : isCurrent
-          ? Colors.blue.withOpacity(0.25)
-          : burgundy.withOpacity(0.22);
+          ? Colors.blue.withValues(alpha: 0.25)
+          : burgundy.withValues(alpha: 0.22);
 
       final strokeWidth = isSelected
           ? 3
@@ -2099,7 +2099,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
         anchor: const Offset(0.5, 0.5),
         flat: true,
-        zIndex: 999,
+        zIndexInt: 999,
       ),
     );
   }
@@ -2197,8 +2197,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
         radius: 20,
-        fillColor: Colors.blue.withOpacity(0.1),
-        strokeColor: Colors.blue.withOpacity(0.3),
+        fillColor: Colors.blue.withValues(alpha: 0.1),
+        strokeColor: Colors.blue.withValues(alpha: 0.3),
         strokeWidth: 1,
       ),
     );
@@ -2682,7 +2682,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                 height: 4,
                 width: 44,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -2773,10 +2773,10 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isNext
-                            ? burgundy.withOpacity(0.08)
+                            ? burgundy.withValues(alpha: 0.08)
                             : Colors.transparent,
                         border: isNext
-                            ? Border.all(color: burgundy.withOpacity(0.3))
+                            ? Border.all(color: burgundy.withValues(alpha: 0.3))
                             : null,
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -2852,8 +2852,8 @@ class _StopChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
