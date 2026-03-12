@@ -1,30 +1,38 @@
 import 'package:campus_app/features/auth/ui/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:campus_app/features/calendar/data/repositories/google_calendar_repository.dart';
 
 class SettingsScreen extends StatelessWidget {
   final bool isLoggedIn;
   const SettingsScreen({super.key, required this.isLoggedIn});
 
   Future<void> _handleLogout(BuildContext context) async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (!context.mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const SignInPage()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error logging out: $e'),
-          backgroundColor: Colors.red[600],
-        ),
-      );
-    }
+  try {
+    // Disconnect Google Calendar first
+    await GoogleCalendarRepository.instance.disconnect();
+
+    // Then logout from Firebase
+    await FirebaseAuth.instance.signOut();
+
+    if (!context.mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInPage()),
+      (route) => false,
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error logging out: $e'),
+        backgroundColor: Colors.red[600],
+      ),
+    );
   }
+}
 
   void _handleSignIn(BuildContext context) {
     Navigator.pushAndRemoveUntil(

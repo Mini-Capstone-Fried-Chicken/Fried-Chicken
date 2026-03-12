@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
 
-import "../features/calendar/ui/calendar_screen.dart";
+import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import "../features/explore/ui/explore_screen.dart";
 import "../features/saved/ui/saved_screen.dart";
 import "../features/settings/ui/settings_screen.dart";
