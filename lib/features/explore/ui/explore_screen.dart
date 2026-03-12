@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../services/location/googlemaps_livelocation.dart';
-import '../../../shared/widgets/map_search_bar.dart';
 import 'package:campus_app/models/campus.dart';
 
 export '../../../services/location/googlemaps_livelocation.dart' show Campus, OutdoorMapPage;  
