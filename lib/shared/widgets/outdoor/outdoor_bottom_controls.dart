@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:campus_app/models/campus.dart';
-import '../../../services/location/googlemaps_livelocation.dart' show Campus, RouteTravelMode;
 
 class OutdoorBottomControls extends StatelessWidget {
   final LatLng? currentLocation;

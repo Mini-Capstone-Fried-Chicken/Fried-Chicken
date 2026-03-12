@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../shared/widgets/campus_toggle.dart';
 import '../../../shared/widgets/route_preview_panel.dart';
-import '../../../services/navigation_steps.dart';
-import '../../../services/location/googlemaps_livelocation.dart' show RouteTravelMode;
 import 'package:campus_app/models/campus.dart';
 
 class OutdoorBottomBar extends StatelessWidget {
