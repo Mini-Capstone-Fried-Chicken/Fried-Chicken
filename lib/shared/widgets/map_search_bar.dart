@@ -187,7 +187,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
             itemBuilder: (context, index) {
               final suggestion = widget.suggestions![index];
               final subtitleColor = suggestion.isConcordiaBuilding
-                ? burgundy.withOpacity(0.7)
+                ? burgundy.withValues(alpha: 0.7)
                 : Colors.grey[600];
               return ListTile(
                 leading: Icon(
