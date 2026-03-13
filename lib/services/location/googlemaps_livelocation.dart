@@ -128,6 +128,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
+  Set<Marker> _amenityMarkers = {};
 
   Set<Polyline> _routePolylines = {};
   Set<Polyline> _indoorRoutePolylines = {};
@@ -216,6 +217,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorPolygons = {};
     _indoorGeoJson = null;
     _roomLabelMarkers = {};
+    _amenityMarkers = {};
     _originRoomMarker = null;
     _destinationRoomMarker = null;
     _resetIndoorRouteState();
@@ -496,6 +498,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorPolygons = result.polygons;
         _indoorGeoJson = result.geoJson;
         _roomLabelMarkers = result.labels;
+        _amenityMarkers = result.amenityIcons;
       });
       await _refreshIndoorRouteForActiveFloor();
     } catch (e) {
@@ -1354,11 +1357,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   /// Shuttle stop marker icon
   Future<void> _createShuttleStopIcon() async {
-  _shuttleStopIcon = await BitmapDescriptor.fromAssetImage(
-    const ImageConfiguration(size: Size(600, 600)),
-    'assets/images/shuttle_icon.png',
-  );
-}
+    _shuttleStopIcon = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(600, 600)),
+      'assets/images/shuttle_icon.png',
+    );
+  }
 
   /// Walking time + 4 next buses
   Future<void> _fetchShuttleInfo() async {
@@ -2435,7 +2438,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 setState(() => _cameraMoving = false);
                 _updatePopupOffset();
               },
-              markers: {..._createMarkers(), ..._roomLabelMarkers},
+              markers: {
+                ..._createMarkers(),
+                ..._roomLabelMarkers,
+                ..._amenityMarkers,
+              },
               circles: _createCircles(),
               polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
               polylines: mergeMapPolylines(
