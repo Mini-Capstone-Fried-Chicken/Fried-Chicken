@@ -12,6 +12,13 @@ class _ParsedFeature {
   _ParsedFeature(this.points, this.properties);
 }
 
+class _AmenityMarkerSpec {
+  final LatLng center;
+  final String label;
+
+  _AmenityMarkerSpec({required this.center, required this.label});
+}
+
 class IndoorGeoJsonRenderer {
   IndoorGeoJsonRenderer._();
   static final Map<String, BitmapDescriptor> _amenityIconCache =
@@ -26,72 +33,101 @@ class IndoorGeoJsonRenderer {
     final markers = <Marker>{};
     var index = 0;
 
-    for (final f in featuresRaw) {
-      if (f is! Map) continue;
-      final feature = f.cast<String, dynamic>();
-      final geometry = feature['geometry'];
-      if (geometry is! Map) continue;
-      final geom = geometry.cast<String, dynamic>();
-      if (geom['type'] != 'Polygon') continue;
+    for (final rawFeature in featuresRaw) {
+      final amenity = _toAmenityMarkerSpec(rawFeature);
+      if (amenity == null) continue;
 
-      final props =
-          (feature['properties'] as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
-
-      final String? amenity = props['amenity']?.toString();
-      final String? highway = props['highway']?.toString();
-      final String? escalators = props['escalators']?.toString();
-
-      final bool isAmenity =
-          (amenity != null && amenity.isNotEmpty) ||
-          (highway == 'elevator') ||
-          (highway == 'steps') ||
-          (escalators == 'yes');
-
-      if (!isAmenity) continue;
-
-      final coords = geom['coordinates'];
-      if (coords is! List || coords.isEmpty) continue;
-      final outer = coords.first;
-      if (outer is! List) continue;
-
-      final points = <LatLng>[];
-      for (final p in outer) {
-        if (p is! List || p.length < 2) continue;
-        final lng = (p[0] as num).toDouble();
-        final lat = (p[1] as num).toDouble();
-        points.add(LatLng(lat, lng));
-      }
-      if (points.length < 3) continue;
-
-      final parsed = _ParsedFeature(points, props);
-      final center = polygonCenter(parsed.points);
-
-      final String label = (amenity != null && amenity.isNotEmpty)
-          ? amenity
-          : (highway != null && highway.isNotEmpty)
-          ? highway
-          : (escalators == 'yes')
-          ? 'escalator'
-          : 'amenity';
-
-      final icon = await _amenityIconForLabel(label);
-
-      markers.add(
-        Marker(
-          markerId: MarkerId('amenity-${index++}-$label'),
-          position: center,
-          icon: icon,
-          anchor: const Offset(0.5, 0.5),
-          flat: true,
-          zIndexInt: 25,
-          consumeTapEvents: false,
-          infoWindow: InfoWindow(title: label),
-        ),
-      );
+      final icon = await _amenityIconForLabel(amenity.label);
+      markers.add(_buildAmenityMarker(amenity, icon, index));
+      index++;
     }
 
     return markers;
+  }
+
+  static _AmenityMarkerSpec? _toAmenityMarkerSpec(dynamic rawFeature) {
+    final parsed = _parsePolygonFeature(rawFeature);
+    if (parsed == null || !_isAmenityFeature(parsed.properties)) {
+      return null;
+    }
+
+    return _AmenityMarkerSpec(
+      center: polygonCenter(parsed.points),
+      label: _amenityLabel(parsed.properties),
+    );
+  }
+
+  static _ParsedFeature? _parsePolygonFeature(dynamic rawFeature) {
+    if (rawFeature is! Map) return null;
+    final feature = rawFeature.cast<String, dynamic>();
+
+    final geometry = feature['geometry'];
+    if (geometry is! Map) return null;
+    final geom = geometry.cast<String, dynamic>();
+    if (geom['type'] != 'Polygon') return null;
+
+    final props =
+        (feature['properties'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+
+    final coords = geom['coordinates'];
+    if (coords is! List || coords.isEmpty) return null;
+    final outer = coords.first;
+    if (outer is! List) return null;
+
+    final points = <LatLng>[];
+    for (final p in outer) {
+      if (p is! List || p.length < 2) continue;
+      final lngValue = p[0];
+      final latValue = p[1];
+      if (lngValue is! num || latValue is! num) continue;
+
+      points.add(LatLng(latValue.toDouble(), lngValue.toDouble()));
+    }
+
+    if (points.length < 3) return null;
+    return _ParsedFeature(points, props);
+  }
+
+  static bool _isAmenityFeature(Map<String, dynamic> properties) {
+    final amenity = properties['amenity']?.toString();
+    final highway = properties['highway']?.toString();
+    final escalators = properties['escalators']?.toString();
+
+    return (amenity != null && amenity.isNotEmpty) ||
+        (highway == 'elevator') ||
+        (highway == 'steps') ||
+        (escalators == 'yes');
+  }
+
+  static String _amenityLabel(Map<String, dynamic> properties) {
+    final amenity = properties['amenity']?.toString();
+    if (amenity != null && amenity.isNotEmpty) return amenity;
+
+    final highway = properties['highway']?.toString();
+    if (highway != null && highway.isNotEmpty) return highway;
+
+    final escalators = properties['escalators']?.toString();
+    if (escalators == 'yes') return 'escalator';
+
+    return 'amenity';
+  }
+
+  static Marker _buildAmenityMarker(
+    _AmenityMarkerSpec amenity,
+    BitmapDescriptor icon,
+    int index,
+  ) {
+    return Marker(
+      markerId: MarkerId('amenity-$index-${amenity.label}'),
+      position: amenity.center,
+      icon: icon,
+      anchor: const Offset(0.5, 0.5),
+      flat: true,
+      zIndexInt: 25,
+      consumeTapEvents: false,
+      infoWindow: InfoWindow(title: amenity.label),
+    );
   }
 
   static Future<BitmapDescriptor> _amenityIconForLabel(String label) async {
