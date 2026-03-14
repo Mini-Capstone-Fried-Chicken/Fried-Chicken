@@ -1,9 +1,9 @@
-import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-
 import '../../data/search_suggestion.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../features/settings/app_settings.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -23,6 +23,7 @@ class MapSearchBar extends StatefulWidget {
   final LatLng? userLocation;
   final String? currentBuildingCode;
   final bool showRoomFields;
+  final bool highContrastMode;
 
   const MapSearchBar({
     super.key,
@@ -41,6 +42,7 @@ class MapSearchBar extends StatefulWidget {
     this.userLocation,
     this.currentBuildingCode,
     this.showRoomFields = false,
+    this.highContrastMode = false,
   });
 
   @override
@@ -85,19 +87,24 @@ class _MapSearchBarState extends State<MapSearchBar> {
   }
 
   void _onRoomFieldChanged() {
+    /// Force rebuild if room text changes externally
     if (mounted) setState(() {});
   }
 
   void _updateSuggestionsVisibility() {
     final shouldShow = _focusNode.hasFocus && _hasSuggestions;
+
     if (_showSuggestions == shouldShow) return;
+
     setState(() {
       _showSuggestions = shouldShow;
     });
   }
 
   void _onFocusChange() {
-    if (_focusNode.hasFocus) widget.onFocus?.call();
+    if (_focusNode.hasFocus) {
+      widget.onFocus?.call();
+    }
     _updateSuggestionsVisibility();
   }
 
@@ -110,127 +117,19 @@ class _MapSearchBarState extends State<MapSearchBar> {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers extracted to reduce cognitive complexity of build
-  // ---------------------------------------------------------------------------
-
-  /// Builds the burgundy search card, including the optional room fields row.
-  Widget _buildSearchCard({
-    required String hint,
-    required bool showRooms,
-    required String? effectiveOriginCode,
-    required String? effectiveDestinationCode,
-    required bool originEnabled,
-    required bool destinationEnabled,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(8),
-        color: burgundy,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(color: Colors.white70),
-                prefixIcon: const Icon(Icons.search, color: Colors.white),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              onSubmitted: widget.onSubmitted,
-              onChanged: (_) => _updateSuggestionsVisibility(),
-            ),
-            if (showRooms)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: RoomFieldsSection(
-                  originBuildingCode: effectiveOriginCode,
-                  destinationBuildingCode: effectiveDestinationCode,
-                  originRoomController: widget.originRoomController,
-                  destinationRoomController: widget.destinationRoomController,
-                  originEnabled: originEnabled,
-                  destinationEnabled: destinationEnabled,
-                  onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
-                  onDestinationRoomSubmitted: widget.onDestinationRoomSubmitted,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds the dropdown suggestions list shown below the search card.
-  Widget _buildSuggestionsList() {
-    return PointerInterceptor(
-      child: Material(
-        elevation: 4,
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(8),
-              bottomRight: Radius.circular(8),
-            ),
-          ),
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: widget.suggestions!.length,
-            itemBuilder: (context, index) {
-              final suggestion = widget.suggestions![index];
-              final subtitleColor = suggestion.isConcordiaBuilding
-                ? burgundy.withValues(alpha: 0.7)
-                : Colors.grey[600];
-              return ListTile(
-                leading: Icon(
-                  suggestion.isConcordiaBuilding ? Icons.school : Icons.place,
-                  color: suggestion.isConcordiaBuilding ? burgundy : Colors.grey,
-                  size: 20,
-                ),
-                title: Text(suggestion.name),
-                subtitle: suggestion.subtitle != null
-                  ? Text(
-                      suggestion.subtitle!,
-                      style: TextStyle(fontSize: 12, color: subtitleColor),
-                    )
-                  : null,
-                dense: true,
-                onTap: () => _selectSuggestion(suggestion),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
-    final hint = widget.campusLabel.trim().isEmpty
-        ? 'Search anywhere'
-        : 'Search anywhere near ${widget.campusLabel}';
+    final barColor = widget.highContrastMode
+        ? AppUiColors.highContrastPrimary
+      : burgundy;
+    final primaryTextColor = widget.highContrastMode ? Colors.black : Colors.white;
+    final hintTextColor = widget.highContrastMode
+      ? Colors.black54
+      : Colors.white70;
 
-    final indoorMode = widget.showRoomFields;
-    final effectiveOriginCode =
-        indoorMode ? widget.selectedBuildingCode : widget.currentBuildingCode;
-    final effectiveDestinationCode = widget.selectedBuildingCode;
-
-    final showRooms = indoorMode
-        ? (effectiveDestinationCode?.isNotEmpty ?? false)
-        : (_isUserInConcordiaBuilding || _isConcordiaBuilding);
-
-    final originEnabled = indoorMode || _isUserInConcordiaBuilding;
-    final destinationEnabled = indoorMode || _isConcordiaBuilding;
+    final String hint = widget.campusLabel.trim().isEmpty
+        ? "Search anywhere"
+        : "Search anywhere near ${widget.campusLabel}";
 
     return TapRegion(
       onTapOutside: (_) {
@@ -240,15 +139,110 @@ class _MapSearchBarState extends State<MapSearchBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildSearchCard(
-            hint: hint,
-            showRooms: showRooms,
-            effectiveOriginCode: effectiveOriginCode,
-            effectiveDestinationCode: effectiveDestinationCode,
-            originEnabled: originEnabled,
-            destinationEnabled: destinationEnabled,
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(8),
+              color: barColor,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /// Main search field
+                  TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    style: TextStyle(color: primaryTextColor),
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      hintStyle: TextStyle(color: hintTextColor),
+                      prefixIcon: Icon(Icons.search, color: primaryTextColor),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onSubmitted: widget.onSubmitted,
+                    onChanged: (_) => _updateSuggestionsVisibility(),
+                  ),
+                  if (_isUserInConcordiaBuilding || _isConcordiaBuilding)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: RoomFieldsSection(
+                        originBuildingCode: widget.currentBuildingCode,
+                        destinationBuildingCode: widget.selectedBuildingCode,
+                        originRoomController: widget.originRoomController,
+                        destinationRoomController:
+                            widget.destinationRoomController,
+                        originEnabled: _isUserInConcordiaBuilding,
+                        destinationEnabled: _isConcordiaBuilding,
+                        onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
+                        onDestinationRoomSubmitted:
+                            widget.onDestinationRoomSubmitted,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-          if (_showSuggestions && _hasSuggestions) _buildSuggestionsList(),
+
+          /// Suggestions dropdown
+          if (_showSuggestions && _hasSuggestions)
+            PointerInterceptor(
+              child: Material(
+                elevation: 4,
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: widget.suggestions!.length,
+                    itemBuilder: (context, index) {
+                      final suggestion = widget.suggestions![index];
+
+                      return ListTile(
+                        leading: Icon(
+                          suggestion.isConcordiaBuilding
+                              ? Icons.school
+                              : Icons.place,
+                          color: suggestion.isConcordiaBuilding
+                              ? AppUiColors.primary(
+                                highContrastEnabled: widget.highContrastMode,
+                              )
+                              : Colors.grey,
+                          size: 20,
+                        ),
+                        title: Text(suggestion.name),
+                        subtitle: suggestion.subtitle != null
+                            ? Text(
+                                suggestion.subtitle!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: suggestion.isConcordiaBuilding
+                                      ? AppUiColors.primary(
+                                          highContrastEnabled:
+                                              widget.highContrastMode,
+                                        ).withOpacity(0.7)
+                                      : Colors.grey[600],
+                                ),
+                              )
+                            : null,
+                        dense: true,
+                        onTap: () => _selectSuggestion(suggestion),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

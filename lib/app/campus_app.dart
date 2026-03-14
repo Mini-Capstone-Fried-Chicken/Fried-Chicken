@@ -1,5 +1,6 @@
 import "package:campus_app/app/app_shell.dart";
 import "package:campus_app/features/auth/ui/login_page.dart";
+import "package:campus_app/features/settings/app_settings.dart";
 //import "package:campus_app/features/indoor/ui/pages/indoor_page.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
@@ -55,6 +56,22 @@ class CampusAppState extends State<CampusApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF76263D)),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        return ValueListenableBuilder<AppSettingsState>(
+          valueListenable: AppSettingsController.notifier,
+          builder: (context, settings, _) {
+            final mediaQuery = MediaQuery.of(context);
+            final baseScale = mediaQuery.textScaler.scale(1.0);
+            final multiplier = settings.largeTextModeEnabled ? 1.4 : 1.0;
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                textScaler: TextScaler.linear(baseScale * multiplier),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+        );
+      },
 
       // Auth gate
       home: StreamBuilder<User?>(

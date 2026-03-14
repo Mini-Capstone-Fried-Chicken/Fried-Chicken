@@ -27,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _accessibilityModeEnabled = state.accessibilityModeEnabled;
       _highContrastMode = state.highContrastModeEnabled;
+      _largeTextMode = state.largeTextModeEnabled;
     });
   }
 
@@ -200,7 +201,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 style: TextStyle(color: textColor),
                               ),
                               value: _accessibilityModeEnabled,
-                              activeColor: toggleActiveColor,
+                              activeThumbColor: toggleActiveColor,
                               inactiveThumbColor: toggleInactiveThumb,
                               inactiveTrackColor: toggleInactiveTrack,
                               onChanged: (value) {
@@ -228,7 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 style: TextStyle(color: textColor),
                               ),
                               value: _calendarAccessEnabled,
-                              activeColor: toggleActiveColor,
+                              activeThumbColor: toggleActiveColor,
                               inactiveThumbColor: toggleInactiveThumb,
                               inactiveTrackColor: toggleInactiveTrack,
                               onChanged: (value) {
@@ -273,7 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: TextStyle(color: textColor),
                                   ),
                                   value: _wheelchairRoutingDefault,
-                                  activeColor: toggleActiveColor,
+                                  activeThumbColor: toggleActiveColor,
                                   inactiveThumbColor: toggleInactiveThumb,
                                   inactiveTrackColor: toggleInactiveTrack,
                                   onChanged: (value) {
@@ -289,7 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: TextStyle(color: textColor),
                                   ),
                                   value: _highContrastMode,
-                                  activeColor: toggleActiveColor,
+                                  activeThumbColor: toggleActiveColor,
                                   inactiveThumbColor: toggleInactiveThumb,
                                   inactiveTrackColor: toggleInactiveTrack,
                                   onChanged: (value) {
@@ -308,13 +309,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: TextStyle(color: textColor),
                                   ),
                                   value: _largeTextMode,
-                                  activeColor: toggleActiveColor,
+                                  activeThumbColor: toggleActiveColor,
                                   inactiveThumbColor: toggleInactiveThumb,
                                   inactiveTrackColor: toggleInactiveTrack,
                                   onChanged: (value) {
                                     setState(() {
                                       _largeTextMode = value;
                                     });
+                                    AppSettingsController.setLargeTextMode(
+                                      value,
+                                    );
                                   },
                                 ),
                               ],
