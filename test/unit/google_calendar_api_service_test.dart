@@ -154,6 +154,38 @@ void main() {
       expect(result[1].calendarId, 'class_calendar');
     });
 
+    test('fetchUpcomingEvents converts dateTime values to local time', () async {
+      final utcStart = DateTime.utc(2026, 3, 12, 20, 15);
+      final utcEnd = DateTime.utc(2026, 3, 12, 21, 55);
+
+      final event = gcal.Event()
+        ..id = 'event1'
+        ..summary = 'SOEN 357 Lecture'
+        ..start = (gcal.EventDateTime()..dateTime = utcStart)
+        ..end = (gcal.EventDateTime()..dateTime = utcEnd);
+
+      final response = gcal.Events()..items = [event];
+
+      final fakeApi = FakeGoogleCalendarApi(
+        eventsResponse: response,
+      );
+
+      final service = GoogleCalendarApiService(
+        apiFactory: (_) => fakeApi,
+      );
+
+      final result = await service.fetchUpcomingEvents(
+        client,
+        calendarId: 'class_calendar',
+      );
+
+      expect(result.length, 1);
+      expect(result.first.start, utcStart.toLocal());
+      expect(result.first.end, utcEnd.toLocal());
+      expect(result.first.start!.isUtc, isFalse);
+      expect(result.first.end!.isUtc, isFalse);
+    });
+
     test('fetchUpcomingEvents filters out events with empty ids', () async {
       final validEvent = gcal.Event()
         ..id = 'event1'

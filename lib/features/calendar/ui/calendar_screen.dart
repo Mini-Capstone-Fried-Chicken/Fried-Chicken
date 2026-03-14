@@ -10,12 +10,131 @@ import 'widgets/calendar_schedule_view.dart';
 import 'widgets/calendar_selection_view.dart';
 import 'package:campus_app/features/calendar/ui/google_calendar_setup_screen.dart';
 
+abstract class CalendarRepositoryContract {
+  List<GoogleCalendarInfo> get cachedCalendars;
+  List<GoogleCalendarEvent> get cachedEvents;
+
+  Future<bool> restoreConnection();
+  Future<bool> connect();
+  Future<List<GoogleCalendarInfo>> getCalendars();
+  void updateSelectedCalendars(List<String> ids);
+  Future<List<GoogleCalendarEvent>> getUpcomingEventsForCalendars(
+    List<GoogleCalendarInfo> calendars,
+  );
+  void goToSelection();
+}
+
+abstract class CalendarSessionContract {
+  bool get isConnected;
+  set isConnected(bool value);
+
+  CalendarConnectionStep get step;
+  set step(CalendarConnectionStep value);
+
+  List<GoogleCalendarInfo> get calendars;
+  set calendars(List<GoogleCalendarInfo> value);
+
+  Set<String> get selectedCalendarIds;
+  set selectedCalendarIds(Set<String> value);
+
+  List<GoogleCalendarEvent> get events;
+  set events(List<GoogleCalendarEvent> value);
+
+  Future<void> restore();
+  Future<void> persist();
+}
+
+class DefaultCalendarRepositoryAdapter implements CalendarRepositoryContract {
+  final GoogleCalendarRepository _repository;
+
+  DefaultCalendarRepositoryAdapter(this._repository);
+
+  @override
+  List<GoogleCalendarInfo> get cachedCalendars => _repository.cachedCalendars;
+
+  @override
+  List<GoogleCalendarEvent> get cachedEvents => _repository.cachedEvents;
+
+  @override
+  Future<bool> restoreConnection() => _repository.restoreConnection();
+
+  @override
+  Future<bool> connect() => _repository.connect();
+
+  @override
+  Future<List<GoogleCalendarInfo>> getCalendars() => _repository.getCalendars();
+
+  @override
+  void updateSelectedCalendars(List<String> ids) {
+    _repository.updateSelectedCalendars(ids);
+  }
+
+  @override
+  Future<List<GoogleCalendarEvent>> getUpcomingEventsForCalendars(
+    List<GoogleCalendarInfo> calendars,
+  ) {
+    return _repository.getUpcomingEventsForCalendars(calendars);
+  }
+
+  @override
+  void goToSelection() {
+    _repository.goToSelection();
+  }
+}
+
+class DefaultCalendarSessionAdapter implements CalendarSessionContract {
+  final GoogleCalendarSession _session;
+
+  DefaultCalendarSessionAdapter(this._session);
+
+  @override
+  bool get isConnected => _session.isConnected;
+
+  @override
+  set isConnected(bool value) => _session.isConnected = value;
+
+  @override
+  CalendarConnectionStep get step => _session.step;
+
+  @override
+  set step(CalendarConnectionStep value) => _session.step = value;
+
+  @override
+  List<GoogleCalendarInfo> get calendars => _session.calendars;
+
+  @override
+  set calendars(List<GoogleCalendarInfo> value) => _session.calendars = value;
+
+  @override
+  Set<String> get selectedCalendarIds => _session.selectedCalendarIds;
+
+  @override
+  set selectedCalendarIds(Set<String> value) =>
+      _session.selectedCalendarIds = value;
+
+  @override
+  List<GoogleCalendarEvent> get events => _session.events;
+
+  @override
+  set events(List<GoogleCalendarEvent> value) => _session.events = value;
+
+  @override
+  Future<void> restore() => _session.restore();
+
+  @override
+  Future<void> persist() => _session.persist();
+}
+
 class CalendarScreen extends StatefulWidget {
   final bool isLoggedIn;
+  final CalendarRepositoryContract? repository;
+  final CalendarSessionContract? session;
 
   const CalendarScreen({
     super.key,
     required this.isLoggedIn,
+    this.repository,
+    this.session,
   });
 
   @override
@@ -23,8 +142,8 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  final GoogleCalendarRepository _repository = GoogleCalendarRepository.instance;
-  final GoogleCalendarSession _session = GoogleCalendarSession.instance;
+  late final CalendarRepositoryContract _repository;
+  late final CalendarSessionContract _session;
 
   CalendarConnectionStep _step = CalendarConnectionStep.connect;
   bool _isLoading = false;
@@ -37,6 +156,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    _repository = widget.repository ??
+        DefaultCalendarRepositoryAdapter(GoogleCalendarRepository.instance);
+    _session =
+        widget.session ?? DefaultCalendarSessionAdapter(GoogleCalendarSession.instance);
     _initializeCalendarState();
   }
 
