@@ -102,8 +102,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: AppLogo()),
-                    const SizedBox(height: 12),
+                    Center(
+                      child: SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: const FittedBox(
+                          fit: BoxFit.contain,
+                          child: AppLogo(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Card(
                       color: cardBackground,
                       shape: RoundedRectangleBorder(
@@ -319,7 +328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
               child: SizedBox(
                 width: 220,
                 child: ElevatedButton.icon(
