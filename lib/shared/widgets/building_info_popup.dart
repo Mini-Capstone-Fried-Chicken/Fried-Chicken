@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
 
 class BuildingInfoPopup extends StatefulWidget {
   final String title;
@@ -13,6 +14,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final VoidCallback? onMore;
   final bool isLoggedIn;
   final VoidCallback onGetDirections;
+  final bool highContrastMode;
 
   const BuildingInfoPopup({
     super.key,
@@ -25,6 +27,7 @@ class BuildingInfoPopup extends StatefulWidget {
     this.onIndoorMap,
     required this.isLoggedIn,
     required this.onGetDirections,
+    this.highContrastMode = false,
   });
 
   @override
@@ -57,6 +60,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
     final overlay = Overlay.of(context);
 
+    final chipBackground = widget.highContrastMode
+      ? AppUiColors.highContrastPrimary.withValues(alpha: 0.95)
+      : Colors.white.withValues(alpha: 0.92);
+    final chipText = widget.highContrastMode ? Colors.black : Colors.black87;
+
     _labelEntry = OverlayEntry(
       builder: (_) {
         return Positioned.fill(
@@ -81,7 +89,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
+                          color: chipBackground,
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(color: Colors.black12),
                           boxShadow: [
@@ -94,9 +102,9 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                         ),
                         child: Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black87,
+                            color: chipText,
                             fontWeight: FontWeight.w700,
                             decoration: TextDecoration.none,
                             decorationColor: Colors.transparent,
@@ -123,7 +131,9 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     required VoidCallback onPressed,
     Key? key,
   }) {
-    const burgundy = Color(0xFF76263D);
+    final iconColor = widget.highContrastMode
+        ? Colors.black
+        : const Color(0xFF76263D);
     return Tooltip(
       message: tooltip,
       triggerMode: _triggerMode,
@@ -131,7 +141,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       child: IconButton(
         key: key,
         onPressed: onPressed,
-        icon: Icon(icon, color: burgundy),
+        icon: Icon(icon, color: iconColor),
         iconSize: 25,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints.tightFor(width: 32, height: 32),
@@ -150,14 +160,16 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   }
 
   Widget _topIcon({required IconData icon, required String tooltip}) {
-    const burgundy = Color(0xFF76263D);
+    final iconColor = widget.highContrastMode
+        ? Colors.black
+        : const Color(0xFF76263D);
     final link = LayerLink();
 
     return CompositedTransformTarget(
       link: link,
       child: IconButton(
         onPressed: () => _showIconLabel(link, tooltip),
-        icon: Icon(icon, color: burgundy, size: 22),
+        icon: Icon(icon, color: iconColor, size: 22),
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints.tightFor(width: 22, height: 22),
         splashRadius: 18,
@@ -170,7 +182,14 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   @override
   Widget build(BuildContext context) {
-    const burgundy = Color(0xFF76263D);
+    final accent = widget.highContrastMode
+      ? Colors.black
+      : const Color(0xFF76263D);
+    final popupBackground = widget.highContrastMode
+      ? AppUiColors.highContrastPrimary
+      : Colors.white;
+    final primaryText = Colors.black;
+    final secondaryText = Colors.black54;
 
     final topIcons = <Widget>[];
 
@@ -208,7 +227,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         width: 300,
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: popupBackground,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
@@ -255,7 +274,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                   child: IconButton(
                     onPressed: widget.onClose,
                     icon: const Icon(Icons.close),
-                    color: burgundy,
+                    color: accent,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints.tightFor(
                       width: 32,
@@ -269,17 +288,17 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             Text(
               widget.title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                color: primaryText,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               widget.description,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+              style: TextStyle(fontSize: 12.5, color: secondaryText),
             ),
             const SizedBox(height: 12),
             Row(
@@ -306,7 +325,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                 onPressed: widget.onMore ?? () {},
                 key: const Key('more_info_button'),
                 style: TextButton.styleFrom(
-                  foregroundColor: burgundy,
+                  foregroundColor: accent,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 6,

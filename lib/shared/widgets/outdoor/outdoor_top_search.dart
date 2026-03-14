@@ -9,6 +9,7 @@ import '../../../shared/widgets/map_search_bar.dart';
 class OutdoorTopSearch extends StatelessWidget {
   final String campusLabel;
   final TextEditingController controller;
+  final bool highContrastMode;
 
   final void Function(String) onSubmitted;
   final List<SearchSuggestion> suggestions;
@@ -36,6 +37,7 @@ class OutdoorTopSearch extends StatelessWidget {
     super.key,
     required this.campusLabel,
     required this.controller,
+    this.highContrastMode = false,
     required this.onSubmitted,
     required this.suggestions,
     required this.onSuggestionSelected,
@@ -82,6 +84,7 @@ class OutdoorTopSearch extends StatelessWidget {
                 : currentBuildingCode,
             userLocation: userLocation,
             isConcordiaBuilding: isConcordiaBuilding,
+            highContrastMode: highContrastMode,
             showRoomFields:
                 showIndoor && (selectedBuildingCode?.isNotEmpty ?? false),
           ),

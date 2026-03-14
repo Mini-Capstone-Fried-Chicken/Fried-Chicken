@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
 
 /// A single navigation instruction row (like Google Maps steps).
 class NavigationStep {
@@ -83,6 +84,7 @@ class NavigationStepsSheet extends StatelessWidget {
   final String? totalDuration;
   final String? totalDistance;
   final List<NavigationStep> steps;
+  final bool highContrastMode;
 
   const NavigationStepsSheet({
     super.key,
@@ -90,18 +92,26 @@ class NavigationStepsSheet extends StatelessWidget {
     required this.steps,
     this.totalDuration,
     this.totalDistance,
+    this.highContrastMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    const burgundy = Color(0xFF76263D);
+    final titleColor = highContrastMode
+      ? Colors.black
+      : const Color(0xFF76263D);
+    final sheetBackground = highContrastMode
+      ? const Color(0xFF89D9C2)
+      : Colors.white;
+    final dividerColor = highContrastMode ? Colors.black26 : null;
+    final emptyTextColor = highContrastMode ? Colors.black54 : Colors.black54;
 
     return SafeArea(
       top: false,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        decoration: BoxDecoration(
+          color: sheetBackground,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -127,7 +137,7 @@ class NavigationStepsSheet extends StatelessWidget {
                     child: _HeaderBlock(
                       title: title,
                       subtitle: _headerSubtitle(totalDuration, totalDistance),
-                      titleColor: burgundy,
+                      titleColor: titleColor,
                     ),
                   ),
                   IconButton(
@@ -138,15 +148,15 @@ class NavigationStepsSheet extends StatelessWidget {
               ),
             ),
 
-            const Divider(height: 1),
+            Divider(height: 1, color: dividerColor),
 
             // Content
             Expanded(
               child: steps.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No steps available',
-                        style: TextStyle(color: Colors.black54),
+                        style: TextStyle(color: emptyTextColor),
                       ),
                     )
                   : ListView.separated(
@@ -155,7 +165,10 @@ class NavigationStepsSheet extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final step = steps[index];
-                        return _StepTile(step: step);
+                        return _StepTile(
+                          step: step,
+                          highContrastMode: highContrastMode,
+                        );
                       },
                     ),
             ),
@@ -180,6 +193,7 @@ Future<void> showNavigationStepsModal(
   required List<NavigationStep> steps,
   String? totalDuration,
   String? totalDistance,
+  bool highContrastMode = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -198,6 +212,7 @@ Future<void> showNavigationStepsModal(
             steps: steps,
             totalDuration: totalDuration,
             totalDistance: totalDistance,
+            highContrastMode: highContrastMode,
           );
         },
       );
@@ -243,18 +258,35 @@ class _HeaderBlock extends StatelessWidget {
 
 class _StepTile extends StatelessWidget {
   final NavigationStep step;
+  final bool highContrastMode;
 
-  const _StepTile({required this.step});
+  const _StepTile({required this.step, this.highContrastMode = false});
 
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
 
     final icon = _iconFor(step);
-    final iconBg = step.travelMode == 'transit'
-        ? Colors.black.withValues(alpha: 0.06)
-        : burgundy.withValues(alpha: 0.12);
-    final iconColor = step.travelMode == 'transit' ? Colors.black87 : burgundy;
+    final iconBg = highContrastMode
+      ? Colors.black.withValues(alpha: 0.08)
+      : step.travelMode == 'transit'
+      ? Colors.black.withValues(alpha: 0.06)
+      : burgundy.withValues(alpha: 0.12);
+    final iconColor = highContrastMode
+      ? Colors.black
+      : step.travelMode == 'transit'
+      ? Colors.black87
+      : burgundy;
+    final tileBackground = highContrastMode
+      ? const Color(0xFF6CCEB5)
+      : Colors.white;
+    final tileBorder = highContrastMode
+      ? Colors.black.withValues(alpha: 0.12)
+      : Colors.black.withValues(alpha: 0.06);
+    final mainTextColor = highContrastMode ? Colors.black : Colors.black87;
+    final secondaryTextColor = highContrastMode
+      ? Colors.black.withValues(alpha: 0.72)
+      : Colors.black.withValues(alpha: 0.6);
 
     // For transit steps, prefer a transit label + headsign line.
     final mainText = step.travelMode == 'transit'
@@ -273,9 +305,9 @@ class _StepTile extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tileBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: tileBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -308,10 +340,10 @@ class _StepTile extends StatelessWidget {
                 children: [
                   Text(
                     mainText,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: mainTextColor,
                       height: 1.15,
                     ),
                   ),
@@ -324,7 +356,7 @@ class _StepTile extends StatelessWidget {
                           line,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black.withValues(alpha: 0.6),
+                            color: secondaryTextColor,
                             height: 1.15,
                           ),
                         ),
@@ -389,6 +421,7 @@ class NavigationNextStepHeader extends StatelessWidget {
   final String? nextDistance; // optional override
   final VoidCallback onStop;
   final VoidCallback onShowSteps;
+  final bool highContrastMode;
 
   const NavigationNextStepHeader({
     super.key,
@@ -397,11 +430,19 @@ class NavigationNextStepHeader extends StatelessWidget {
     required this.onStop,
     required this.onShowSteps,
     this.nextDistance,
+    this.highContrastMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    const burgundy = Color(0xFF76263D);
+    final cardBg = highContrastMode
+      ? AppUiColors.highContrastPrimary
+      : const Color(0xFF76263D);
+    final primaryText = highContrastMode ? Colors.black : Colors.white;
+    final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
+    final chipBg = highContrastMode
+      ? const Color(0xFF5EBFA7)
+      : Colors.white.withValues(alpha: 0.14);
 
     final step = nextStep;
     final stepLabel = step != null && step.travelMode == 'transit'
@@ -428,7 +469,7 @@ class NavigationNextStepHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
         child: Container(
           decoration: BoxDecoration(
-            color: burgundy,
+            color: cardBg,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -448,10 +489,10 @@ class NavigationNextStepHeader extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.14),
+                    color: chipBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.navigation, color: Colors.white),
+                  child: Icon(Icons.navigation, color: primaryText),
                 ),
                 const SizedBox(width: 10),
 
@@ -464,8 +505,8 @@ class NavigationNextStepHeader extends StatelessWidget {
                         primary,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: primaryText,
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           height: 1.15,
@@ -476,8 +517,8 @@ class NavigationNextStepHeader extends StatelessWidget {
                         secondaryParts.isEmpty
                             ? modeLabel
                             : secondaryParts.join(' • '),
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: secondaryText,
                           fontSize: 12,
                         ),
                       ),
@@ -491,7 +532,7 @@ class NavigationNextStepHeader extends StatelessWidget {
                     TextButton(
                       onPressed: onShowSteps,
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: primaryText,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
@@ -508,7 +549,7 @@ class NavigationNextStepHeader extends StatelessWidget {
                     TextButton(
                       onPressed: onStop,
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: primaryText,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
