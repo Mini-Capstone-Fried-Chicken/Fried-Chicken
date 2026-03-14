@@ -32,7 +32,27 @@ class GoogleCalendarAuthService {
     _initialized = true;
   }
 
+  Future<bool> restorePreviousSignIn() async {
+    await initialize(serverClientId: webServerClientId);
+
+    final account = await _signIn.attemptLightweightAuthentication();
+    _currentUser = account;
+
+    if (account == null) return false;
+
+    final authorization =
+        await account.authorizationClient.authorizationForScopes(scopes);
+
+    if (authorization == null) {
+      await account.authorizationClient.authorizeScopes(scopes);
+    }
+
+    return true;
+  }
+
   Future<bool> signIn() async {
+    await initialize(serverClientId: webServerClientId);
+
     final account = await _signIn.authenticate(
       scopeHint: scopes,
     );
@@ -59,5 +79,10 @@ class GoogleCalendarAuthService {
   Future<void> signOut() async {
     _currentUser = null;
     await _signIn.signOut();
+  }
+
+  Future<void> disconnect() async {
+    _currentUser = null;
+    await _signIn.disconnect();
   }
 }

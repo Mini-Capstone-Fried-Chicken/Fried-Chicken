@@ -14,9 +14,9 @@ class GoogleCalendarEvent {
   const GoogleCalendarEvent({
     required this.id,
     required this.title,
-    required this.start,
-    required this.end,
-    required this.location,
+    this.start,
+    this.end,
+    this.location,
     required this.calendarId,
     required this.calendarName,
     required this.color,

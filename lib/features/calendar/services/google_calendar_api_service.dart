@@ -68,19 +68,19 @@ class GoogleCalendarApiService {
     final items = response.items ?? [];
 
     return items
-        .map(
-          (event) => GoogleCalendarEvent(
-            id: event.id ?? '',
-            title: event.summary ?? 'Untitled event',
-            start: event.start?.dateTime ?? event.start?.date,
-            end: event.end?.dateTime ?? event.end?.date,
-            location: event.location,
-            calendarId: calendarId,
-            calendarName: '',
-            color: const Color(0xFF8B1E3F),
-          ),
-        )
-        .where((event) => event.id.isNotEmpty)
-        .toList();
+    .map(
+      (event) => GoogleCalendarEvent(
+        id: event.id ?? '',
+        title: event.summary ?? 'Untitled event',
+        start: event.start?.dateTime?.toLocal() ?? event.start?.date,
+        end: event.end?.dateTime?.toLocal() ?? event.end?.date,
+        location: event.location,
+        calendarId: calendarId,
+        calendarName: '',
+        color: const Color(0xFF8B1E3F),
+      ),
+    )
+    .where((event) => event.id.isNotEmpty)
+    .toList();
   }
 }

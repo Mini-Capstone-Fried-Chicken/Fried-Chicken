@@ -135,10 +135,40 @@ class GoogleCalendarRepository {
   }
 
   Future<void> disconnect() async {
-    await authService.signOut();
+    await authService.disconnect();
     _session = const CalendarSessionState.initial();
     _cachedCalendars = [];
     _cachedEvents = [];
-    GoogleCalendarSession.instance.clear();
+    await GoogleCalendarSession.instance.clear();
+  }
+
+  Future<bool> restoreConnection() async {
+    await GoogleCalendarSession.instance.restore();
+
+    final restored = await authService.restorePreviousSignIn();
+    if (!restored) {
+      return false;
+    }
+
+    _session = _session.copyWith(
+      isConnected: true,
+      step: GoogleCalendarSession.instance.step,
+      selectedCalendarIds: GoogleCalendarSession.instance.selectedCalendarIds
+          .toList(),
+    );
+
+    final calendars = await getCalendars();
+
+    if (_session.selectedCalendarIds.isNotEmpty) {
+      final selectedCalendars = calendars
+          .where((calendar) => _session.selectedCalendarIds.contains(calendar.id))
+          .toList();
+
+      if (selectedCalendars.isNotEmpty) {
+        await getUpcomingEventsForCalendars(selectedCalendars);
+      }
+    }
+
+    return true;
   }
 }

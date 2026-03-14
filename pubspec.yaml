@@ -34,6 +34,7 @@ dependencies:
   googleapis_auth: ^2.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   syncfusion_flutter_calendar: ^32.2.9
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   integration_test:

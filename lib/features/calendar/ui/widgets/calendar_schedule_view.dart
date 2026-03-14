@@ -27,6 +27,13 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
   Widget build(BuildContext context) {
     final dataSource = GoogleCalendarDataSource(widget.events);
 
+    DateTime initialDate;
+    if (widget.events.isNotEmpty && widget.events.first.start != null) {
+      initialDate = widget.events.first.start!;
+    } else {
+      initialDate = DateTime.now();
+    }
+
     return Column(
       children: [
         Padding(
@@ -93,9 +100,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                   key: ValueKey(_calendarView),
                   view: _calendarView,
                   dataSource: dataSource,
-                  initialDisplayDate: widget.events.isNotEmpty
-                      ? widget.events.first.start
-                      : DateTime.now(),
+                  initialDisplayDate: initialDate,
                   firstDayOfWeek: 1,
                   todayHighlightColor: const Color(0xFF8B1E3F),
                   selectionDecoration: BoxDecoration(

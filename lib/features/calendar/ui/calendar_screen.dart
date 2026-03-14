@@ -37,19 +37,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-
-    _step = _session.step;
-    _calendars = List.from(_repository.cachedCalendars);
-    _events = List.from(_repository.cachedEvents);
-    _selectedCalendarIds = Set.from(_session.selectedCalendarIds);
+    _initializeCalendarState();
   }
 
-  void _saveSession() {
+  Future<void> _initializeCalendarState() async {
+    await _session.restore();
+
+    _step = _session.step;
+    _selectedCalendarIds = Set.from(_session.selectedCalendarIds);
+    _calendars = List.from(_repository.cachedCalendars);
+    _events = List.from(_repository.cachedEvents);
+
+    if (!widget.isLoggedIn) {
+      if (mounted) setState(() {});
+      return;
+    }
+
+    try {
+      final restored = await _repository.restoreConnection();
+
+      if (!mounted) return;
+
+      if (restored) {
+        setState(() {
+          _calendars = List.from(_repository.cachedCalendars);
+          _events = List.from(_repository.cachedEvents);
+          _selectedCalendarIds = Set.from(_session.selectedCalendarIds);
+
+          if (_events.isNotEmpty) {
+            _step = CalendarConnectionStep.schedule;
+          } else if (_calendars.isNotEmpty) {
+            _step = CalendarConnectionStep.selectCalendar;
+          } else {
+            _step = CalendarConnectionStep.connect;
+          }
+        });
+      } else {
+        setState(() {
+          _step = CalendarConnectionStep.connect;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _step = CalendarConnectionStep.connect;
+      });
+    }
+  }
+
+  Future<void> _saveSession() async {
     _session.step = _step;
     _session.calendars = List.from(_calendars);
     _session.selectedCalendarIds = Set.from(_selectedCalendarIds);
     _session.events = List.from(_events);
     _session.isConnected = _step != CalendarConnectionStep.connect;
+
+    await _session.persist();
   }
 
   Future<void> _connectCalendar() async {
@@ -77,7 +120,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _isLoading = false;
       });
 
-      _saveSession();
+      await _saveSession();
     } catch (e) {
       setState(() {
         _error = 'Failed to connect Google Calendar: $e';
@@ -86,7 +129,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  void _toggleCalendarSelection(GoogleCalendarInfo calendar) {
+  Future<void> _toggleCalendarSelection(GoogleCalendarInfo calendar) async {
     setState(() {
       if (_selectedCalendarIds.contains(calendar.id)) {
         _selectedCalendarIds.remove(calendar.id);
@@ -96,7 +139,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
 
     _repository.updateSelectedCalendars(_selectedCalendarIds.toList());
-    _saveSession();
+    await _saveSession();
   }
 
   Future<void> _continueWithCalendars() async {
@@ -122,7 +165,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _isLoading = false;
       });
 
-      _saveSession();
+      await _saveSession();
     } catch (e) {
       setState(() {
         _error = 'Failed to load class schedule: $e';
@@ -185,12 +228,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 return CalendarScheduleView(
                   selectedCalendarLabel: _selectedCalendarLabel(),
                   events: _events,
-                  onBack: () {
+                  onBack: () async {
                     _repository.goToSelection();
                     setState(() {
                       _step = CalendarConnectionStep.selectCalendar;
                     });
-                    _saveSession();
+                    await _saveSession();
                   },
                 );
             }
