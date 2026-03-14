@@ -5,34 +5,39 @@ import 'package:campus_app/features/calendar/data/repositories/google_calendar_r
 
 class SettingsScreen extends StatelessWidget {
   final bool isLoggedIn;
-  const SettingsScreen({super.key, required this.isLoggedIn});
+  final Future<void> Function(BuildContext context)? onLogoutOverride;
+  final void Function(BuildContext context)? onSignInOverride;
+
+  const SettingsScreen({
+    super.key,
+    required this.isLoggedIn,
+    this.onLogoutOverride,
+    this.onSignInOverride,
+  });
 
   Future<void> _handleLogout(BuildContext context) async {
-  try {
-    // Disconnect Google Calendar first
-    await GoogleCalendarRepository.instance.disconnect();
+    try {
+      await GoogleCalendarRepository.instance.disconnect();
+      await FirebaseAuth.instance.signOut();
 
-    // Then logout from Firebase
-    await FirebaseAuth.instance.signOut();
+      if (!context.mounted) return;
 
-    if (!context.mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const SignInPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const SignInPage()),
-      (route) => false,
-    );
-  } catch (e) {
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error logging out: $e'),
-        backgroundColor: Colors.red[600],
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error logging out: $e'),
+          backgroundColor: Colors.red[600],
+        ),
+      );
+    }
   }
-}
 
   void _handleSignIn(BuildContext context) {
     Navigator.pushAndRemoveUntil(
@@ -50,13 +55,19 @@ class SettingsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              "Settings Screen",
+              'Settings Screen',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             if (isLoggedIn) ...[
               ElevatedButton.icon(
-                onPressed: () => _handleLogout(context),
+                onPressed: () async {
+                  if (onLogoutOverride != null) {
+                    await onLogoutOverride!(context);
+                  } else {
+                    await _handleLogout(context);
+                  }
+                },
                 icon: const Icon(Icons.logout),
                 label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
@@ -75,7 +86,13 @@ class SettingsScreen extends StatelessWidget {
               ),
             ] else ...[
               ElevatedButton.icon(
-                onPressed: () => _handleSignIn(context),
+                onPressed: () {
+                  if (onSignInOverride != null) {
+                    onSignInOverride!(context);
+                  } else {
+                    _handleSignIn(context);
+                  }
+                },
                 icon: const Icon(Icons.login),
                 label: const Text('Sign In'),
                 style: ElevatedButton.styleFrom(
