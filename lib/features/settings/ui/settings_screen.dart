@@ -1,15 +1,27 @@
 import 'package:campus_app/features/auth/ui/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:campus_app/features/calendar/data/repositories/google_calendar_repository.dart';
 
 class SettingsScreen extends StatelessWidget {
   final bool isLoggedIn;
-  const SettingsScreen({super.key, required this.isLoggedIn});
+  final Future<void> Function(BuildContext context)? onLogoutOverride;
+  final void Function(BuildContext context)? onSignInOverride;
+
+  const SettingsScreen({
+    super.key,
+    required this.isLoggedIn,
+    this.onLogoutOverride,
+    this.onSignInOverride,
+  });
 
   Future<void> _handleLogout(BuildContext context) async {
     try {
+      await GoogleCalendarRepository.instance.disconnect();
       await FirebaseAuth.instance.signOut();
+
       if (!context.mounted) return;
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const SignInPage()),
@@ -17,6 +29,7 @@ class SettingsScreen extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error logging out: $e'),
@@ -42,13 +55,19 @@ class SettingsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              "Settings Screen",
+              'Settings Screen',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             if (isLoggedIn) ...[
               ElevatedButton.icon(
-                onPressed: () => _handleLogout(context),
+                onPressed: () async {
+                  if (onLogoutOverride != null) {
+                    await onLogoutOverride!(context);
+                  } else {
+                    await _handleLogout(context);
+                  }
+                },
                 icon: const Icon(Icons.logout),
                 label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
@@ -67,7 +86,13 @@ class SettingsScreen extends StatelessWidget {
               ),
             ] else ...[
               ElevatedButton.icon(
-                onPressed: () => _handleSignIn(context),
+                onPressed: () {
+                  if (onSignInOverride != null) {
+                    onSignInOverride!(context);
+                  } else {
+                    _handleSignIn(context);
+                  }
+                },
                 icon: const Icon(Icons.login),
                 label: const Text('Sign In'),
                 style: ElevatedButton.styleFrom(
