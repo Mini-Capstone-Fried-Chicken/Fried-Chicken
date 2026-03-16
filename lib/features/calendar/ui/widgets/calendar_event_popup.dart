@@ -30,13 +30,17 @@ class CalendarEventPopup extends StatelessWidget {
     final hasBuilding = safeBuildingCode.isNotEmpty;
     final hasRoom = safeRoomNumber.isNotEmpty;
 
-    final locationLabel = hasBuilding && hasRoom
-        ? '$safeBuildingCode-$safeRoomNumber'
-        : hasBuilding
-        ? '$safeBuildingCode - No room'
-        : hasRoom
-        ? 'Unknown building-$safeRoomNumber'
-        : 'Location unavailable';
+    String locationLabel;
+
+    if (hasBuilding && hasRoom) {
+      locationLabel = '$safeBuildingCode-$safeRoomNumber';
+    } else if (hasBuilding) {
+      locationLabel = '$safeBuildingCode - No room';
+    } else if (hasRoom) {
+      locationLabel = 'Unknown building-$safeRoomNumber';
+    } else {
+      locationLabel = 'Location unavailable';
+    }
 
     final canGoToBuilding = hasBuilding;
     final canGoToRoom = hasBuilding && hasRoom;

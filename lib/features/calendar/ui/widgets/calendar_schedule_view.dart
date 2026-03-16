@@ -181,7 +181,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
           child: Container(
-            color: const Color(0xFF8B1E3F).withOpacity(0.20),
+            color: const Color(0xFF8B1E3F).withValues(alpha: 0.20),
             child: CalendarEventPopup(
               event: event,
               buildingCode: buildingCode,

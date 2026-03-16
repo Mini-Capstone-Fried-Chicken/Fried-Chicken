@@ -16,7 +16,7 @@ List<TimeRegion> buildTodayHighlightRegion(CalendarView calendarView) {
     TimeRegion(
       startTime: startOfDay,
       endTime: endOfDay,
-      color: const Color(0xFF8B1E3F).withOpacity(0.28),
+      color: const Color(0xFF8B1E3F).withValues(alpha: 0.28),
       enablePointerInteraction: false,
     ),
   ];
