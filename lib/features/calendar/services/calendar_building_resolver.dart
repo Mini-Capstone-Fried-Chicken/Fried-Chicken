@@ -10,14 +10,12 @@ String resolveBuildingCode(String? location) {
 
   final normalizedQuery = normalizeBuildingValue(buildingQuery);
 
-  // code match from building info
   for (final code in buildingInfoByCode.keys) {
     if (normalizeBuildingValue(code) == normalizedQuery) {
       return code;
     }
   }
 
-  // match against building names + search terms
   for (final building in concordiaBuildingNames) {
     if (normalizeBuildingValue(building.code) == normalizedQuery) {
       return building.code;
@@ -34,29 +32,12 @@ String resolveBuildingCode(String? location) {
     }
   }
 
-  // Fallback partial match
-  for (final building in concordiaBuildingNames) {
-    if (normalizeBuildingValue(building.name).contains(normalizedQuery) ||
-        normalizedQuery.contains(normalizeBuildingValue(building.code))) {
-      return building.code;
-    }
-
-    for (final term in building.searchTerms) {
-      final normalizedTerm = normalizeBuildingValue(term);
-      if (normalizedTerm.contains(normalizedQuery) ||
-          normalizedQuery.contains(normalizedTerm)) {
-        return building.code;
-      }
-    }
-  }
-
   return '';
 }
 
 String extractBuildingQuery(String rawLocation) {
   final upper = rawLocation.trim().toUpperCase();
 
-  // cases like H-937
   final dashMatch = RegExp(r'^([A-Z]+)\s*-\s*').firstMatch(upper);
   if (dashMatch != null) {
     final token = dashMatch.group(1)!;
@@ -69,7 +50,6 @@ String extractBuildingQuery(String rawLocation) {
     return normalizeSpecialBuildingCode(token);
   }
 
-  // If location is already a full building name keep it
   return normalizeSpecialBuildingCode(rawLocation);
 }
 
