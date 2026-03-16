@@ -3,9 +3,11 @@ import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:campus_app/shared/widgets/app_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:campus_app/features/calendar/data/repositories/google_calendar_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool isLoggedIn;
+
   const SettingsScreen({super.key, required this.isLoggedIn});
 
   @override
@@ -46,8 +48,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _handleLogout(BuildContext context) async {
     try {
+      await GoogleCalendarRepository.instance.disconnect();
       await FirebaseAuth.instance.signOut();
+
       if (!context.mounted) return;
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const SignInPage()),
@@ -55,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error logging out: $e'),
@@ -76,7 +82,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final isHighContrast = _highContrastMode;
     final pageBackground = isHighContrast ? Colors.black : Colors.white;
-    final cardBackground = isHighContrast ? const Color(0xFF0F0F0F) : Colors.white;
+    final cardBackground = isHighContrast
+        ? const Color(0xFF0F0F0F)
+        : Colors.white;
     final borderColor = isHighContrast
         ? const Color(0xFF89D9C2)
         : Colors.grey.shade300;
@@ -84,11 +92,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ? const Color(0xFF89D9C2)
         : Colors.black87;
     final textColor = isHighContrast ? Colors.white : Colors.black87;
-    final subTextColor = isHighContrast ? const Color(0xFF89D9C2) : Colors.black87;
+    final subTextColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : Colors.black87;
     final dividerColor = isHighContrast ? const Color(0x3389D9C2) : null;
     final toggleActiveColor = isHighContrast
-      ? AppUiColors.highContrastPrimary
-      : AppUiColors.defaultPrimary;
+        ? AppUiColors.highContrastPrimary
+        : AppUiColors.defaultPrimary;
     final toggleInactiveThumb = isHighContrast ? Colors.white70 : null;
     final toggleInactiveTrack = isHighContrast ? Colors.white24 : null;
 
@@ -99,7 +109,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -155,30 +168,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ],
                               selected: {_defaultCampus},
                               style: ButtonStyle(
-                                foregroundColor: WidgetStateProperty.resolveWith(
-                                  (states) {
-                                    if (states.contains(WidgetState.selected)) {
-                                      return isHighContrast
-                                          ? Colors.black
-                                          : Colors.white;
-                                    }
-                                    return isHighContrast
-                                        ? const Color(0xFF89D9C2)
-                                        : Colors.black87;
-                                  },
-                                ),
-                                backgroundColor: WidgetStateProperty.resolveWith(
-                                  (states) {
-                                    if (states.contains(WidgetState.selected)) {
+                                foregroundColor:
+                                    WidgetStateProperty.resolveWith((states) {
+                                      if (states.contains(
+                                        WidgetState.selected,
+                                      )) {
+                                        return isHighContrast
+                                            ? Colors.black
+                                            : Colors.white;
+                                      }
                                       return isHighContrast
                                           ? const Color(0xFF89D9C2)
-                                          : AppUiColors.defaultPrimary;
-                                    }
-                                    return isHighContrast
-                                        ? const Color(0xFF1B1B1B)
-                                        : Colors.white;
-                                  },
-                                ),
+                                          : Colors.black87;
+                                    }),
+                                backgroundColor:
+                                    WidgetStateProperty.resolveWith((states) {
+                                      if (states.contains(
+                                        WidgetState.selected,
+                                      )) {
+                                        return isHighContrast
+                                            ? const Color(0xFF89D9C2)
+                                            : AppUiColors.defaultPrimary;
+                                      }
+                                      return isHighContrast
+                                          ? const Color(0xFF1B1B1B)
+                                          : Colors.white;
+                                    }),
                                 side: WidgetStateProperty.all(
                                   BorderSide(
                                     color: isHighContrast
@@ -208,7 +223,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 setState(() {
                                   _accessibilityModeEnabled = value;
                                 });
-                                AppSettingsController.setAccessibilityMode(value);
+                                AppSettingsController.setAccessibilityMode(
+                                  value,
+                                );
                               },
                             ),
                             Divider(height: 12, color: dividerColor),
@@ -350,7 +367,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       highContrastEnabled:
                           AppSettingsController.state.highContrastModeEnabled,
                     ),
-                    foregroundColor: isHighContrast ? Colors.black : Colors.white,
+                    foregroundColor: isHighContrast
+                        ? Colors.black
+                        : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
