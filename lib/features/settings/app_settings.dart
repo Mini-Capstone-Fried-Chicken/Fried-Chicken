@@ -5,17 +5,20 @@ class AppSettingsState {
   final bool accessibilityModeEnabled;
   final bool highContrastModeEnabled;
   final bool largeTextModeEnabled;
+  final bool calendarAccessEnabled;
 
   const AppSettingsState({
     this.accessibilityModeEnabled = false,
     this.highContrastModeEnabled = false,
     this.largeTextModeEnabled = false,
+    this.calendarAccessEnabled = true,
   });
 
   AppSettingsState copyWith({
     bool? accessibilityModeEnabled,
     bool? highContrastModeEnabled,
     bool? largeTextModeEnabled,
+    bool? calendarAccessEnabled,
   }) {
     return AppSettingsState(
       accessibilityModeEnabled:
@@ -23,6 +26,8 @@ class AppSettingsState {
       highContrastModeEnabled:
           highContrastModeEnabled ?? this.highContrastModeEnabled,
       largeTextModeEnabled: largeTextModeEnabled ?? this.largeTextModeEnabled,
+      calendarAccessEnabled:
+          calendarAccessEnabled ?? this.calendarAccessEnabled,
     );
   }
 }
@@ -53,6 +58,10 @@ class AppSettingsController {
       return;
     }
     notifier.value = state.copyWith(largeTextModeEnabled: enabled);
+  }
+
+  static void setCalendarAccess(bool enabled) {
+    notifier.value = state.copyWith(calendarAccessEnabled: enabled);
   }
 }
 

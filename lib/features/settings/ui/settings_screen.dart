@@ -30,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _accessibilityModeEnabled = state.accessibilityModeEnabled;
       _highContrastMode = state.highContrastModeEnabled;
       _largeTextMode = state.largeTextModeEnabled;
+      _calendarAccessEnabled = state.calendarAccessEnabled;
     });
   }
 
@@ -253,6 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 setState(() {
                                   _calendarAccessEnabled = value;
                                 });
+                                AppSettingsController.setCalendarAccess(value);
                               },
                             ),
                           ],

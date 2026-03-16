@@ -363,6 +363,56 @@ class _CalendarScreenState extends State<CalendarScreen> {
       builder: (context, settings, _) {
         final isHighContrast = settings.highContrastModeEnabled;
 
+        if (!settings.calendarAccessEnabled) {
+          return Scaffold(
+            backgroundColor: isHighContrast
+                ? Colors.black
+                : const Color(0xFFF9F4F6),
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_outlined,
+                        size: 64,
+                        color: isHighContrast
+                            ? const Color(0xFF89D9C2)
+                            : Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Calendar access is disabled',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: isHighContrast
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'To use the calendar, enable Calendar Access in the Settings tab.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isHighContrast
+                              ? Colors.white70
+                              : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
         return Scaffold(
           backgroundColor: isHighContrast
               ? Colors.black
