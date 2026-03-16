@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'dart:ui';
 
 import '../../data/models/google_calendar_event.dart';
+import '../../services/calendar_building_resolver.dart';
+import '../../services/calendar_today_highlight_helper.dart';
+import 'calendar_event_popup.dart';
 import 'google_calendar_data_source.dart';
 
 class CalendarScheduleView extends StatefulWidget {
@@ -9,11 +13,24 @@ class CalendarScheduleView extends StatefulWidget {
   final List<GoogleCalendarEvent> events;
   final VoidCallback onBack;
 
+  final void Function(GoogleCalendarEvent event, String buildingCode)?
+  onGoToBuilding;
+  final void Function(
+    GoogleCalendarEvent event,
+    String buildingCode,
+    String roomNumber,
+  )?
+  onGoToRoom;
+  final void Function(GoogleCalendarEvent event, String buildingCode)? onSave;
+
   const CalendarScheduleView({
     super.key,
     required this.selectedCalendarLabel,
     required this.events,
     required this.onBack,
+    this.onGoToBuilding,
+    this.onGoToRoom,
+    this.onSave,
   });
 
   @override
@@ -103,6 +120,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                   initialDisplayDate: initialDate,
                   firstDayOfWeek: 1,
                   todayHighlightColor: const Color(0xFF8B1E3F),
+                  specialRegions: buildTodayHighlightRegion(_calendarView),
                   selectionDecoration: BoxDecoration(
                     border: Border.all(
                       color: const Color(0xFF8B1E3F),
@@ -127,10 +145,66 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                     startHour: 8,
                     endHour: 22,
                     timeIntervalHeight: 60,
+                    minimumAppointmentDuration: Duration(minutes: 45),
                   ),
+                  onTap: handleCalendarTap,
                 ),
         ),
       ],
+    );
+  }
+
+  void handleCalendarTap(CalendarTapDetails details) {
+    if (details.targetElement != CalendarElement.appointment &&
+        details.targetElement != CalendarElement.agenda) {
+      return;
+    }
+
+    final rawAppointment =
+        details.appointments != null && details.appointments!.isNotEmpty
+        ? details.appointments!.first
+        : null;
+
+    if (rawAppointment is! GoogleCalendarEvent) return;
+
+    showEventPopup(rawAppointment);
+  }
+
+  void showEventPopup(GoogleCalendarEvent event) {
+    final buildingCode = resolveBuildingCode(event.location);
+    final roomNumber = (event.description ?? '').trim();
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (_) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: Container(
+            color: const Color(0xFF8B1E3F).withOpacity(0.20),
+            child: CalendarEventPopup(
+              event: event,
+              buildingCode: buildingCode,
+              roomNumber: roomNumber,
+              onClose: () {
+                Navigator.of(context).pop();
+              },
+              onGoToBuilding: () {
+                Navigator.of(context).pop();
+                widget.onGoToBuilding?.call(event, buildingCode);
+              },
+              onGoToRoom: () {
+                Navigator.of(context).pop();
+                widget.onGoToRoom?.call(event, buildingCode, roomNumber);
+              },
+              onSave: () {
+                Navigator.of(context).pop();
+                widget.onSave?.call(event, buildingCode);
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 

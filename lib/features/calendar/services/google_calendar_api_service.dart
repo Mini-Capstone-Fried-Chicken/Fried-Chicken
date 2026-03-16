@@ -36,9 +36,9 @@ typedef CalendarApiFactory = IGoogleCalendarApi Function(AuthClient client);
 class GoogleCalendarApiService {
   final CalendarApiFactory _apiFactory;
 
-  GoogleCalendarApiService({
-    CalendarApiFactory? apiFactory,
-  }) : _apiFactory = apiFactory ?? ((client) => GoogleCalendarApiAdapter(client));
+  GoogleCalendarApiService({CalendarApiFactory? apiFactory})
+    : _apiFactory =
+          apiFactory ?? ((client) => GoogleCalendarApiAdapter(client));
 
   Future<List<GoogleCalendarInfo>> fetchCalendars(AuthClient client) async {
     final api = _apiFactory(client);
@@ -68,19 +68,20 @@ class GoogleCalendarApiService {
     final items = response.items ?? [];
 
     return items
-    .map(
-      (event) => GoogleCalendarEvent(
-        id: event.id ?? '',
-        title: event.summary ?? 'Untitled event',
-        start: event.start?.dateTime?.toLocal() ?? event.start?.date,
-        end: event.end?.dateTime?.toLocal() ?? event.end?.date,
-        location: event.location,
-        calendarId: calendarId,
-        calendarName: '',
-        color: const Color(0xFF8B1E3F),
-      ),
-    )
-    .where((event) => event.id.isNotEmpty)
-    .toList();
+        .map(
+          (event) => GoogleCalendarEvent(
+            id: event.id ?? '',
+            title: event.summary ?? 'Untitled event',
+            start: event.start?.dateTime?.toLocal() ?? event.start?.date,
+            end: event.end?.dateTime?.toLocal() ?? event.end?.date,
+            location: event.location,
+            description: event.description,
+            calendarId: calendarId,
+            calendarName: '',
+            color: const Color(0xFF8B1E3F),
+          ),
+        )
+        .where((event) => event.id.isNotEmpty)
+        .toList();
   }
 }
