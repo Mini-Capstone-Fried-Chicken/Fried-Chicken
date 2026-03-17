@@ -261,5 +261,50 @@ void main() {
 
       expect(setupPressed, isTrue);
     });
+
+    testWidgets('high contrast mode uses expected colors for banner and selected tile', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarSelectionView(
+            isLoading: false,
+            error: null,
+            calendars: const [calendar1, calendar2],
+            selectedCalendarIds: const {'cal_2'},
+            onCalendarToggled: (_) {},
+            onContinue: () {},
+            onSetupPressed: () {},
+            highContrastMode: true,
+          ),
+        ),
+      );
+
+      final decoratedContainers = tester
+          .widgetList<Container>(find.byType(Container))
+          .where((container) => container.decoration is BoxDecoration)
+          .toList();
+
+      final hasPrimaryContainer = decoratedContainers.any((container) {
+        final decoration = container.decoration as BoxDecoration;
+        return decoration.color == const Color(0xFF89D9C2);
+      });
+      expect(hasPrimaryContainer, isTrue);
+
+      final selectedText = tester.widget<Text>(find.text('SOEN 357'));
+      expect(selectedText.style?.color, Colors.black);
+
+      final continueButton = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Continue'),
+      );
+      expect(
+        continueButton.style?.backgroundColor?.resolve(<WidgetState>{}),
+        const Color(0xFF89D9C2),
+      );
+      expect(
+        continueButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+        Colors.black,
+      );
+    });
   });
 }

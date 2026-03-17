@@ -2,6 +2,7 @@ import 'package:campus_app/features/calendar/data/models/google_calendar_event.d
 import 'package:campus_app/features/calendar/ui/widgets/calendar_schedule_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 void main() {
   Widget makeTestableWidget(Widget child) {
@@ -186,6 +187,34 @@ void main() {
 
       expect(scheduleChip.selected, isTrue);
       expect(weekChip.selected, isFalse);
+    });
+
+    testWidgets('high contrast mode applies expected calendar header and time label styles', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 341',
+            events: sampleEvents,
+            onBack: () {},
+            highContrastMode: true,
+          ),
+        ),
+      );
+
+      final calendar = tester.widget<SfCalendar>(find.byType(SfCalendar));
+
+      expect(calendar.headerStyle.backgroundColor, const Color(0xFF89D9C2));
+      expect(calendar.headerStyle.textStyle?.color, Colors.black);
+      expect(
+        calendar.viewHeaderStyle.backgroundColor,
+        const Color(0xFF89D9C2),
+      );
+      expect(
+        calendar.timeSlotViewSettings.timeTextStyle?.color,
+        Colors.white,
+      );
     });
     
   });

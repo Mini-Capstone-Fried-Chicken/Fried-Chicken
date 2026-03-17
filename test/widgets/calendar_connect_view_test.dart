@@ -128,5 +128,35 @@ void main() {
 
       expect(find.byType(Image), findsNWidgets(2));
     });
+
+    testWidgets('applies high contrast colors to title and action button', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarConnectView(
+            isLoading: false,
+            error: null,
+            onConnect: () {},
+            highContrastMode: true,
+          ),
+        ),
+      );
+
+      final titleText = tester
+          .widgetList<Text>(find.text('Connect to Google Calendar'))
+          .firstWhere((text) => text.style?.fontSize == 28);
+      expect(titleText.style?.color, Colors.white);
+
+      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(
+        button.style?.backgroundColor?.resolve(<WidgetState>{}),
+        const Color(0xFF89D9C2),
+      );
+      expect(
+        button.style?.foregroundColor?.resolve(<WidgetState>{}),
+        Colors.black,
+      );
+    });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:campus_app/features/settings/ui/settings_screen.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,99 +11,139 @@ void main() {
   }
 
   group('SettingsScreen', () {
-    testWidgets('shows logout UI when user is logged in', (tester) async {
+    setUp(() {
+      AppSettingsController.notifier.value = const AppSettingsState();
+    });
+
+    tearDown(() {
+      AppSettingsController.notifier.value = const AppSettingsState();
+    });
+
+    testWidgets('renders sectioned settings layout and sign out button when logged in', (tester) async {
       await tester.pumpWidget(
         makeTestableWidget(
           const SettingsScreen(isLoggedIn: true),
         ),
       );
 
-      expect(find.text('Settings Screen'), findsOneWidget);
-      expect(find.text('Logout'), findsOneWidget);
-      expect(find.text('(Temporary for testing)'), findsOneWidget);
+      expect(find.text('General Settings'), findsOneWidget);
+      expect(find.text('Accessibility Settings'), findsOneWidget);
+      expect(find.text('Default Campus'), findsOneWidget);
+      expect(find.text('Calendar Access'), findsOneWidget);
+      expect(find.text('Sign Out'), findsOneWidget);
       expect(find.text('Sign In'), findsNothing);
-      expect(find.text('(Guest mode)'), findsNothing);
     });
 
-    testWidgets('shows sign in UI when user is not logged in', (tester) async {
+    testWidgets('renders sign in button when user is not logged in', (tester) async {
       await tester.pumpWidget(
         makeTestableWidget(
           const SettingsScreen(isLoggedIn: false),
         ),
       );
 
-      expect(find.text('Settings Screen'), findsOneWidget);
+      expect(find.text('General Settings'), findsOneWidget);
       expect(find.text('Sign In'), findsOneWidget);
-      expect(find.text('(Guest mode)'), findsOneWidget);
-      expect(find.text('Logout'), findsNothing);
-      expect(find.text('(Temporary for testing)'), findsNothing);
+      expect(find.text('Sign Out'), findsNothing);
     });
 
-    testWidgets('calls logout override when logout button is pressed', (
-      tester,
-    ) async {
-      var logoutCalled = false;
-
+    testWidgets('accessibility controls are gated until accessibility mode is enabled', (tester) async {
       await tester.pumpWidget(
         makeTestableWidget(
-          SettingsScreen(
-            isLoggedIn: true,
-            onLogoutOverride: (_) async {
-              logoutCalled = true;
-            },
-          ),
+          const SettingsScreen(isLoggedIn: true),
         ),
       );
 
-      await tester.tap(find.text('Logout'));
+      await tester.ensureVisible(find.text('High Contrast mode'));
       await tester.pumpAndSettle();
 
-      expect(logoutCalled, isTrue);
-    });
-
-    testWidgets('calls sign in override when sign in button is pressed', (
-      tester,
-    ) async {
-      var signInCalled = false;
-
-      await tester.pumpWidget(
-        makeTestableWidget(
-          SettingsScreen(
-            isLoggedIn: false,
-            onSignInOverride: (_) {
-              signInCalled = true;
-            },
-          ),
-        ),
+      await tester.tap(
+        find.text('High Contrast mode'),
+        warnIfMissed: false,
       );
-
-      await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      expect(signInCalled, isTrue);
+      expect(
+        AppSettingsController.state.highContrastModeEnabled,
+        isFalse,
+      );
+
+      await tester.tap(find.text('Assessibility Mode'));
+      await tester.pumpAndSettle();
+
+      expect(AppSettingsController.state.accessibilityModeEnabled, isTrue);
+
+      await tester.tap(find.text('High Contrast mode'));
+      await tester.pumpAndSettle();
+      expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
     });
 
-    testWidgets('logout override can show snackbar path safely', (
+    testWidgets('high contrast mode switch updates shared settings when accessibility mode is enabled', (
       tester,
     ) async {
       await tester.pumpWidget(
         makeTestableWidget(
-          SettingsScreen(
-            isLoggedIn: true,
-            onLogoutOverride: (context) async {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fake logout error')),
-              );
-            },
-          ),
+          const SettingsScreen(isLoggedIn: true),
         ),
       );
 
-      await tester.tap(find.text('Logout'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Assessibility Mode'));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Fake logout error'), findsOneWidget);
+      expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
+
+      await tester.ensureVisible(find.text('High Contrast mode'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('High Contrast mode'));
+      await tester.pumpAndSettle();
+
+      expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
+    });
+
+    testWidgets('calendar access switch updates shared settings state', (tester) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          const SettingsScreen(isLoggedIn: true),
+        ),
+      );
+
+      expect(AppSettingsController.state.calendarAccessEnabled, isTrue);
+
+      await tester.tap(find.text('Calendar Access'));
+      await tester.pumpAndSettle();
+
+      expect(AppSettingsController.state.calendarAccessEnabled, isFalse);
+    });
+
+    testWidgets('high contrast active settings screen uses dark page background', (tester) async {
+      AppSettingsController.setAccessibilityMode(true);
+      AppSettingsController.setHighContrastMode(true);
+
+      await tester.pumpWidget(
+        makeTestableWidget(
+          const SettingsScreen(isLoggedIn: true),
+        ),
+      );
+
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, Colors.black);
+      expect(find.text('Sign Out'), findsOneWidget);
+    });
+
+    testWidgets('default campus segmented control allows switching to Loyola', (tester) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          const SettingsScreen(isLoggedIn: true),
+        ),
+      );
+
+      await tester.tap(find.text('Loyola'));
+      await tester.pumpAndSettle();
+
+      final segmentedButton = tester.widget<SegmentedButton<String>>(
+        find.byType(SegmentedButton<String>),
+      );
+
+      expect(segmentedButton.selected, {'Loyola'});
     });
   });
 }
