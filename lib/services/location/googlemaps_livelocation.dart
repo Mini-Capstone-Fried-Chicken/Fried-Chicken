@@ -14,6 +14,8 @@ import '../../data/search_suggestion.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/concordia_shuttle_service.dart';
 import '../../services/navigation_steps.dart';
+import '../../services/nearby_poi_service.dart';
+import '../../services/poi_icon_factory.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
 import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
@@ -34,6 +36,9 @@ const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 const String currentLocationTag = "Current location";
+
+// Replace with the same Google API key used by GooglePlacesService
+const String _googleApiKey = 'AIzaSyD4FGfPTjWLXrSRd6zkqaSloFsdmOVr9dY';
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
@@ -194,6 +199,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   int? _shuttleWalkingMinutes;
   String _shuttleNearestStop = 'SGW';
   BitmapDescriptor? _shuttleStopIcon;
+
+  // POI state
+  List<PoiPlace> _nearbyPois = [];
+  bool _poisLoaded = false;
+  final Map<PoiCategory, BitmapDescriptor> _poiIcons = {};
 
   StreamSubscription<Position>? _posSub;
 
@@ -1363,6 +1373,86 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
   }
 
+  /// Pre-builds all four POI icons then fetches nearby places.
+  Future<void> _initPois() async {
+    for (final category in PoiCategory.values) {
+      _poiIcons[category] = await PoiIconFactory.iconFor(category);
+    }
+    await _loadNearbyPois();
+  }
+
+  /// Fetches POIs centred on the current location (SGW and Loyola).
+  Future<void> _loadNearbyPois() async {
+    try {
+      // Fetch around both campuses in parallel
+      final results = await Future.wait([
+        NearbyPoiService.fetchNearby(
+          concordiaSGW,
+          apiKey: 'AIzaSyD4FGfPTjWLXrSRd6zkqaSloFsdmOVr9dY',
+        ),
+        NearbyPoiService.fetchNearby(
+          concordiaLoyola,
+          apiKey: 'AIzaSyD4FGfPTjWLXrSRd6zkqaSloFsdmOVr9dY',
+        ),
+      ]);
+
+      // Deduplicate by placeId across both campus results
+      final seen = <String>{};
+      final merged = <PoiPlace>[];
+      for (final list in results) {
+        for (final poi in list) {
+          if (seen.add(poi.placeId)) {
+            merged.add(poi);
+          }
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _nearbyPois = merged;
+        _poisLoaded = true;
+      });
+    } catch (e) {
+      print('[POI] Failed to load nearby POIs: $e');
+    }
+  }
+
+  /// Adds a map marker for every loaded POI.
+  void _addPoiMarkers(Set<Marker> markers) {
+    if (!_poisLoaded) return;
+
+    for (final poi in _nearbyPois) {
+      final icon = _poiIcons[poi.category];
+      if (icon == null) continue;
+
+      markers.add(
+        Marker(
+          markerId: MarkerId('poi_${poi.placeId}'),
+          position: poi.location,
+          icon: icon,
+          infoWindow: InfoWindow(
+            title: poi.name,
+            snippet: _poiCategoryLabel(poi.category),
+          ),
+          zIndexInt: 0,
+        ),
+      );
+    }
+  }
+
+  String _poiCategoryLabel(PoiCategory category) {
+    switch (category) {
+      case PoiCategory.cafe:
+        return 'Cafe';
+      case PoiCategory.restaurant:
+        return 'Restaurant';
+      case PoiCategory.pharmacy:
+        return 'Pharmacy';
+      case PoiCategory.depanneur:
+        return 'Dépanneur';
+    }
+  }
+
   /// Walking time + 4 next buses
   Future<void> _fetchShuttleInfo() async {
     final origin = _routeOrigin ?? _currentLocation;
@@ -1885,6 +1975,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
     _determineUserLocationAndBuilding();
+
+    // Initialise POI icons and fetch nearby places
+    _initPois();
   }
 
   Future<void> _determineUserLocationAndBuilding() async {
@@ -2081,6 +2174,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final markers = <Marker>{};
 
     _addCurrentLocationMarker(markers);
+    _addPoiMarkers(markers);
     _addShuttleStopMarkers(markers);
     _addIndoorRoomMarkers(markers);
     _addRouteDestinationMarker(markers);
