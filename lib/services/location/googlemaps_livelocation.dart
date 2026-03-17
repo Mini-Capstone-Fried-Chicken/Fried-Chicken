@@ -412,8 +412,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
 
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (ok) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Could not open link")));
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -1841,14 +1847,22 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _determineUserLocationAndBuilding() async {
-    final position = await Geolocator.getCurrentPosition();
-    _currentLocation = LatLng(position.latitude, position.longitude);
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      _currentLocation = LatLng(position.latitude, position.longitude);
 
-    final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
+      final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
 
-    setState(() {
-      _currentBuildingCode = buildingAtLocation?.code;
-    });
+      if (!mounted) return;
+      setState(() {
+        _currentBuildingCode = buildingAtLocation?.code;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentBuildingCode = null;
+      });
+    }
   }
 
   BuildingPolygon? _findBuildingAtLocation(LatLng location) {

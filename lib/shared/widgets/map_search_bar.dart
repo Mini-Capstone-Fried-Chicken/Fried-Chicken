@@ -240,6 +240,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                 children: [
                   /// Main search field
                   TextField(
+                    key: const Key('map_search_input'),
                     controller: widget.controller,
                     focusNode: _focusNode,
                     style: TextStyle(color: primaryTextColor),

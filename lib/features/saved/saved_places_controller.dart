@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,16 +10,44 @@ class SavedPlacesController {
   SavedPlacesController._();
 
   static const String _storageKey = 'saved_places';
+  static const String _anonymousScope = 'anonymous';
   static final ValueNotifier<List<SavedPlace>> notifier = ValueNotifier<List<SavedPlace>>(
     const <SavedPlace>[],
   );
 
   static bool _initialized = false;
+  static String _activeScope = _anonymousScope;
+  static String? Function() _userIdResolver = _defaultUserIdResolver;
+
+  static String? _defaultUserIdResolver() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _scope() {
+    final userId = _userIdResolver();
+    if (userId == null || userId.isEmpty) {
+      return _anonymousScope;
+    }
+    return userId;
+  }
+
+  static String _scopedStorageKey({String? scope}) {
+    return '${_storageKey}__${scope ?? _scope()}';
+  }
 
   static Future<void> ensureInitialized() async {
-    if (_initialized) return;
+    final scope = _scope();
+    if (_initialized && _activeScope == scope) {
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
+    final scopedKey = _scopedStorageKey(scope: scope);
+    final raw = prefs.getString(scopedKey);
     if (raw != null && raw.isNotEmpty) {
       try {
         final list = jsonDecode(raw) as List<dynamic>;
@@ -30,14 +59,17 @@ class SavedPlacesController {
       } catch (_) {
         notifier.value = const <SavedPlace>[];
       }
+    } else {
+      notifier.value = const <SavedPlace>[];
     }
     _initialized = true;
+    _activeScope = scope;
   }
 
   static Future<void> _persist(List<SavedPlace> places) async {
     final prefs = await SharedPreferences.getInstance();
     final payload = jsonEncode(places.map((e) => e.toJson()).toList());
-    await prefs.setString(_storageKey, payload);
+    await prefs.setString(_scopedStorageKey(), payload);
   }
 
   static bool isSaved(String placeId) {
@@ -74,5 +106,22 @@ class SavedPlacesController {
     }
     await savePlace(place);
     return true;
+  }
+
+  static Future<void> reloadForCurrentUser() async {
+    _initialized = false;
+    await ensureInitialized();
+  }
+
+  @visibleForTesting
+  static void debugSetUserIdResolver(String? Function() resolver) {
+    _userIdResolver = resolver;
+    _initialized = false;
+  }
+
+  @visibleForTesting
+  static void debugResetUserIdResolver() {
+    _userIdResolver = _defaultUserIdResolver;
+    _initialized = false;
   }
 }

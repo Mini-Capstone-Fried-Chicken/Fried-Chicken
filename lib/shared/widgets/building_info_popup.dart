@@ -86,7 +86,13 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   Future<void> _toggleSavedPlace() async {
     final place = widget.savedPlace;
-    if (place == null) return;
+    if (place == null) {
+      if (!mounted) return;
+      setState(() {
+        _isSaved = !_isSaved;
+      });
+      return;
+    }
     await SavedPlacesController.ensureInitialized();
     final alreadySaved = SavedPlacesController.isSaved(place.id);
 

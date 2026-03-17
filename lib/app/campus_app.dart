@@ -1,10 +1,12 @@
 import "package:campus_app/app/app_shell.dart";
 import "package:campus_app/features/auth/ui/login_page.dart";
+import "package:campus_app/features/saved/saved_places_controller.dart";
 import "package:campus_app/features/settings/app_settings.dart";
 //import "package:campus_app/features/indoor/ui/pages/indoor_page.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 import "package:campus_app/utils/route_factory_indoor.dart";
+import 'dart:async';
 
 class CampusApp extends StatefulWidget {
   const CampusApp({super.key});
@@ -14,6 +16,8 @@ class CampusApp extends StatefulWidget {
 }
 
 class CampusAppState extends State<CampusApp> {
+  StreamSubscription<User?>? _authStateSub;
+
   static const Map<String, String> indoorAssetsById = {
     // SVGs
     "MB-1": "assets/indoor_svg/MB-1.svg",
@@ -45,6 +49,21 @@ class CampusAppState extends State<CampusApp> {
       if (entry.key.toLowerCase() == lower) return entry.value;
     }
     return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _authStateSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+      unawaited(AppSettingsController.restore(force: true));
+      unawaited(SavedPlacesController.reloadForCurrentUser());
+    });
+  }
+
+  @override
+  void dispose() {
+    _authStateSub?.cancel();
+    super.dispose();
   }
 
   @override

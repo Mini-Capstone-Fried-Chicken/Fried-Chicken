@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -43,6 +44,7 @@ class AppSettingsState {
 }
 
 class AppSettingsController {
+  static const String _anonymousScope = 'anonymous';
   static const String _accessibilityModeEnabledKey =
       'settings_accessibility_mode_enabled';
   static const String _highContrastModeEnabledKey =
@@ -56,26 +58,77 @@ class AppSettingsController {
   static final ValueNotifier<AppSettingsState> notifier =
       ValueNotifier(const AppSettingsState());
 
+  static bool _initialized = false;
+  static String _activeScope = _anonymousScope;
+  static String? Function() _userIdResolver = _defaultUserIdResolver;
+
   static AppSettingsState get state => notifier.value;
 
-  static Future<void> restore() async {
+  static String? _defaultUserIdResolver() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _scope() {
+    final userId = _userIdResolver();
+    if (userId == null || userId.isEmpty) {
+      return _anonymousScope;
+    }
+    return userId;
+  }
+
+  static String _scopedKey(String baseKey, {String? scope}) {
+    return '${baseKey}__${scope ?? _scope()}';
+  }
+
+  static Future<void> restore({bool force = false}) async {
+    final scope = _scope();
+    if (!force && _initialized && _activeScope == scope) {
+      return;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
 
       notifier.value = AppSettingsState(
-        accessibilityModeEnabled:
-            prefs.getBool(_accessibilityModeEnabledKey) ?? false,
-        highContrastModeEnabled:
-            prefs.getBool(_highContrastModeEnabledKey) ?? false,
-        largeTextModeEnabled: prefs.getBool(_largeTextModeEnabledKey) ?? false,
-        calendarAccessEnabled: prefs.getBool(_calendarAccessEnabledKey) ?? true,
+        accessibilityModeEnabled: _getScopedBool(
+          prefs,
+          _accessibilityModeEnabledKey,
+          scope,
+          fallback: false,
+        ),
+        highContrastModeEnabled: _getScopedBool(
+          prefs,
+          _highContrastModeEnabledKey,
+          scope,
+          fallback: false,
+        ),
+        largeTextModeEnabled: _getScopedBool(
+          prefs,
+          _largeTextModeEnabledKey,
+          scope,
+          fallback: false,
+        ),
+        calendarAccessEnabled: _getScopedBool(
+          prefs,
+          _calendarAccessEnabledKey,
+          scope,
+          fallback: true,
+        ),
         defaultCampus: _normalizeDefaultCampus(
-          prefs.getString(_defaultCampusKey),
+          _getScopedString(prefs, _defaultCampusKey, scope),
         ),
       );
+      _initialized = true;
+      _activeScope = scope;
     } catch (_) {
       // Keep defaults when persistence isn't available.
       notifier.value = const AppSettingsState();
+      _initialized = true;
+      _activeScope = scope;
     }
   }
 
@@ -87,22 +140,26 @@ class AppSettingsController {
   static Future<void> _persist(AppSettingsState newState) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final scope = _scope();
 
       await prefs.setBool(
-        _accessibilityModeEnabledKey,
+        _scopedKey(_accessibilityModeEnabledKey, scope: scope),
         newState.accessibilityModeEnabled,
       );
       await prefs.setBool(
-        _highContrastModeEnabledKey,
+        _scopedKey(_highContrastModeEnabledKey, scope: scope),
         newState.highContrastModeEnabled,
       );
-      await prefs.setBool(_largeTextModeEnabledKey, newState.largeTextModeEnabled);
       await prefs.setBool(
-        _calendarAccessEnabledKey,
+        _scopedKey(_largeTextModeEnabledKey, scope: scope),
+        newState.largeTextModeEnabled,
+      );
+      await prefs.setBool(
+        _scopedKey(_calendarAccessEnabledKey, scope: scope),
         newState.calendarAccessEnabled,
       );
       await prefs.setString(
-        _defaultCampusKey,
+        _scopedKey(_defaultCampusKey, scope: scope),
         _normalizeDefaultCampus(newState.defaultCampus),
       );
     } catch (_) {
@@ -115,6 +172,49 @@ class AppSettingsController {
       return AppSettingsState.defaultCampusLoyola;
     }
     return AppSettingsState.defaultCampusSgw;
+  }
+
+  static bool _getScopedBool(
+    SharedPreferences prefs,
+    String baseKey,
+    String scope, {
+    required bool fallback,
+  }) {
+    final scoped = _scopedKey(baseKey, scope: scope);
+    if (prefs.containsKey(scoped)) {
+      return prefs.getBool(scoped) ?? fallback;
+    }
+    if (prefs.containsKey(baseKey)) {
+      return prefs.getBool(baseKey) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static String? _getScopedString(
+    SharedPreferences prefs,
+    String baseKey,
+    String scope,
+  ) {
+    final scoped = _scopedKey(baseKey, scope: scope);
+    if (prefs.containsKey(scoped)) {
+      return prefs.getString(scoped);
+    }
+    if (prefs.containsKey(baseKey)) {
+      return prefs.getString(baseKey);
+    }
+    return null;
+  }
+
+  @visibleForTesting
+  static void debugSetUserIdResolver(String? Function() resolver) {
+    _userIdResolver = resolver;
+    _initialized = false;
+  }
+
+  @visibleForTesting
+  static void debugResetUserIdResolver() {
+    _userIdResolver = _defaultUserIdResolver;
+    _initialized = false;
   }
 
   static void setAccessibilityMode(bool enabled) {

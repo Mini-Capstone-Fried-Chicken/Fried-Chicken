@@ -5,10 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('AppSettingsController', () {
     setUp(() {
+      AppSettingsController.debugSetUserIdResolver(() => null);
       AppSettingsController.notifier.value = const AppSettingsState();
     });
 
     tearDown(() {
+      AppSettingsController.debugResetUserIdResolver();
       AppSettingsController.notifier.value = const AppSettingsState();
     });
 
@@ -83,7 +85,8 @@ void main() {
 
     test('restore loads persisted default campus from shared preferences', () async {
       SharedPreferences.setMockInitialValues({
-        'settings_default_campus': AppSettingsState.defaultCampusLoyola,
+        'settings_default_campus__anonymous':
+            AppSettingsState.defaultCampusLoyola,
       });
 
       await AppSettingsController.restore();
@@ -102,7 +105,30 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getString('settings_default_campus'),
+        prefs.getString('settings_default_campus__anonymous'),
+        AppSettingsState.defaultCampusLoyola,
+      );
+    });
+
+    test('settings are isolated between accounts', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      AppSettingsController.debugSetUserIdResolver(() => 'user-a');
+      await AppSettingsController.restore(force: true);
+      AppSettingsController.setDefaultCampus(AppSettingsState.defaultCampusLoyola);
+      await Future<void>.delayed(Duration.zero);
+
+      AppSettingsController.debugSetUserIdResolver(() => 'user-b');
+      await AppSettingsController.restore(force: true);
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusSgw,
+      );
+
+      AppSettingsController.debugSetUserIdResolver(() => 'user-a');
+      await AppSettingsController.restore(force: true);
+      expect(
+        AppSettingsController.state.defaultCampus,
         AppSettingsState.defaultCampusLoyola,
       );
     });
