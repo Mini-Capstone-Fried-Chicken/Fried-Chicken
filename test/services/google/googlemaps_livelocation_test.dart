@@ -16,6 +16,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:campus_app/services/nearby_poi_service.dart';
+import 'package:campus_app/services/poi_icon_factory.dart';
 
 class FakeGeolocatorPlatform extends GeolocatorPlatform
     with MockPlatformInterfaceMixin {
@@ -128,10 +130,19 @@ Future<void> mockAssetBundle() async {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlAbwAAAABJRU5ErkJggg==';
   final Uint8List pngBytes = base64Decode(base64Png);
 
+  const assetPaths = [
+    'assets/images/shuttle_icon.png',
+    'assets/images/cafe.png',
+    'assets/images/restaurant.png',
+    'assets/images/pharmacy.png',
+    'assets/images/depanneur.png',
+  ];
+
   final Map<String, Object> manifest = {
-    'assets/images/shuttle_icon.png': <Map<String, Object>>[
-      <String, Object>{'asset': 'assets/images/shuttle_icon.png'},
-    ],
+    for (final path in assetPaths)
+      path: <Map<String, Object>>[
+        <String, Object>{'asset': path},
+      ],
   };
 
   final ByteData manifestBin = const StandardMessageCodec().encodeMessage(
@@ -202,6 +213,15 @@ void main() {
     await mockAssetBundle();
   });
 
+  // setUp(() {
+  //   GeolocatorPlatform.instance = FakeGeolocatorPlatform(
+  //     initialPosition: makePosition(
+  //       latitude: concordiaSGW.latitude,
+  //       longitude: concordiaSGW.longitude,
+  //     ),
+  //   );
+  // });
+
   setUp(() {
     GeolocatorPlatform.instance = FakeGeolocatorPlatform(
       initialPosition: makePosition(
@@ -209,6 +229,12 @@ void main() {
         longitude: concordiaSGW.longitude,
       ),
     );
+
+    // Pre-seed POI icon cache so _buildDescriptor (canvas + codec) is never called
+    PoiIconFactory.seedCacheForTesting({
+      for (final category in PoiCategory.values)
+        category: BitmapDescriptor.defaultMarker,
+    });
   });
 
   group('detectCampus', () {
