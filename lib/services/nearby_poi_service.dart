@@ -65,10 +65,19 @@ class NearbyPoiService {
     'convenience_store': PoiCategory.depanneur,
   };
 
-  //Fetches POIs for all categories
+  //Fetches POIs for all categories using the hardcoded API key.
   static Future<List<PoiPlace>> fetchNearby(
     LatLng center, {
     required String apiKey,
+  }) async {
+    return fetchNearbyWithClient(center, apiKey: apiKey, client: http.Client());
+  }
+
+  /// Testable entry point — accepts an injected [http.Client].
+  static Future<List<PoiPlace>> fetchNearbyWithClient(
+    LatLng center, {
+    required String apiKey,
+    required http.Client client,
   }) async {
     final results = <PoiPlace>[];
     final seenPlaceIds = <String>{};
@@ -82,6 +91,7 @@ class NearbyPoiService {
           apiKey: apiKey,
           sink: results,
           seen: seenPlaceIds,
+          client: client,
         ),
       ),
     );
@@ -96,6 +106,7 @@ class NearbyPoiService {
     required String apiKey,
     required List<PoiPlace> sink,
     required Set<String> seen,
+    required http.Client client,
   }) async {
     try {
       final uri = Uri.parse(
@@ -106,7 +117,7 @@ class NearbyPoiService {
         '&key=$apiKey',
       );
 
-      final response = await http.get(uri);
+      final response = await client.get(uri);
       if (response.statusCode != 200) {
         print('[POI] HTTP ${response.statusCode} for type=$type');
         return;

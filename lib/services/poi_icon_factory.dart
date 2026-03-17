@@ -96,4 +96,10 @@ class PoiIconFactory {
 
     return BitmapDescriptor.fromBytes(pngBytes!.buffer.asUint8List());
   }
+
+  // Testing helpers — not used in production
+  static void clearCacheForTesting() => _cache.clear();
+  static bool isCachedForTesting(PoiCategory c) => _cache.containsKey(c);
+  static String? assetPathForTesting(PoiCategory c) => _assetPaths[c];
+  static Color get bgColorForTesting => _bgColor;
 }
