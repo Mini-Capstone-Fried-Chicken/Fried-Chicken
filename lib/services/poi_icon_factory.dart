@@ -29,7 +29,9 @@ class PoiIconFactory {
     if (_cache.containsKey(category)) return _cache[category]!;
 
     final assetPath = _assetPaths[category]!;
-    final descriptor = await _buildDescriptor(assetPath);
+    final descriptor = testDescriptorBuilder != null
+        ? await testDescriptorBuilder!(assetPath)
+        : await _buildDescriptor(assetPath);
     _cache[category] = descriptor;
     return descriptor;
   }
@@ -107,4 +109,8 @@ class PoiIconFactory {
   static void seedCacheForTesting(Map<PoiCategory, BitmapDescriptor> entries) {
     _cache.addAll(entries);
   }
+
+  @visibleForTesting
+  static Future<BitmapDescriptor> Function(String assetPath)?
+  testDescriptorBuilder;
 }

@@ -164,4 +164,44 @@ void main() {
       }
     });
   });
+
+  group('PoiIconFactory.iconFor — cache-miss path', () {
+    setUp(() {
+      // Inject a fast fake builder so _buildDescriptor is never called
+      PoiIconFactory.testDescriptorBuilder = (_) async =>
+          BitmapDescriptor.defaultMarker;
+    });
+
+    tearDown(() {
+      PoiIconFactory.testDescriptorBuilder = null;
+    });
+
+    test('cache-miss path stores result in cache', () async {
+      expect(PoiIconFactory.isCachedForTesting(PoiCategory.cafe), isFalse);
+
+      await PoiIconFactory.iconFor(PoiCategory.cafe);
+
+      expect(PoiIconFactory.isCachedForTesting(PoiCategory.cafe), isTrue);
+    });
+
+    test('cache-miss path returns a BitmapDescriptor', () async {
+      final result = await PoiIconFactory.iconFor(PoiCategory.restaurant);
+      // return descriptor line is now hit
+      expect(result, isA<BitmapDescriptor>());
+    });
+
+    test('preloadAll covers all categories via cache-miss path', () async {
+      // preloadAll() calls iconFor for every category —
+      // with testDescriptorBuilder set, none of them hang
+      await PoiIconFactory.preloadAll();
+
+      for (final cat in PoiCategory.values) {
+        expect(
+          PoiIconFactory.isCachedForTesting(cat),
+          isTrue,
+          reason: '$cat should be cached after preloadAll',
+        );
+      }
+    });
+  });
 }
