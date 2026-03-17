@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
+import 'package:campus_app/features/saved/saved_place.dart';
+import 'package:campus_app/features/saved/saved_place_metadata_service.dart';
+import 'package:campus_app/features/saved/saved_places_controller.dart';
 
 class BuildingInfoPopup extends StatefulWidget {
   final String title;
@@ -15,6 +18,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final bool isLoggedIn;
   final VoidCallback onGetDirections;
   final bool highContrastMode;
+  final SavedPlace? savedPlace;
 
   const BuildingInfoPopup({
     super.key,
@@ -28,6 +32,7 @@ class BuildingInfoPopup extends StatefulWidget {
     required this.isLoggedIn,
     required this.onGetDirections,
     this.highContrastMode = false,
+    this.savedPlace,
   });
 
   @override
@@ -46,6 +51,59 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     return isTouch ? TooltipTriggerMode.longPress : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    SavedPlacesController.notifier.addListener(_syncSavedState);
+    unawaited(_initializeSavedState());
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildingInfoPopup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.savedPlace?.id != widget.savedPlace?.id) {
+      unawaited(_initializeSavedState());
+    }
+  }
+
+  Future<void> _initializeSavedState() async {
+    await SavedPlacesController.ensureInitialized();
+    _syncSavedState();
+  }
+
+  void _syncSavedState() {
+    final placeId = widget.savedPlace?.id;
+    if (placeId == null || !mounted) return;
+    final savedNow = SavedPlacesController.isSaved(placeId);
+    if (savedNow != _isSaved) {
+      setState(() {
+        _isSaved = savedNow;
+      });
+    }
+  }
+
+  Future<void> _toggleSavedPlace() async {
+    final place = widget.savedPlace;
+    if (place == null) return;
+    await SavedPlacesController.ensureInitialized();
+    final alreadySaved = SavedPlacesController.isSaved(place.id);
+
+    bool isSavedNow;
+    if (alreadySaved) {
+      await SavedPlacesController.removePlace(place.id);
+      isSavedNow = false;
+    } else {
+      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(place);
+      await SavedPlacesController.savePlace(enriched);
+      isSavedNow = true;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSaved = isSavedNow;
+    });
   }
 
   void _hideIconLabel() {
@@ -248,11 +306,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                     icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
                     tooltip: _isSaved ? 'Unsave' : 'Save',
                     key: const Key('save_toggle_button'),
-                    onPressed: () {
-                      setState(() {
-                        _isSaved = !_isSaved;
-                      });
-                    },
+                    onPressed: () => unawaited(_toggleSavedPlace()),
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -343,6 +397,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   @override
   void dispose() {
+    SavedPlacesController.notifier.removeListener(_syncSavedState);
     _hideIconLabel();
     super.dispose();
   }

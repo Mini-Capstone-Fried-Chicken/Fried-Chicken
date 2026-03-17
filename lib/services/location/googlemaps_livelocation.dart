@@ -29,6 +29,8 @@ import 'package:campus_app/utils/geo.dart' as geo;
 import '../indoor_maps/indoor_map_controller.dart';
 import 'package:campus_app/models/campus.dart';
 import '../indoor_maps/indoor_map_repository.dart';
+import '../../features/saved/saved_directions_controller.dart';
+import '../../features/saved/saved_place.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -212,6 +214,54 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _lastCameraTarget;
   bool _highContrastMode = false;
+
+  void _onSavedDirectionsRequested() {
+    final place = SavedDirectionsController.notifier.value;
+    if (place == null) return;
+    unawaited(_startDirectionsForSavedPlace(place));
+  }
+
+  Future<void> _startDirectionsForSavedPlace(SavedPlace place) async {
+    try {
+      var origin = _currentLocation;
+      if (origin == null) {
+        final position = await Geolocator.getCurrentPosition();
+        origin = LatLng(position.latitude, position.longitude);
+        if (mounted) {
+          setState(() {
+            _currentLocation = origin;
+          });
+        }
+      }
+
+      final destination = LatLng(place.latitude, place.longitude);
+      final selectedBuilding = _findBuildingByCode(place.id);
+      final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
+      if (!mounted) return;
+      setState(() {
+        _selectedBuildingPoly = selectedBuilding;
+        _selectedBuildingCenter = null;
+        _anchorOffset = null;
+        _showRoutePreview = true;
+        _routeOrigin = origin;
+        _routeDestination = destination;
+        _routeOriginText = currentLocationTag;
+        _routeDestinationText = place.name;
+        _routeOriginBuildingCode = currentBuildingCode;
+        _routeDestinationBuildingCode = selectedBuilding?.code;
+      });
+
+      await _fetchRoutesAndDurations();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to start directions for this place.')),
+      );
+    } finally {
+      SavedDirectionsController.clear();
+    }
+  }
 
   void _onAppSettingsChanged() {
     final enabled = AppSettingsController.state.highContrastModeEnabled;
@@ -1766,6 +1816,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     _highContrastMode = AppSettingsController.state.highContrastModeEnabled;
     AppSettingsController.notifier.addListener(_onAppSettingsChanged);
+    SavedDirectionsController.notifier.addListener(_onSavedDirectionsRequested);
 
     _selectedCampus = widget.initialCampus;
 
@@ -1783,9 +1834,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
     _determineUserLocationAndBuilding();
-
     // Initialise POI icons and fetch nearby places
     _initPois();
+
+    _onSavedDirectionsRequested();
   }
 
   Future<void> _determineUserLocationAndBuilding() async {
@@ -1802,6 +1854,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   BuildingPolygon? _findBuildingAtLocation(LatLng location) {
     for (final building in buildingPolygons) {
       if (_isPointInPolygon(location, building.points)) {
+        return building;
+      }
+    }
+    return null;
+  }
+
+  BuildingPolygon? _findBuildingByCode(String code) {
+    for (final building in buildingPolygons) {
+      if (building.code.toUpperCase() == code.toUpperCase()) {
         return building;
       }
     }
@@ -2288,7 +2349,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 destinationBuildingCode: _routeDestinationBuildingCode,
                 isConcordiaBuilding: (buildingCode) {
                   return buildingPolygons.any(
-                    (b) => (b.code ?? '').toUpperCase() == buildingCode.toUpperCase(),
+                    (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
                   );
                 },
               ),
@@ -2342,9 +2403,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               userLocation: _currentLocation,
               isConcordiaBuilding: (buildingCode) {
                 return buildingPolygons.any(
-                  (b) =>
-                      (b.code ?? '').toUpperCase() ==
-                      buildingCode.toUpperCase(),
+                  (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
                 );
               },
               showIndoor: _showIndoor,
@@ -2507,6 +2566,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   @override
   void dispose() {
     AppSettingsController.notifier.removeListener(_onAppSettingsChanged);
+    SavedDirectionsController.notifier.removeListener(_onSavedDirectionsRequested);
     _posSub?.cancel();
     _popupDebounce?.cancel();
     _debounceTimer?.cancel();

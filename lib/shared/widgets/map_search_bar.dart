@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../features/settings/app_settings.dart';
+import '../../data/building_polygons.dart';
+import '../../features/saved/saved_place.dart';
+import '../../features/saved/saved_place_metadata_service.dart';
+import '../../features/saved/saved_places_controller.dart';
+import '../../services/google_places_service.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -75,6 +82,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
     _focusNode.addListener(_onFocusChange);
     widget.originRoomController.addListener(_onRoomFieldChanged);
     widget.destinationRoomController.addListener(_onRoomFieldChanged);
+    SavedPlacesController.notifier.addListener(_onSavedPlacesChanged);
+    SavedPlacesController.ensureInitialized();
   }
 
   @override
@@ -83,7 +92,13 @@ class _MapSearchBarState extends State<MapSearchBar> {
     _focusNode.dispose();
     widget.originRoomController.removeListener(_onRoomFieldChanged);
     widget.destinationRoomController.removeListener(_onRoomFieldChanged);
+    SavedPlacesController.notifier.removeListener(_onSavedPlacesChanged);
     super.dispose();
+  }
+
+  void _onSavedPlacesChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _onRoomFieldChanged() {
@@ -115,6 +130,81 @@ class _MapSearchBarState extends State<MapSearchBar> {
     setState(() {
       _showSuggestions = false;
     });
+  }
+
+  String? _savedIdForSuggestion(SearchSuggestion suggestion) {
+    if (suggestion.isConcordiaBuilding) {
+      return suggestion.buildingName?.code;
+    }
+    return suggestion.placeId;
+  }
+
+  bool _isSuggestionSaved(SearchSuggestion suggestion) {
+    final id = _savedIdForSuggestion(suggestion);
+    if (id == null || id.isEmpty) return false;
+    return SavedPlacesController.isSaved(id);
+  }
+
+  Future<void> _toggleSuggestionSaved(SearchSuggestion suggestion) async {
+    await SavedPlacesController.ensureInitialized();
+
+    final existingId = _savedIdForSuggestion(suggestion);
+    if (existingId != null && existingId.isNotEmpty && SavedPlacesController.isSaved(existingId)) {
+      await SavedPlacesController.removePlace(existingId);
+      return;
+    }
+
+    final placeToSave = await _buildSavedPlaceFromSuggestion(suggestion);
+    if (placeToSave == null) return;
+
+    final enriched = await SavedPlaceMetadataService.enrichFromGoogle(placeToSave);
+    await SavedPlacesController.savePlace(enriched);
+  }
+
+  Future<SavedPlace?> _buildSavedPlaceFromSuggestion(
+    SearchSuggestion suggestion,
+  ) async {
+    if (suggestion.isConcordiaBuilding) {
+      final code = suggestion.buildingName?.code;
+      if (code == null || code.isEmpty) return null;
+
+      BuildingPolygon? building;
+      for (final item in buildingPolygons) {
+        if (item.code.toUpperCase() == code.toUpperCase()) {
+          building = item;
+          break;
+        }
+      }
+      if (building == null) return null;
+
+      return SavedPlace(
+        id: code,
+        name: suggestion.name,
+        category: 'all',
+        latitude: building.center.latitude,
+        longitude: building.center.longitude,
+        openingHoursToday: 'Open today: Hours unavailable',
+      );
+    }
+
+    final placeId = suggestion.placeId;
+    if (placeId == null || placeId.isEmpty) return null;
+
+    final details = await GooglePlacesService.instance.getPlaceDetails(
+      placeId,
+      includeMetadata: true,
+    );
+    if (details == null) return null;
+
+    return SavedPlace(
+      id: placeId,
+      name: details.name,
+      category: 'all',
+      latitude: details.location.latitude,
+      longitude: details.location.longitude,
+      openingHoursToday: 'Open today: Hours unavailable',
+      googlePlaceType: details.primaryType,
+    );
   }
 
   @override
@@ -235,6 +325,23 @@ class _MapSearchBarState extends State<MapSearchBar> {
                                 ),
                               )
                             : null,
+                        trailing: IconButton(
+                          tooltip: _isSuggestionSaved(suggestion)
+                              ? 'Remove from saved'
+                              : 'Add to saved',
+                          icon: Icon(
+                            _isSuggestionSaved(suggestion)
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            size: 20,
+                            color: _isSuggestionSaved(suggestion)
+                                ? AppUiColors.primary(
+                                    highContrastEnabled: widget.highContrastMode,
+                                  )
+                                : Colors.grey[700],
+                          ),
+                          onPressed: () => unawaited(_toggleSuggestionSaved(suggestion)),
+                        ),
                         dense: true,
                         onTap: () => _selectSuggestion(suggestion),
                       );
