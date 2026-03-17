@@ -68,6 +68,8 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
+/// Merges outdoor and indoor polylines into a single set.
+/// Returns an empty set if both inputs are empty.
 Set<Polyline> mergeMapPolylines({
   required Set<Polyline> outdoorPolylines,
   required Set<Polyline> indoorPolylines,
