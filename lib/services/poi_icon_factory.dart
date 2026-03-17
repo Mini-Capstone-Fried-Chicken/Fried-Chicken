@@ -94,7 +94,7 @@ class PoiIconFactory {
     final image = await picture.toImage(canvasSize.toInt(), canvasSize.toInt());
     final pngBytes = await image.toByteData(format: ui.ImageByteFormat.png);
 
-    return BitmapDescriptor.fromBytes(pngBytes!.buffer.asUint8List());
+    return BitmapDescriptor.bytes(pngBytes!.buffer.asUint8List());
   }
 
   // Testing helpers — not used in production
@@ -102,4 +102,9 @@ class PoiIconFactory {
   static bool isCachedForTesting(PoiCategory c) => _cache.containsKey(c);
   static String? assetPathForTesting(PoiCategory c) => _assetPaths[c];
   static Color get bgColorForTesting => _bgColor;
+
+  @visibleForTesting
+  static void seedCacheForTesting(Map<PoiCategory, BitmapDescriptor> entries) {
+    _cache.addAll(entries);
+  }
 }

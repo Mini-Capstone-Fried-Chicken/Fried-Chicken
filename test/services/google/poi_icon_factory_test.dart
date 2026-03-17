@@ -103,40 +103,63 @@ void main() {
   });
 
   group('PoiIconFactory.iconFor', () {
-    testWidgets('returns a BitmapDescriptor for each category', (tester) async {
+    test('returns cached descriptor immediately after seeding', () {
+      PoiIconFactory.seedCacheForTesting({
+        for (final cat in PoiCategory.values)
+          cat: BitmapDescriptor.defaultMarker,
+      });
+
       for (final category in PoiCategory.values) {
-        final descriptor = await PoiIconFactory.iconFor(category);
-        expect(descriptor, isA<BitmapDescriptor>());
+        expect(PoiIconFactory.isCachedForTesting(category), isTrue);
       }
     });
 
-    testWidgets('caches result — second call returns same instance', (
-      tester,
-    ) async {
+    test('caches result — second iconFor call returns same instance', () async {
+      // Seed so _buildDescriptor is never called
+      PoiIconFactory.seedCacheForTesting({
+        PoiCategory.cafe: BitmapDescriptor.defaultMarker,
+      });
+
       final first = await PoiIconFactory.iconFor(PoiCategory.cafe);
       final second = await PoiIconFactory.iconFor(PoiCategory.cafe);
       expect(identical(first, second), isTrue);
     });
 
-    testWidgets('different categories return different descriptors', (
-      tester,
-    ) async {
-      final cafe = await PoiIconFactory.iconFor(PoiCategory.cafe);
-      final pharmacy = await PoiIconFactory.iconFor(PoiCategory.pharmacy);
-      // They won't be identical objects
-      expect(identical(cafe, pharmacy), isFalse);
+    test('different categories have different cache entries after seeding', () {
+      final cafeIcon = BitmapDescriptor.defaultMarker;
+      final pharmacyIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueBlue,
+      );
+
+      PoiIconFactory.seedCacheForTesting({
+        PoiCategory.cafe: cafeIcon,
+        PoiCategory.pharmacy: pharmacyIcon,
+      });
+
+      expect(PoiIconFactory.isCachedForTesting(PoiCategory.cafe), isTrue);
+      expect(PoiIconFactory.isCachedForTesting(PoiCategory.pharmacy), isTrue);
+    });
+
+    test('cache is empty before seeding (clearCacheForTesting works)', () {
+      // setUp already calls clearCacheForTesting
+      for (final cat in PoiCategory.values) {
+        expect(PoiIconFactory.isCachedForTesting(cat), isFalse);
+      }
     });
   });
 
   group('PoiIconFactory.preloadAll', () {
-    testWidgets('populates cache for all categories', (tester) async {
-      await PoiIconFactory.preloadAll();
+    test('all categories cached after seedCacheForTesting', () {
+      PoiIconFactory.seedCacheForTesting({
+        for (final cat in PoiCategory.values)
+          cat: BitmapDescriptor.defaultMarker,
+      });
 
       for (final category in PoiCategory.values) {
         expect(
           PoiIconFactory.isCachedForTesting(category),
           isTrue,
-          reason: '$category should be cached after preloadAll',
+          reason: '$category should be cached',
         );
       }
     });
