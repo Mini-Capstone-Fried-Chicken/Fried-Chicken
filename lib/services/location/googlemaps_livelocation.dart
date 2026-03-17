@@ -57,6 +57,13 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
+Set<Polyline> mergeMapPolylines({
+  required Set<Polyline> outdoorPolylines,
+  required Set<Polyline> indoorPolylines,
+}) {
+  return {...outdoorPolylines, ...indoorPolylines};
+}
+
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
   final bool isLoggedIn;
