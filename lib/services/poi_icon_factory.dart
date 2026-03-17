@@ -94,7 +94,7 @@ class PoiIconFactory {
     final image = await picture.toImage(canvasSize.toInt(), canvasSize.toInt());
     final pngBytes = await image.toByteData(format: ui.ImageByteFormat.png);
 
-    return BitmapDescriptor.bytes(pngBytes!.buffer.asUint8List());
+    return BitmapDescriptor.bytes(pngBytes!.buffer.asUint8List(), width: 40);
   }
 
   // Testing helpers — not used in production
