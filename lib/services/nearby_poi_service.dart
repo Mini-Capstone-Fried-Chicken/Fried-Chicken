@@ -25,13 +25,6 @@ class PoiPlace {
 class NearbyPoiService {
   NearbyPoiService._();
 
-  // Key is injected at build time via --dart-define=GOOGLE_PLACES_API_KEY=...
-  // Never hardcode the key here — read it from local.properties via run.ps1
-  static const String _apiKey = String.fromEnvironment(
-    'GOOGLE_PLACES_API_KEY',
-    defaultValue: '',
-  );
-
   static const String _baseUrl =
       'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
 
