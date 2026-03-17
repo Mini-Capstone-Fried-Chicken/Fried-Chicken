@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../shared/widgets/map_search_bar.dart';
 import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../data/search_result.dart';
@@ -14,15 +12,12 @@ import '../../data/search_suggestion.dart';
 import '../building_search_service.dart';
 import '../google_places_service.dart';
 import '../google_directions_service.dart';
-import '../../shared/widgets/campus_toggle.dart';
-import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../services/navigation_steps.dart';
 import '../../features/settings/app_settings.dart';
 import '../indoor_maps/indoor_floor_config.dart';
 import 'package:campus_app/utils/geo.dart' as geo;
-import '../../shared/widgets/indoor_floor_dropdown.dart';
 import '../indoor_maps/indoor_map_controller.dart';
 import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
