@@ -37,8 +37,12 @@ const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 const String currentLocationTag = "Current location";
 
-// Replace with the same Google API key used by GooglePlacesService
-const String _googleApiKey = 'AIzaSyD4FGfPTjWLXrSRd6zkqaSloFsdmOVr9dY';
+// Key is injected at build time via --dart-define=GOOGLE_PLACES_API_KEY=...
+// Never hardcode the key here — read it from local.properties via run.ps1
+const String _googleApiKey = String.fromEnvironment(
+  'GOOGLE_PLACES_API_KEY',
+  defaultValue: '',
+);
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
@@ -1381,19 +1385,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     await _loadNearbyPois();
   }
 
-  /// Fetches POIs centred on the current location (SGW and Loyola).
+  /// Fetches POIs centred on SGW and Loyola campuses in parallel.
   Future<void> _loadNearbyPois() async {
     try {
-      // Fetch around both campuses in parallel
       final results = await Future.wait([
-        NearbyPoiService.fetchNearby(
-          concordiaSGW,
-          apiKey: 'AIzaSyD4FGfPTjWLXrSRd6zkqaSloFsdmOVr9dY',
-        ),
-        NearbyPoiService.fetchNearby(
-          concordiaLoyola,
-          apiKey: 'AIzaSyD4FGfPTjWLXrSRd6zkqaSloFsdmOVr9dY',
-        ),
+        NearbyPoiService.fetchNearby(concordiaSGW, apiKey: _googleApiKey),
+        NearbyPoiService.fetchNearby(concordiaLoyola, apiKey: _googleApiKey),
       ]);
 
       // Deduplicate by placeId across both campus results
