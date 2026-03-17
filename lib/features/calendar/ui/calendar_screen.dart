@@ -327,13 +327,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isHighContrast) {
     switch (_step) {
       case CalendarConnectionStep.connect:
         return CalendarConnectView(
           isLoading: _isLoading,
           error: _error,
           onConnect: _connectCalendar,
+          highContrastMode: isHighContrast,
         );
       case CalendarConnectionStep.selectCalendar:
         return CalendarSelectionView(
@@ -346,12 +347,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           },
           onContinue: _continueWithCalendars,
           onSetupPressed: _openSetupScreen,
+          highContrastMode: isHighContrast,
         );
       case CalendarConnectionStep.schedule:
         return CalendarScheduleView(
           selectedCalendarLabel: _selectedCalendarLabel(),
           events: _events,
           onBack: _goToSelection,
+          highContrastMode: isHighContrast,
         );
     }
   }
@@ -420,7 +423,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           body: SafeArea(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: KeyedSubtree(key: ValueKey(_step), child: _buildBody()),
+              child: KeyedSubtree(
+                key: ValueKey(_step),
+                child: _buildBody(isHighContrast),
+              ),
             ),
           ),
         );
