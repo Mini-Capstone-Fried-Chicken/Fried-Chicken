@@ -99,6 +99,28 @@ void main() {
       expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
     });
 
+    testWidgets('large text switch updates shared settings when accessibility mode is enabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          const SettingsScreen(isLoggedIn: true),
+        ),
+      );
+
+      await tester.tap(find.text('Assessibility Mode'));
+      await tester.pumpAndSettle();
+
+      expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
+
+      await tester.ensureVisible(find.text('Large Text'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Large Text'));
+      await tester.pumpAndSettle();
+
+      expect(AppSettingsController.state.largeTextModeEnabled, isTrue);
+    });
+
     testWidgets('calendar access switch updates shared settings state', (tester) async {
       await tester.pumpWidget(
         makeTestableWidget(
@@ -127,6 +149,24 @@ void main() {
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, Colors.black);
       expect(find.text('Sign Out'), findsOneWidget);
+    });
+
+    testWidgets('listens to shared settings updates after initial build', (tester) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          const SettingsScreen(isLoggedIn: true),
+        ),
+      );
+
+      Scaffold scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, Colors.white);
+
+      AppSettingsController.setAccessibilityMode(true);
+      AppSettingsController.setHighContrastMode(true);
+      await tester.pumpAndSettle();
+
+      scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, Colors.black);
     });
 
     testWidgets('default campus segmented control allows switching to Loyola', (tester) async {
