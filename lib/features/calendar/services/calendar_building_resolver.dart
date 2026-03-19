@@ -1,6 +1,9 @@
 import '../../indoor/data/building_info.dart';
 import '../../../data/building_names.dart';
 
+final Map<String, String> normalizedBuildingLookup =
+    buildNormalizedBuildingLookup();
+
 String resolveBuildingCode(String? location) {
   final rawLocation = (location ?? '').trim();
   if (rawLocation.isEmpty) return '';
@@ -10,29 +13,33 @@ String resolveBuildingCode(String? location) {
 
   final normalizedQuery = normalizeBuildingValue(buildingQuery);
 
+  return normalizedBuildingLookup[normalizedQuery] ?? '';
+}
+
+Map<String, String> buildNormalizedBuildingLookup() {
+  final lookup = <String, String>{};
+
   for (final code in buildingInfoByCode.keys) {
-    if (normalizeBuildingValue(code) == normalizedQuery) {
-      return code;
-    }
+    lookup.putIfAbsent(normalizeBuildingValue(code), () => code);
   }
 
   for (final building in concordiaBuildingNames) {
-    if (normalizeBuildingValue(building.code) == normalizedQuery) {
-      return building.code;
-    }
+    lookup.putIfAbsent(
+      normalizeBuildingValue(building.code),
+      () => building.code,
+    );
 
-    if (normalizeBuildingValue(building.name) == normalizedQuery) {
-      return building.code;
-    }
+    lookup.putIfAbsent(
+      normalizeBuildingValue(building.name),
+      () => building.code,
+    );
 
     for (final term in building.searchTerms) {
-      if (normalizeBuildingValue(term) == normalizedQuery) {
-        return building.code;
-      }
+      lookup.putIfAbsent(normalizeBuildingValue(term), () => building.code);
     }
   }
 
-  return '';
+  return lookup;
 }
 
 String extractBuildingQuery(String rawLocation) {
