@@ -156,10 +156,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ??
+    _repository =
+        widget.repository ??
         DefaultCalendarRepositoryAdapter(GoogleCalendarRepository.instance);
     _session =
-        widget.session ?? DefaultCalendarSessionAdapter(GoogleCalendarSession.instance);
+        widget.session ??
+        DefaultCalendarSessionAdapter(GoogleCalendarSession.instance);
     _initializeCalendarState();
   }
 
@@ -310,11 +312,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     if (!widget.isLoggedIn) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Please log in first'),
-        ),
-      );
+      return const Scaffold(body: Center(child: Text('Please log in first')));
     }
 
     return Scaffold(

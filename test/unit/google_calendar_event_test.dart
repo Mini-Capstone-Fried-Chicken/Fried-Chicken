@@ -16,6 +16,7 @@ void main() {
         start: start,
         end: end,
         location: 'Hall A',
+        description: 'H-937',
         calendarId: 'calendar1',
         calendarName: 'School',
         color: color,
@@ -26,6 +27,7 @@ void main() {
       expect(event.start, start);
       expect(event.end, end);
       expect(event.location, 'Hall A');
+      expect(event.description, 'H-937');
       expect(event.calendarId, 'calendar1');
       expect(event.calendarName, 'School');
       expect(event.color, color);
@@ -38,6 +40,7 @@ void main() {
         start: start,
         end: end,
         location: 'Hall A',
+        description: 'H-937',
         calendarId: 'calendar1',
         calendarName: 'School',
         color: color,
@@ -46,12 +49,13 @@ void main() {
       final updated = event.copyWith(
         title: 'Updated Lecture',
         location: 'Hall B',
+        description: 'MB-2.130',
       );
 
       expect(updated.title, 'Updated Lecture');
       expect(updated.location, 'Hall B');
+      expect(updated.description, 'MB-2.130');
 
-      // unchanged fields
       expect(updated.id, event.id);
       expect(updated.start, event.start);
       expect(updated.calendarId, event.calendarId);
@@ -64,6 +68,7 @@ void main() {
         start: start,
         end: end,
         location: 'Hall A',
+        description: 'H-937',
         calendarId: 'calendar1',
         calendarName: 'School',
         color: color,
@@ -76,6 +81,7 @@ void main() {
       expect(updated.start, event.start);
       expect(updated.end, event.end);
       expect(updated.location, event.location);
+      expect(updated.description, event.description);
       expect(updated.calendarId, event.calendarId);
       expect(updated.calendarName, event.calendarName);
       expect(updated.color, event.color);

@@ -6,6 +6,7 @@ class GoogleCalendarEvent {
   final DateTime? start;
   final DateTime? end;
   final String? location;
+  final String? description;
 
   final String calendarId;
   final String calendarName;
@@ -17,6 +18,7 @@ class GoogleCalendarEvent {
     this.start,
     this.end,
     this.location,
+    this.description,
     required this.calendarId,
     required this.calendarName,
     required this.color,
@@ -28,6 +30,7 @@ class GoogleCalendarEvent {
     DateTime? start,
     DateTime? end,
     String? location,
+    String? description,
     String? calendarId,
     String? calendarName,
     Color? color,
@@ -38,6 +41,7 @@ class GoogleCalendarEvent {
       start: start ?? this.start,
       end: end ?? this.end,
       location: location ?? this.location,
+      description: description ?? this.description,
       calendarId: calendarId ?? this.calendarId,
       calendarName: calendarName ?? this.calendarName,
       color: color ?? this.color,
