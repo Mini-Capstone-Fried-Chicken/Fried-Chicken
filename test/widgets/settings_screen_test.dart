@@ -61,7 +61,7 @@ void main() {
 
         expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
 
-        await tester.tap(find.text('Assessibility Mode'));
+        await tester.tap(find.text('Accessibility Mode'));
         await tester.pumpAndSettle();
 
         expect(AppSettingsController.state.accessibilityModeEnabled, isTrue);
@@ -79,7 +79,7 @@ void main() {
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
 
-        await tester.tap(find.text('Assessibility Mode'));
+        await tester.tap(find.text('Accessibility Mode'));
         await tester.pumpAndSettle();
 
         expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
@@ -100,7 +100,7 @@ void main() {
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
 
-        await tester.tap(find.text('Assessibility Mode'));
+        await tester.tap(find.text('Accessibility Mode'));
         await tester.pumpAndSettle();
 
         expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
@@ -204,7 +204,7 @@ void main() {
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
 
-        await tester.tap(find.text('Assessibility Mode'));
+        await tester.tap(find.text('Accessibility Mode'));
         await tester.pumpAndSettle();
 
         final opacityWidgets = tester.widgetList<Opacity>(find.byType(Opacity));
@@ -224,7 +224,7 @@ void main() {
         makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
       );
 
-      await tester.tap(find.text('Assessibility Mode'));
+      await tester.tap(find.text('Accessibility Mode'));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Wheelchair routing as default'));

@@ -213,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text(
-                                'Assessibility Mode',
+                                'Accessibility Mode',
                                 style: TextStyle(color: textColor),
                               ),
                               value: _accessibilityModeEnabled,
