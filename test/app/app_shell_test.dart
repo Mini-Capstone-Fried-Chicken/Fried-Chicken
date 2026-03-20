@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:campus_app/app/app_shell.dart';
+import 'package:campus_app/features/saved/saved_directions_controller.dart';
+import 'package:campus_app/features/saved/saved_place.dart';
 import 'package:campus_app/features/explore/ui/explore_screen.dart';
 import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import 'package:campus_app/features/saved/ui/saved_screen.dart';
@@ -306,6 +308,35 @@ void main() {
         find.byType(Image),
         findsNWidgets(5),
       ); // 4 bottom nav + 1 logo from ExploreScreen
+    });
+
+    testWidgets('saved directions request switches from Saved to Explore', (
+      WidgetTester tester,
+    ) async {
+      SavedDirectionsController.clear();
+
+      await tester.pumpWidget(
+        const MaterialApp(home: AppShell(isLoggedIn: true)),
+      );
+
+      await tester.tap(find.text('Saved'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SavedScreen), findsOneWidget);
+
+      SavedDirectionsController.requestDirections(
+        const SavedPlace(
+          id: 'hall',
+          name: 'Hall Building',
+          category: 'concordia building',
+          latitude: 45.4973,
+          longitude: -73.5789,
+          openingHoursToday: 'Open today: Hours unavailable',
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ExploreScreen), findsOneWidget);
     });
   });
 }

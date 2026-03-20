@@ -223,18 +223,34 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     unawaited(_startDirectionsForSavedPlace(place));
   }
 
+  Future<LatLng> _resolveOriginForSavedDirections() async {
+    if (_currentLocation != null) {
+      return _currentLocation!;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      final origin = LatLng(position.latitude, position.longitude);
+      if (mounted) {
+        setState(() {
+          _currentLocation = origin;
+        });
+      }
+      return origin;
+    } catch (_) {
+      // Fall back to map context when GPS is unavailable/denied.
+    }
+
+    if (_lastCameraTarget != null) {
+      return _lastCameraTarget!;
+    }
+
+    return _selectedCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+  }
+
   Future<void> _startDirectionsForSavedPlace(SavedPlace place) async {
     try {
-      var origin = _currentLocation;
-      if (origin == null) {
-        final position = await Geolocator.getCurrentPosition();
-        origin = LatLng(position.latitude, position.longitude);
-        if (mounted) {
-          setState(() {
-            _currentLocation = origin;
-          });
-        }
-      }
+      final origin = await _resolveOriginForSavedDirections();
 
       final destination = LatLng(place.latitude, place.longitude);
       final selectedBuilding = _findBuildingByCode(place.id);
