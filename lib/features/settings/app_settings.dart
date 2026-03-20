@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @immutable
 class AppSettingsState {
@@ -33,35 +36,89 @@ class AppSettingsState {
 }
 
 class AppSettingsController {
+  static const String _accessibilityModeEnabledKey =
+      'settings_accessibility_mode_enabled';
+  static const String _highContrastModeEnabledKey =
+      'settings_high_contrast_mode_enabled';
+  static const String _largeTextModeEnabledKey =
+      'settings_large_text_mode_enabled';
+  static const String _calendarAccessEnabledKey =
+      'settings_calendar_access_enabled';
+
   static final ValueNotifier<AppSettingsState> notifier =
       ValueNotifier(const AppSettingsState());
 
   static AppSettingsState get state => notifier.value;
 
+  static Future<void> restore() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      notifier.value = AppSettingsState(
+        accessibilityModeEnabled:
+            prefs.getBool(_accessibilityModeEnabledKey) ?? false,
+        highContrastModeEnabled:
+            prefs.getBool(_highContrastModeEnabledKey) ?? false,
+        largeTextModeEnabled: prefs.getBool(_largeTextModeEnabledKey) ?? false,
+        calendarAccessEnabled: prefs.getBool(_calendarAccessEnabledKey) ?? true,
+      );
+    } catch (_) {
+      // Keep defaults when persistence isn't available.
+      notifier.value = const AppSettingsState();
+    }
+  }
+
+  static void _updateState(AppSettingsState newState) {
+    notifier.value = newState;
+    unawaited(_persist(newState));
+  }
+
+  static Future<void> _persist(AppSettingsState newState) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setBool(
+        _accessibilityModeEnabledKey,
+        newState.accessibilityModeEnabled,
+      );
+      await prefs.setBool(
+        _highContrastModeEnabledKey,
+        newState.highContrastModeEnabled,
+      );
+      await prefs.setBool(_largeTextModeEnabledKey, newState.largeTextModeEnabled);
+      await prefs.setBool(
+        _calendarAccessEnabledKey,
+        newState.calendarAccessEnabled,
+      );
+    } catch (_) {
+      // Ignore persistence failures and keep in-memory state.
+    }
+  }
+
   static void setAccessibilityMode(bool enabled) {
-    notifier.value = state.copyWith(
+    _updateState(state.copyWith(
       accessibilityModeEnabled: enabled,
       highContrastModeEnabled: enabled ? state.highContrastModeEnabled : false,
       largeTextModeEnabled: enabled ? state.largeTextModeEnabled : false,
-    );
+    ));
   }
 
   static void setHighContrastMode(bool enabled) {
     if (!state.accessibilityModeEnabled && enabled) {
       return;
     }
-    notifier.value = state.copyWith(highContrastModeEnabled: enabled);
+    _updateState(state.copyWith(highContrastModeEnabled: enabled));
   }
 
   static void setLargeTextMode(bool enabled) {
     if (!state.accessibilityModeEnabled && enabled) {
       return;
     }
-    notifier.value = state.copyWith(largeTextModeEnabled: enabled);
+    _updateState(state.copyWith(largeTextModeEnabled: enabled));
   }
 
   static void setCalendarAccess(bool enabled) {
-    notifier.value = state.copyWith(calendarAccessEnabled: enabled);
+    _updateState(state.copyWith(calendarAccessEnabled: enabled));
   }
 }
 

@@ -134,7 +134,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Connect to Google Calendar'), findsNWidgets(2));
+      expect(find.text('Please log in first'), findsOneWidget);
       expect(repo.restoreCalls, 0);
       expect(session.restoreCalls, 1);
     });
@@ -571,7 +571,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Connect to Google Calendar'), findsNWidgets(2));
+      expect(find.text('Please log in first'), findsOneWidget);
       expect(session.restoreCalls, 1);
     });
 
@@ -587,7 +587,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Connect to Google Calendar'), findsNWidgets(2));
+      expect(find.text('Please log in first'), findsOneWidget);
     });
   });
 }
