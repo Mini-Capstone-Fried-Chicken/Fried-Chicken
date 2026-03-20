@@ -9,30 +9,39 @@ import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
+import '../../features/indoor/data/building_info.dart';
+import '../../services/concordia_shuttle_service.dart';
+import '../../services/navigation_steps.dart';
+import '../../services/nearby_poi_service.dart';
+import '../../services/poi_icon_factory.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
+import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
+import '../../shared/widgets/outdoor/outdoor_map_view.dart';
+import '../../shared/widgets/outdoor/outdoor_top_search.dart';
+import '../../shared/widgets/route_preview_panel.dart';
 import '../building_search_service.dart';
 import '../google_places_service.dart';
 import '../google_directions_service.dart';
-import '../../shared/widgets/route_preview_panel.dart';
-import '../../features/indoor/data/building_info.dart';
-import '../../services/navigation_steps.dart';
 import '../../features/settings/app_settings.dart';
 import '../indoor_maps/indoor_floor_config.dart';
 import 'package:campus_app/utils/geo.dart' as geo;
 import '../indoor_maps/indoor_map_controller.dart';
-import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
-import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
-import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
 import 'package:campus_app/models/campus.dart';
-import '../../shared/widgets/outdoor/outdoor_map_view.dart';
 import '../indoor_maps/indoor_map_repository.dart';
-import '../../shared/widgets/outdoor/outdoor_top_search.dart';
-import '../../services/concordia_shuttle_service.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 const String currentLocationTag = "Current location";
+
+// Key is injected at build time via --dart-define=GOOGLE_PLACES_API_KEY=...
+// Never hardcode the key here — read it from local.properties via run.ps1
+const String _googleApiKey = String.fromEnvironment(
+  'GOOGLE_PLACES_API_KEY',
+  defaultValue: '',
+);
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
@@ -182,6 +191,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   int? _shuttleWalkingMinutes;
   String _shuttleNearestStop = 'SGW';
   BitmapDescriptor? _shuttleStopIcon;
+
+  // POI state
+  List<PoiPlace> _nearbyPois = [];
+  bool _poisLoaded = false;
+  final Map<PoiCategory, BitmapDescriptor> _poiIcons = {};
 
   StreamSubscription<Position>? _posSub;
 
@@ -1150,6 +1164,79 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
   }
 
+  /// Pre-builds all four POI icons then fetches nearby places.
+  Future<void> _initPois() async {
+    for (final category in PoiCategory.values) {
+      _poiIcons[category] = await PoiIconFactory.iconFor(category);
+    }
+    await _loadNearbyPois();
+  }
+
+  /// Fetches POIs centred on SGW and Loyola campuses in parallel.
+  Future<void> _loadNearbyPois() async {
+    try {
+      final results = await Future.wait([
+        NearbyPoiService.fetchNearby(concordiaSGW, apiKey: _googleApiKey),
+        NearbyPoiService.fetchNearby(concordiaLoyola, apiKey: _googleApiKey),
+      ]);
+
+      // Deduplicate by placeId across both campus results
+      final seen = <String>{};
+      final merged = <PoiPlace>[];
+      for (final list in results) {
+        for (final poi in list) {
+          if (seen.add(poi.placeId)) {
+            merged.add(poi);
+          }
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _nearbyPois = merged;
+        _poisLoaded = true;
+      });
+    } catch (e) {
+      print('[POI] Failed to load nearby POIs: $e');
+    }
+  }
+
+  /// Adds a map marker for every loaded POI.
+  void _addPoiMarkers(Set<Marker> markers) {
+    if (!_poisLoaded) return;
+
+    for (final poi in _nearbyPois) {
+      final icon = _poiIcons[poi.category];
+      if (icon == null) continue;
+
+      markers.add(
+        Marker(
+          markerId: MarkerId('poi_${poi.placeId}'),
+          position: poi.location,
+          icon: icon,
+          infoWindow: InfoWindow(
+            title: poi.name,
+            snippet: _poiCategoryLabel(poi.category),
+          ),
+          zIndexInt: 0,
+        ),
+      );
+    }
+  }
+
+  String _poiCategoryLabel(PoiCategory category) {
+    switch (category) {
+      case PoiCategory.cafe:
+        return 'Cafe';
+      case PoiCategory.restaurant:
+        return 'Restaurant';
+      case PoiCategory.pharmacy:
+        return 'Pharmacy';
+      case PoiCategory.depanneur:
+        return 'Dépanneur';
+    }
+  }
+
   /// Walking time + 4 next buses
   Future<void> _fetchShuttleInfo() async {
     final origin = _routeOrigin ?? _currentLocation;
@@ -1696,6 +1783,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
     _determineUserLocationAndBuilding();
+
+    // Initialise POI icons and fetch nearby places
+    _initPois();
   }
 
   Future<void> _determineUserLocationAndBuilding() async {
@@ -1867,6 +1957,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         ),
       );
     }
+
+    _addPoiMarkers(markers);
 
     // Shuttle stop markers
     final shuttleIcon = _shuttleStopIcon;

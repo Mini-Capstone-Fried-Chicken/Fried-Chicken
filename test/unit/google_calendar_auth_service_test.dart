@@ -19,9 +19,7 @@ class FakeGoogleSignInClientAuthorization extends Fake
     implements GoogleSignInClientAuthorization {
   final AuthClient? clientToReturn;
 
-  FakeGoogleSignInClientAuthorization({
-    this.clientToReturn,
-  });
+  FakeGoogleSignInClientAuthorization({this.clientToReturn});
 
   @override
   AuthClient? authClient({required List<String> scopes}) {
@@ -35,9 +33,7 @@ class FakeGoogleSignedInUserGateway implements GoogleSignedInUserGateway {
   List<String>? authorizeScopesArgs;
   List<String>? authorizationForScopesArgs;
 
-  FakeGoogleSignedInUserGateway({
-    this.authorizationToReturn,
-  });
+  FakeGoogleSignedInUserGateway({this.authorizationToReturn});
 
   @override
   Future<GoogleSignInClientAuthorization?> authorizationForScopes(
@@ -54,15 +50,15 @@ class FakeGoogleSignedInUserGateway implements GoogleSignedInUserGateway {
   }
 
   @override
-    AuthClient? authClientFromAuthorization(
-      GoogleSignInClientAuthorization authorization, {
-      List<String>? scopes,
-    }) {
-      if (authorization is FakeGoogleSignInClientAuthorization) {
-        return authorization.clientToReturn;
-      }
-      return null;
+  AuthClient? authClientFromAuthorization(
+    GoogleSignInClientAuthorization authorization, {
+    List<String>? scopes,
+  }) {
+    if (authorization is FakeGoogleSignInClientAuthorization) {
+      return authorization.clientToReturn;
     }
+    return null;
+  }
 }
 
 class FakeGoogleSignInGateway implements GoogleSignInGateway {
@@ -80,10 +76,7 @@ class FakeGoogleSignInGateway implements GoogleSignInGateway {
   bool returnNullAttempt = false;
 
   @override
-  Future<void> initialize({
-    String? clientId,
-    String? serverClientId,
-  }) async {
+  Future<void> initialize({String? clientId, String? serverClientId}) async {
     initializeCalled = true;
     lastClientId = clientId;
     lastServerClientId = serverClientId;
@@ -144,88 +137,109 @@ void main() {
       expect(fakeGateway.lastScopeHint, GoogleCalendarAuthService.scopes);
     });
 
-    test('signIn returns true and authorizes scopes when account exists', () async {
-      final fakeUser = FakeGoogleSignedInUserGateway();
-      fakeGateway.accountToReturn = fakeUser;
+    test(
+      'signIn returns true and authorizes scopes when account exists',
+      () async {
+        final fakeUser = FakeGoogleSignedInUserGateway();
+        fakeGateway.accountToReturn = fakeUser;
 
-      final result = await service.signIn();
+        final result = await service.signIn();
 
-      expect(result, isTrue);
-      expect(fakeUser.authorizeScopesCalled, isTrue);
-      expect(fakeUser.authorizeScopesArgs, GoogleCalendarAuthService.scopes);
-    });
+        expect(result, isTrue);
+        expect(fakeUser.authorizeScopesCalled, isTrue);
+        expect(fakeUser.authorizeScopesArgs, GoogleCalendarAuthService.scopes);
+      },
+    );
 
-    test('restorePreviousSignIn returns false when no account is restored', () async {
-      fakeGateway.returnNullAttempt = true;
+    test(
+      'restorePreviousSignIn returns false when no account is restored',
+      () async {
+        fakeGateway.returnNullAttempt = true;
 
-      final result = await service.restorePreviousSignIn();
+        final result = await service.restorePreviousSignIn();
 
-      expect(result, isFalse);
-      expect(fakeGateway.attemptRestoreCalled, isTrue);
-    });
+        expect(result, isFalse);
+        expect(fakeGateway.attemptRestoreCalled, isTrue);
+      },
+    );
 
-    test('restorePreviousSignIn authorizes scopes when authorization is null', () async {
-      final fakeUser = FakeGoogleSignedInUserGateway(
-        authorizationToReturn: null,
-      );
-      fakeGateway.accountToReturn = fakeUser;
+    test(
+      'restorePreviousSignIn authorizes scopes when authorization is null',
+      () async {
+        final fakeUser = FakeGoogleSignedInUserGateway(
+          authorizationToReturn: null,
+        );
+        fakeGateway.accountToReturn = fakeUser;
 
-      final result = await service.restorePreviousSignIn();
+        final result = await service.restorePreviousSignIn();
 
-      expect(result, isTrue);
-      expect(fakeGateway.attemptRestoreCalled, isTrue);
-      expect(fakeUser.authorizeScopesCalled, isTrue);
-      expect(
-        fakeUser.authorizationForScopesArgs,
-        GoogleCalendarAuthService.scopes,
-      );
-    });
+        expect(result, isTrue);
+        expect(fakeGateway.attemptRestoreCalled, isTrue);
+        expect(fakeUser.authorizeScopesCalled, isTrue);
+        expect(
+          fakeUser.authorizationForScopesArgs,
+          GoogleCalendarAuthService.scopes,
+        );
+      },
+    );
 
-    test('restorePreviousSignIn does not re-authorize when authorization exists', () async {
-      final fakeUser = FakeGoogleSignedInUserGateway(
-        authorizationToReturn: FakeGoogleSignInClientAuthorization(),
-      );
-      fakeGateway.accountToReturn = fakeUser;
+    test(
+      'restorePreviousSignIn does not re-authorize when authorization exists',
+      () async {
+        final fakeUser = FakeGoogleSignedInUserGateway(
+          authorizationToReturn: FakeGoogleSignInClientAuthorization(),
+        );
+        fakeGateway.accountToReturn = fakeUser;
 
-      final result = await service.restorePreviousSignIn();
+        final result = await service.restorePreviousSignIn();
 
-      expect(result, isTrue);
-      expect(fakeUser.authorizeScopesCalled, isFalse);
-    });
+        expect(result, isTrue);
+        expect(fakeUser.authorizeScopesCalled, isFalse);
+      },
+    );
 
-    test('getAuthenticatedClient returns null when no user is signed in', () async {
-      final client = await service.getAuthenticatedClient();
+    test(
+      'getAuthenticatedClient returns null when no user is signed in',
+      () async {
+        final client = await service.getAuthenticatedClient();
 
-      expect(client, isNull);
-    });
+        expect(client, isNull);
+      },
+    );
 
-    test('getAuthenticatedClient returns null when authorization is null', () async {
-      final fakeUser = FakeGoogleSignedInUserGateway(
-        authorizationToReturn: null,
-      );
-      fakeGateway.accountToReturn = fakeUser;
+    test(
+      'getAuthenticatedClient returns null when authorization is null',
+      () async {
+        final fakeUser = FakeGoogleSignedInUserGateway(
+          authorizationToReturn: null,
+        );
+        fakeGateway.accountToReturn = fakeUser;
 
-      await service.signIn();
-      final client = await service.getAuthenticatedClient();
+        await service.signIn();
+        final client = await service.getAuthenticatedClient();
 
-      expect(client, isNull);
-    });
+        expect(client, isNull);
+      },
+    );
 
-    test('getAuthenticatedClient returns auth client when authorization exists', () async {
-      final fakeClient = FakeAuthClient();
-      final fakeAuthorization = FakeGoogleSignInClientAuthorization(
-        clientToReturn: fakeClient,
-      );
-      final fakeUser = FakeGoogleSignedInUserGateway(
-        authorizationToReturn: fakeAuthorization,
-      );
-      fakeGateway.accountToReturn = fakeUser;
+    test(
+      'getAuthenticatedClient returns auth client when authorization exists',
+      () async {
+        final fakeClient = FakeAuthClient();
+        final fakeAuthorization = FakeGoogleSignInClientAuthorization(
+          clientToReturn: fakeClient,
+        );
+        final fakeUser = FakeGoogleSignedInUserGateway(
+          authorizationToReturn: fakeAuthorization,
+        );
+        fakeGateway.accountToReturn = fakeUser;
 
-      await service.signIn();
-      final client = await service.getAuthenticatedClient();
+        await service.signIn();
+        final client = await service.getAuthenticatedClient();
 
-      expect(client, same(fakeClient));
-    });
+        expect(client, same(fakeClient));
+      },
+    );
 
     test('signOut clears user and calls gateway signOut', () async {
       await service.signOut();

@@ -40,8 +40,8 @@ void main() {
     });
 
     test('searchBuilding should match exact names', () {
-      expect(BuildingSearchService.searchBuilding('JSMB Building'), isNotNull);
-      expect(BuildingSearchService.searchBuilding('jsmb building'), isNotNull);
+      expect(BuildingSearchService.searchBuilding('JMSB Building'), isNotNull);
+      expect(BuildingSearchService.searchBuilding('jmsb building'), isNotNull);
       expect(BuildingSearchService.searchBuilding('Hall Building'), isNotNull);
     });
 

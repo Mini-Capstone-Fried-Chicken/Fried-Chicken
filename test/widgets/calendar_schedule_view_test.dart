@@ -1,17 +1,26 @@
 import 'package:campus_app/features/calendar/data/models/google_calendar_event.dart';
 import 'package:campus_app/features/calendar/ui/widgets/calendar_schedule_view.dart';
+import 'package:campus_app/features/calendar/ui/widgets/calendar_event_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 void main() {
   Widget makeTestableWidget(Widget child) {
-    return MaterialApp(
-      home: Scaffold(
-        body: child,
-      ),
-    );
+    return MaterialApp(home: Scaffold(body: child));
   }
+
+  final popupEvent = GoogleCalendarEvent(
+    id: 'popup_1',
+    title: 'SOEN 357 Lecture',
+    start: DateTime(2026, 3, 12, 10, 0),
+    end: DateTime(2026, 3, 12, 11, 15),
+    location: 'Hall Building',
+    description: 'H-937',
+    calendarId: 'cal_popup',
+    calendarName: 'SOEN 357',
+    color: const Color(0xFF8B1E3F),
+  );
 
   final sampleEvents = [
     GoogleCalendarEvent(
@@ -105,14 +114,18 @@ void main() {
         ),
       );
 
-      final weekChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Week'));
-      final dayChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Day'));
-      final monthChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Month'));
-      final scheduleChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Schedule'));
+      final weekChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Week'),
+      );
+      final dayChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Day'),
+      );
+      final monthChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Month'),
+      );
+      final scheduleChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Schedule'),
+      );
 
       expect(weekChip.selected, isTrue);
       expect(dayChip.selected, isFalse);
@@ -134,10 +147,12 @@ void main() {
       await tester.tap(find.widgetWithText(ChoiceChip, 'Day'));
       await tester.pump();
 
-      final dayChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Day'));
-      final weekChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Week'));
+      final dayChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Day'),
+      );
+      final weekChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Week'),
+      );
 
       expect(dayChip.selected, isTrue);
       expect(weekChip.selected, isFalse);
@@ -157,10 +172,12 @@ void main() {
       await tester.tap(find.widgetWithText(ChoiceChip, 'Month'));
       await tester.pump();
 
-      final monthChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Month'));
-      final weekChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Week'));
+      final monthChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Month'),
+      );
+      final weekChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Week'),
+      );
 
       expect(monthChip.selected, isTrue);
       expect(weekChip.selected, isFalse);
@@ -180,10 +197,12 @@ void main() {
       await tester.tap(find.widgetWithText(ChoiceChip, 'Schedule'));
       await tester.pump();
 
-      final scheduleChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Schedule'));
-      final weekChip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Week'));
+      final scheduleChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Schedule'),
+      );
+      final weekChip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Week'),
+      );
 
       expect(scheduleChip.selected, isTrue);
       expect(weekChip.selected, isFalse);
@@ -216,6 +235,196 @@ void main() {
         Colors.white,
       );
     });
-    
+
+    testWidgets('showEventPopup displays popup with event title', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+      state.showEventPopup(popupEvent);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarEventPopup), findsOneWidget);
+      expect(find.text('SOEN 357 Lecture'), findsOneWidget);
+    });
+    testWidgets('popup close button closes the popup', (tester) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+      state.showEventPopup(popupEvent);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarEventPopup), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarEventPopup), findsNothing);
+    });
+    testWidgets('popup Go to Building calls onGoToBuilding callback', (
+      tester,
+    ) async {
+      GoogleCalendarEvent? receivedEvent;
+      String? receivedBuildingCode;
+
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+            onGoToBuilding: (event, buildingCode) {
+              receivedEvent = event;
+              receivedBuildingCode = buildingCode;
+            },
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+      state.showEventPopup(popupEvent);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Go to Building'));
+      await tester.pumpAndSettle();
+
+      expect(receivedEvent, isNotNull);
+      expect(receivedEvent!.id, 'popup_1');
+      expect(receivedBuildingCode, isNotEmpty);
+    });
+    testWidgets('popup Go to Room calls onGoToRoom callback', (tester) async {
+      GoogleCalendarEvent? receivedEvent;
+      String? receivedBuildingCode;
+      String? receivedRoomNumber;
+
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+            onGoToRoom: (event, buildingCode, roomNumber) {
+              receivedEvent = event;
+              receivedBuildingCode = buildingCode;
+              receivedRoomNumber = roomNumber;
+            },
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+      state.showEventPopup(popupEvent);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Go to Room'));
+      await tester.pumpAndSettle();
+
+      expect(receivedEvent, isNotNull);
+      expect(receivedBuildingCode, isNotEmpty);
+      expect(receivedRoomNumber, 'H-937');
+    });
+    testWidgets('popup Save calls onSave callback', (tester) async {
+      GoogleCalendarEvent? receivedEvent;
+      String? receivedBuildingCode;
+
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+            onSave: (event, buildingCode) {
+              receivedEvent = event;
+              receivedBuildingCode = buildingCode;
+            },
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+      state.showEventPopup(popupEvent);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(receivedEvent, isNotNull);
+      expect(receivedBuildingCode, isNotEmpty);
+    });
+    testWidgets('handleCalendarTap ignores non-appointment targets', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+
+      state.handleCalendarTap(
+        CalendarTapDetails(
+          null,
+          DateTime(2026, 3, 12),
+          CalendarElement.calendarCell,
+          null,
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarEventPopup), findsNothing);
+    });
+    testWidgets(
+      'handleCalendarTap ignores appointment list with non calendar event object',
+      (tester) async {
+        await tester.pumpWidget(
+          makeTestableWidget(
+            CalendarScheduleView(
+              selectedCalendarLabel: 'SOEN 357',
+              events: [popupEvent],
+              onBack: () {},
+            ),
+          ),
+        );
+
+        final state =
+            tester.state(find.byType(CalendarScheduleView)) as dynamic;
+
+        state.handleCalendarTap(
+          CalendarTapDetails(
+            <Object>['not an event'],
+            DateTime(2026, 3, 12),
+            CalendarElement.appointment,
+            null,
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CalendarEventPopup), findsNothing);
+      },
+    );
   });
 }
