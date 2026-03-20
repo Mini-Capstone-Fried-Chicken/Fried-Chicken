@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../indoors_routing/core/indoor_route_plan_models.dart';
+import 'indoor_floor_config.dart';
+
 /// Maps building codes to their indoor map asset paths (by floor)
 const Map<String, List<String>> _buildingAssetPaths = {
   'HALL': [
@@ -44,7 +47,32 @@ class IndoorMapRepository {
   @visibleForTesting
   List<String> getAssetPathsForBuilding(String buildingCode) {
     final code = _normalizeBuildingCode(buildingCode);
-    return _buildingAssetPaths[code] ?? [];
+    return IndoorFloorConfig.floorsForBuilding(
+      code,
+    ).map((floor) => floor.assetPath).toList(growable: false);
+  }
+
+  List<IndoorFloorOption> getFloorOptionsForBuilding(String buildingCode) {
+    return IndoorFloorConfig.floorsForBuilding(
+      _normalizeBuildingCode(buildingCode),
+    );
+  }
+
+  Future<List<(IndoorFloorOption option, Map<String, dynamic> geoJson)>>
+  loadFloorsForBuilding(String buildingCode) async {
+    final floors = getFloorOptionsForBuilding(buildingCode);
+    final loaded = <(IndoorFloorOption, Map<String, dynamic>)>[];
+
+    for (final floor in floors) {
+      try {
+        final geoJson = await loadGeoJsonAsset(floor.assetPath);
+        loaded.add((floor, geoJson));
+      } catch (_) {
+        continue;
+      }
+    }
+
+    return loaded;
   }
 
   @visibleForTesting
@@ -72,18 +100,10 @@ class IndoorMapRepository {
   }
 
   Future<List<String>> getRoomCodesForBuilding(String buildingCode) async {
-    final assetPaths = getAssetPathsForBuilding(buildingCode);
-    if (assetPaths.isEmpty) return [];
-
     final rooms = <String>{};
-    for (final assetPath in assetPaths) {
-      try {
-        final geoJson = await loadGeoJsonAsset(assetPath);
-        final roomsInFloor = extractRoomCodesFromGeoJson(geoJson);
-        rooms.addAll(roomsInFloor);
-      } catch (e) {
-        continue;
-      }
+    for (final loadedFloor in await loadFloorsForBuilding(buildingCode)) {
+      final roomsInFloor = extractRoomCodesFromGeoJson(loadedFloor.$2);
+      rooms.addAll(roomsInFloor);
     }
 
     return rooms.toList();
@@ -136,33 +156,46 @@ class IndoorMapRepository {
 
   /// Get the location (center coordinates) of a specific room in a building
   Future<LatLng?> getRoomLocation(String buildingCode, String roomCode) async {
-    final assetPaths = getAssetPathsForBuilding(buildingCode);
-    if (assetPaths.isEmpty) {
-      print('[DEBUG] No asset paths found for building: $buildingCode');
-      return null;
-    }
+    return (await resolveRoom(buildingCode, roomCode))?.center;
+  }
 
-    final searchCode = roomCode.toUpperCase();
-    print('[DEBUG] Searching for room: $searchCode in $buildingCode');
+  Future<IndoorResolvedRoom?> resolveRoom(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    final normalizedBuildingCode = _normalizeBuildingCode(buildingCode);
+    final searchCode = roomCode.toUpperCase().trim();
 
-    for (final assetPath in assetPaths) {
-      try {
-        final geoJson = await loadGeoJsonAsset(assetPath);
-        final features = geoJson['features'] as List?;
-        if (features == null) continue;
-
-        final location = _findRoomLocationInFeatures(features, searchCode);
-        if (location != null) {
-          print('[DEBUG] Room $searchCode found at: $location');
-          return location;
-        }
-      } catch (e) {
-        print('[ERROR] Error loading asset $assetPath: $e');
+    for (final loadedFloor in await loadFloorsForBuilding(
+      normalizedBuildingCode,
+    )) {
+      final option = loadedFloor.$1;
+      final geoJson = loadedFloor.$2;
+      final features = geoJson['features'] as List?;
+      if (features == null) {
         continue;
       }
+
+      final location = _findRoomLocationInFeatures(features, searchCode);
+      if (location == null) {
+        continue;
+      }
+
+      final floorLevel =
+          _extractFloorLevel(features) ??
+          IndoorFloorConfig.normalizeFloorLabel(option.label);
+
+      return IndoorResolvedRoom(
+        buildingCode: normalizedBuildingCode,
+        roomCode: searchCode,
+        floorLabel: option.label,
+        floorLevel: floorLevel,
+        floorAssetPath: option.assetPath,
+        floorGeoJson: geoJson,
+        center: location,
+      );
     }
 
-    print('[ERROR] Room $searchCode not found in $buildingCode');
     return null;
   }
 
@@ -193,6 +226,23 @@ class IndoorMapRepository {
           }
         }
       } catch (e) {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  String? _extractFloorLevel(List<dynamic> features) {
+    for (final feature in features) {
+      try {
+        final featureMap = feature as Map<String, dynamic>;
+        final props = featureMap['properties'] as Map<String, dynamic>?;
+        final level = props?['level']?.toString();
+        if (level != null && level.trim().isNotEmpty) {
+          return level;
+        }
+      } catch (_) {
         continue;
       }
     }
