@@ -714,15 +714,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final dirBtn = find.descendant(
-        of: find.byType(BuildingInfoPopup),
-        matching: find.textContaining('Direction', findRichText: true),
-      );
-      if (dirBtn.evaluate().isNotEmpty) {
-        await tester.tap(dirBtn.first, warnIfMissed: false);
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      expect(find.byType(BuildingInfoPopup), findsOneWidget);
+
+      final dirBtn = find.byKey(const Key('get_directions_button'));
+      expect(dirBtn, findsOneWidget);
+
+      await tester.tap(dirBtn);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
     }
+
 
     testWidgets('RoutePreviewPanel not shown initially', (tester) async {
       await pumpNoMap(tester);
@@ -843,6 +844,7 @@ void main() {
       }
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
+
   });
 
   // --------------------------------------------------------------------------

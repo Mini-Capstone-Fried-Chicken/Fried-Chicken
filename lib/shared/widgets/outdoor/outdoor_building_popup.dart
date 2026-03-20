@@ -17,6 +17,7 @@ class OutdoorBuildingPopup extends StatelessWidget {
   final Future<void> Function(String url) onOpenLink;
 
   final bool isLoggedIn;
+  final bool highContrastMode;
 
   const OutdoorBuildingPopup({
     super.key,
@@ -29,6 +30,7 @@ class OutdoorBuildingPopup extends StatelessWidget {
     required this.onGetDirections,
     required this.onOpenLink,
     required this.isLoggedIn,
+    this.highContrastMode = false,
   });
 
   @override
@@ -57,6 +59,7 @@ class OutdoorBuildingPopup extends StatelessWidget {
           isLoggedIn: isLoggedIn,
           onIndoorMap: onIndoorMap,
           onGetDirections: onGetDirections,
+          highContrastMode: highContrastMode,
         ),
       ),
     );

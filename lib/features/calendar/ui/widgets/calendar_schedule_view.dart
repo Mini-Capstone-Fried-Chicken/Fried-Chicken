@@ -12,6 +12,7 @@ class CalendarScheduleView extends StatefulWidget {
   final String selectedCalendarLabel;
   final List<GoogleCalendarEvent> events;
   final VoidCallback onBack;
+  final bool highContrastMode;
 
   final void Function(GoogleCalendarEvent event, String buildingCode)?
   onGoToBuilding;
@@ -28,6 +29,7 @@ class CalendarScheduleView extends StatefulWidget {
     required this.selectedCalendarLabel,
     required this.events,
     required this.onBack,
+    this.highContrastMode = false,
     this.onGoToBuilding,
     this.onGoToRoom,
     this.onSave,
@@ -42,6 +44,23 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
 
   @override
   Widget build(BuildContext context) {
+    final isHighContrast = widget.highContrastMode;
+    final primaryText = isHighContrast ? Colors.white : Colors.black87;
+    final secondaryText = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
+    final chipSelectedBg = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
+    final chipSelectedText = isHighContrast ? Colors.black : Colors.white;
+    final chipUnselectedBg = isHighContrast ? const Color(0xFF111111) : Colors.white;
+    final chipUnselectedText = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
+    final chipBorder = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
+
     final dataSource = GoogleCalendarDataSource(widget.events);
 
     DateTime initialDate;
@@ -59,16 +78,19 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
             children: [
               IconButton(
                 onPressed: widget.onBack,
-                icon: const Icon(Icons.arrow_back),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: isHighContrast ? const Color(0xFF89D9C2) : null,
+                ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'My Class Schedule',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: primaryText,
                   ),
                 ),
               ),
@@ -81,10 +103,10 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
             alignment: Alignment.centerLeft,
             child: Text(
               widget.selectedCalendarLabel,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF8B1E3F),
+                color: secondaryText,
               ),
             ),
           ),
@@ -107,33 +129,60 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
         const SizedBox(height: 12),
         Expanded(
           child: widget.events.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
                     'No events found in this calendar.',
-                    style: TextStyle(fontSize: 15, color: Colors.black54),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isHighContrast ? Colors.white70 : Colors.black54,
+                    ),
                   ),
                 )
               : SfCalendar(
                   key: ValueKey(_calendarView),
                   view: _calendarView,
                   dataSource: dataSource,
+                  backgroundColor: isHighContrast
+                      ? const Color(0xFF0F0F0F)
+                      : Colors.white,
+                  cellBorderColor: isHighContrast
+                      ? const Color(0x3389D9C2)
+                      : const Color(0x1A000000),
                   initialDisplayDate: initialDate,
                   firstDayOfWeek: 1,
-                  todayHighlightColor: const Color(0xFF8B1E3F),
+                  todayHighlightColor: isHighContrast
+                      ? const Color(0xFF89D9C2)
+                      : const Color(0xFF8B1E3F),
                   specialRegions: buildTodayHighlightRegion(_calendarView),
                   selectionDecoration: BoxDecoration(
                     border: Border.all(
-                      color: const Color(0xFF8B1E3F),
+                      color: isHighContrast
+                          ? const Color(0xFF89D9C2)
+                          : const Color(0xFF8B1E3F),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  headerStyle: const CalendarHeaderStyle(
+                  headerStyle: CalendarHeaderStyle(
+                    backgroundColor: isHighContrast
+                        ? const Color(0xFF89D9C2)
+                        : null,
                     textAlign: TextAlign.center,
                     textStyle: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: isHighContrast ? Colors.black : primaryText,
+                    ),
+                  ),
+                  viewHeaderStyle: ViewHeaderStyle(
+                    backgroundColor: isHighContrast
+                        ? const Color(0xFF89D9C2)
+                        : Colors.white,
+                    dayTextStyle: TextStyle(
+                      color: isHighContrast ? Colors.black54 : Colors.black54,
+                    ),
+                    dateTextStyle: TextStyle(
+                      color: isHighContrast ? Colors.black : Colors.black87,
                     ),
                   ),
                   monthViewSettings: const MonthViewSettings(
@@ -141,10 +190,14 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                         MonthAppointmentDisplayMode.appointment,
                     showAgenda: true,
                   ),
-                  timeSlotViewSettings: const TimeSlotViewSettings(
+                  timeSlotViewSettings: TimeSlotViewSettings(
                     startHour: 8,
                     endHour: 22,
                     timeIntervalHeight: 60,
+                    timeTextStyle: TextStyle(
+                      color: isHighContrast ? Colors.white : Colors.black54,
+                      fontSize: 12,
+                    ),
                     minimumAppointmentDuration: Duration(minutes: 45),
                   ),
                   onTap: handleCalendarTap,
@@ -209,7 +262,20 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
   }
 
   Widget _viewChip(String label, CalendarView view) {
+    final isHighContrast = widget.highContrastMode;
     final isSelected = _calendarView == view;
+
+    final selectedColor = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
+    final selectedText = isHighContrast ? Colors.black : Colors.white;
+    final unselectedText = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
+    final backgroundColor = isHighContrast ? const Color(0xFF111111) : Colors.white;
+    final borderColor = isHighContrast
+      ? const Color(0xFF89D9C2)
+      : const Color(0xFF8B1E3F);
 
     return ChoiceChip(
       label: Text(label),
@@ -219,13 +285,13 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
           _calendarView = view;
         });
       },
-      selectedColor: const Color(0xFF8B1E3F),
+      selectedColor: selectedColor,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : const Color(0xFF8B1E3F),
+        color: isSelected ? selectedText : unselectedText,
         fontWeight: FontWeight.w600,
       ),
-      backgroundColor: Colors.white,
-      side: const BorderSide(color: Color(0xFF8B1E3F)),
+      backgroundColor: backgroundColor,
+      side: BorderSide(color: borderColor),
     );
   }
 }

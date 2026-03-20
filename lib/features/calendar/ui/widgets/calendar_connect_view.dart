@@ -4,16 +4,24 @@ class CalendarConnectView extends StatelessWidget {
   final bool isLoading;
   final String? error;
   final VoidCallback onConnect;
+  final bool highContrastMode;
 
   const CalendarConnectView({
     super.key,
     required this.isLoading,
     required this.error,
     required this.onConnect,
+    this.highContrastMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final primaryText = highContrastMode ? Colors.white : Colors.black87;
+    final secondaryText = highContrastMode ? Colors.white70 : Colors.black54;
+    final cardBg = highContrastMode ? const Color(0xFF89D9C2) : Colors.grey.shade100;
+    final buttonBg = highContrastMode ? const Color(0xFF89D9C2) : const Color(0xFF7F1D3A);
+    final buttonFg = highContrastMode ? Colors.black : Colors.white;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
       child: Column(
@@ -24,13 +32,13 @@ class CalendarConnectView extends StatelessWidget {
             height: 70,
           ),
           const SizedBox(height: 48),
-          const Text(
+          Text(
             'Connect to Google Calendar',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: primaryText,
             ),
           ),
           const SizedBox(height: 28),
@@ -38,7 +46,7 @@ class CalendarConnectView extends StatelessWidget {
             width: 110,
             height: 110,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: cardBg,
               borderRadius: BorderRadius.circular(24),
             ),
             child: Image.asset(
@@ -47,12 +55,12 @@ class CalendarConnectView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 28),
-          const Text(
+          Text(
             'Connect your Google Calendar to import your class events and get directions to your next class.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
-              color: Colors.black54,
+              color: secondaryText,
               height: 1.5,
             ),
           ),
@@ -74,20 +82,20 @@ class CalendarConnectView extends StatelessWidget {
             child: ElevatedButton(
               onPressed: isLoading ? null : onConnect,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7F1D3A),
-                foregroundColor: Colors.white,
+                backgroundColor: buttonBg,
+                foregroundColor: buttonFg,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.4,
-                        color: Colors.white,
+                        color: buttonFg,
                       ),
                     )
                   : const Text(

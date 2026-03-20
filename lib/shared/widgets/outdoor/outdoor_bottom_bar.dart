@@ -7,6 +7,7 @@ import 'package:campus_app/models/campus.dart';
 class OutdoorBottomBar extends StatelessWidget {
   final bool showRoutePreview;
   final bool isNavigating;
+  final bool highContrastMode;
 
   final Campus selectedCampus;
   final void Function(Campus) onCampusChanged;
@@ -29,6 +30,7 @@ class OutdoorBottomBar extends StatelessWidget {
     super.key,
     required this.showRoutePreview,
     required this.isNavigating,
+    this.highContrastMode = false,
     required this.selectedCampus,
     required this.onCampusChanged,
     required this.selectedTravelMode,
@@ -55,6 +57,7 @@ class OutdoorBottomBar extends StatelessWidget {
             child: RouteTravelModeBar(
               selectedTravelMode: selectedTravelMode,
               onTravelModeSelected: onTravelModeSelected,
+              highContrastMode: highContrastMode,
               modeDurations: routeDurations,
               isLoadingDurations: isLoadingRouteData,
               onClose: onCloseRoutePreview,
@@ -80,6 +83,7 @@ class OutdoorBottomBar extends StatelessWidget {
           child: CampusToggle(
             currentCampus: selectedCampus,
             onCampusChanged: onCampusChanged,
+            highContrastMode: highContrastMode,
           ),
         ),
       ),

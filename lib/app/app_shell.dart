@@ -1,11 +1,10 @@
 import "package:flutter/material.dart";
+import '../features/settings/app_settings.dart';
 
 import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import "../features/explore/ui/explore_screen.dart";
 import "../features/saved/ui/saved_screen.dart";
 import "../features/settings/ui/settings_screen.dart";
-
-const Color burgundy = Color(0xFF76263D);
 
 class AppShell extends StatefulWidget {
   final bool isLoggedIn;
@@ -62,18 +61,29 @@ class _AppShellState extends State<AppShell> {
             ),
           ];
 
-    return Scaffold(
-      body: pages[currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) => setState(() => currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: burgundy,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        items: items,
-      ),
+    return ValueListenableBuilder<AppSettingsState>(
+      valueListenable: AppSettingsController.notifier,
+      builder: (context, settings, _) {
+        return Scaffold(
+          body: pages[currentIndex],
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: (index) => setState(() => currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppUiColors.primary(
+              highContrastEnabled: settings.highContrastModeEnabled,
+            ),
+            selectedItemColor: settings.highContrastModeEnabled
+                ? Colors.black
+                : Colors.white,
+            unselectedItemColor: settings.highContrastModeEnabled
+                ? Colors.black54
+                : Colors.white70,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            items: items,
+          ),
+        );
+      },
     );
   }
 }

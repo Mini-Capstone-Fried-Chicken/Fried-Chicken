@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
 
 import '../data/models/calendar_connection_state.dart';
 import '../data/models/google_calendar_event.dart';
@@ -309,58 +310,130 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '${selected.length} calendars selected';
   }
 
+  Future<void> _goToSelection() async {
+    _repository.goToSelection();
+    setState(() {
+      _step = CalendarConnectionStep.selectCalendar;
+      _error = null;
+    });
+    await _saveSession();
+  }
+
+  void _openSetupScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const GoogleCalendarSetupScreen(),
+      ),
+    );
+  }
+  Widget _buildBody(bool isHighContrast) {
+    switch (_step) {
+      case CalendarConnectionStep.connect:
+        return CalendarConnectView(
+          isLoading: _isLoading,
+          error: _error,
+          onConnect: _connectCalendar,
+          highContrastMode: isHighContrast,
+        );
+      case CalendarConnectionStep.selectCalendar:
+        return CalendarSelectionView(
+          isLoading: _isLoading,
+          error: _error,
+          calendars: _calendars,
+          selectedCalendarIds: _selectedCalendarIds,
+          onCalendarToggled: (calendar) {
+            _toggleCalendarSelection(calendar);
+          },
+          onContinue: _continueWithCalendars,
+          onSetupPressed: _openSetupScreen,
+          highContrastMode: isHighContrast,
+        );
+      case CalendarConnectionStep.schedule:
+        return CalendarScheduleView(
+          selectedCalendarLabel: _selectedCalendarLabel(),
+          events: _events,
+          onBack: _goToSelection,
+          highContrastMode: isHighContrast,
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.isLoggedIn) {
       return const Scaffold(body: Center(child: Text('Please log in first')));
     }
 
-    return Scaffold(
-      body: SafeArea(
-        child: Builder(
-          builder: (context) {
-            switch (_step) {
-              case CalendarConnectionStep.connect:
-                return CalendarConnectView(
-                  isLoading: _isLoading,
-                  error: _error,
-                  onConnect: _connectCalendar,
-                );
+    return ValueListenableBuilder<AppSettingsState>(
+      valueListenable: AppSettingsController.notifier,
+      builder: (context, settings, _) {
+        final isHighContrast = settings.highContrastModeEnabled;
 
-              case CalendarConnectionStep.selectCalendar:
-                return CalendarSelectionView(
-                  isLoading: _isLoading,
-                  error: _error,
-                  calendars: _calendars,
-                  selectedCalendarIds: _selectedCalendarIds,
-                  onCalendarToggled: _toggleCalendarSelection,
-                  onContinue: _continueWithCalendars,
-                  onSetupPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const GoogleCalendarSetupScreen(),
+        if (!settings.calendarAccessEnabled) {
+          return Scaffold(
+            backgroundColor: isHighContrast
+                ? Colors.black
+                : const Color(0xFFF9F4F6),
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_outlined,
+                        size: 64,
+                        color: isHighContrast
+                            ? const Color(0xFF89D9C2)
+                            : Colors.grey.shade400,
                       ),
-                    );
-                  },
-                );
+                      const SizedBox(height: 16),
+                      Text(
+                        'Calendar access is disabled',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: isHighContrast
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'To use the calendar, enable Calendar Access in the Settings tab.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isHighContrast
+                              ? Colors.white70
+                              : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
 
-              case CalendarConnectionStep.schedule:
-                return CalendarScheduleView(
-                  selectedCalendarLabel: _selectedCalendarLabel(),
-                  events: _events,
-                  onBack: () async {
-                    _repository.goToSelection();
-                    setState(() {
-                      _step = CalendarConnectionStep.selectCalendar;
-                    });
-                    await _saveSession();
-                  },
-                );
-            }
-          },
-        ),
-      ),
+        return Scaffold(
+          backgroundColor: isHighContrast
+              ? Colors.black
+              : const Color(0xFFF9F4F6),
+          body: SafeArea(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: KeyedSubtree(
+                key: ValueKey(_step),
+                child: _buildBody(isHighContrast),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
