@@ -15,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _defaultCampus = 'SGW';
+  String _defaultCampus = AppSettingsState.defaultCampusSgw;
   bool _accessibilityModeEnabled = false;
   bool _calendarAccessEnabled = true;
 
@@ -31,6 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _highContrastMode = state.highContrastModeEnabled;
       _largeTextMode = state.largeTextModeEnabled;
       _calendarAccessEnabled = state.calendarAccessEnabled;
+      _defaultCampus = state.defaultCampus;
     });
   }
 
@@ -204,9 +205,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                               ),
                               onSelectionChanged: (selection) {
+                                final selectedCampus = selection.first;
                                 setState(() {
-                                  _defaultCampus = selection.first;
+                                  _defaultCampus = selectedCampus;
                                 });
+                                AppSettingsController.setDefaultCampus(
+                                  selectedCampus,
+                                );
                               },
                             ),
                             const SizedBox(height: 10),

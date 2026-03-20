@@ -178,7 +178,31 @@ void main() {
       );
 
       expect(segmentedButton.selected, {'Loyola'});
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusLoyola,
+      );
     });
+
+    testWidgets(
+      'default campus segmented control reflects shared default campus on load',
+      (tester) async {
+        AppSettingsController.notifier.value = const AppSettingsState(
+          defaultCampus: AppSettingsState.defaultCampusLoyola,
+        );
+
+        await tester.pumpWidget(
+          makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
+        );
+        await tester.pumpAndSettle();
+
+        final segmentedButton = tester.widget<SegmentedButton<String>>(
+          find.byType(SegmentedButton<String>),
+        );
+
+        expect(segmentedButton.selected, {'Loyola'});
+      },
+    );
 
     testWidgets(
       'accessibility section is dimmed and non-interactive when mode is off',

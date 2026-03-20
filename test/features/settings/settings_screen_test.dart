@@ -40,7 +40,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
 
-      await tester.tap(find.text('Assessibility Mode'));
+      await tester.tap(find.text('Accessibility Mode'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Large Text'));
       await tester.pumpAndSettle();

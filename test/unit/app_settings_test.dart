@@ -1,4 +1,5 @@
 import 'package:campus_app/features/settings/app_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -16,6 +17,10 @@ void main() {
       expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
       expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
       expect(AppSettingsController.state.calendarAccessEnabled, isTrue);
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusSgw,
+      );
     });
 
     test('setAccessibilityMode(false) clears high contrast and large text', () {
@@ -60,6 +65,46 @@ void main() {
 
       AppSettingsController.setCalendarAccess(true);
       expect(AppSettingsController.state.calendarAccessEnabled, isTrue);
+    });
+
+    test('setDefaultCampus updates state and normalizes invalid values', () {
+      AppSettingsController.setDefaultCampus(AppSettingsState.defaultCampusLoyola);
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusLoyola,
+      );
+
+      AppSettingsController.setDefaultCampus('invalid-campus');
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusSgw,
+      );
+    });
+
+    test('restore loads persisted default campus from shared preferences', () async {
+      SharedPreferences.setMockInitialValues({
+        'settings_default_campus': AppSettingsState.defaultCampusLoyola,
+      });
+
+      await AppSettingsController.restore();
+
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusLoyola,
+      );
+    });
+
+    test('setDefaultCampus persists to shared preferences', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      AppSettingsController.setDefaultCampus(AppSettingsState.defaultCampusLoyola);
+      await Future<void>.delayed(Duration.zero);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('settings_default_campus'),
+        AppSettingsState.defaultCampusLoyola,
+      );
     });
   });
 

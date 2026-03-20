@@ -5,16 +5,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 @immutable
 class AppSettingsState {
+  static const String defaultCampusSgw = 'SGW';
+  static const String defaultCampusLoyola = 'Loyola';
+
   final bool accessibilityModeEnabled;
   final bool highContrastModeEnabled;
   final bool largeTextModeEnabled;
   final bool calendarAccessEnabled;
+  final String defaultCampus;
 
   const AppSettingsState({
     this.accessibilityModeEnabled = false,
     this.highContrastModeEnabled = false,
     this.largeTextModeEnabled = false,
     this.calendarAccessEnabled = true,
+    this.defaultCampus = defaultCampusSgw,
   });
 
   AppSettingsState copyWith({
@@ -22,6 +27,7 @@ class AppSettingsState {
     bool? highContrastModeEnabled,
     bool? largeTextModeEnabled,
     bool? calendarAccessEnabled,
+    String? defaultCampus,
   }) {
     return AppSettingsState(
       accessibilityModeEnabled:
@@ -31,6 +37,7 @@ class AppSettingsState {
       largeTextModeEnabled: largeTextModeEnabled ?? this.largeTextModeEnabled,
       calendarAccessEnabled:
           calendarAccessEnabled ?? this.calendarAccessEnabled,
+      defaultCampus: defaultCampus ?? this.defaultCampus,
     );
   }
 }
@@ -44,6 +51,7 @@ class AppSettingsController {
       'settings_large_text_mode_enabled';
   static const String _calendarAccessEnabledKey =
       'settings_calendar_access_enabled';
+  static const String _defaultCampusKey = 'settings_default_campus';
 
   static final ValueNotifier<AppSettingsState> notifier =
       ValueNotifier(const AppSettingsState());
@@ -61,6 +69,9 @@ class AppSettingsController {
             prefs.getBool(_highContrastModeEnabledKey) ?? false,
         largeTextModeEnabled: prefs.getBool(_largeTextModeEnabledKey) ?? false,
         calendarAccessEnabled: prefs.getBool(_calendarAccessEnabledKey) ?? true,
+        defaultCampus: _normalizeDefaultCampus(
+          prefs.getString(_defaultCampusKey),
+        ),
       );
     } catch (_) {
       // Keep defaults when persistence isn't available.
@@ -90,9 +101,20 @@ class AppSettingsController {
         _calendarAccessEnabledKey,
         newState.calendarAccessEnabled,
       );
+      await prefs.setString(
+        _defaultCampusKey,
+        _normalizeDefaultCampus(newState.defaultCampus),
+      );
     } catch (_) {
       // Ignore persistence failures and keep in-memory state.
     }
+  }
+
+  static String _normalizeDefaultCampus(String? value) {
+    if (value == AppSettingsState.defaultCampusLoyola) {
+      return AppSettingsState.defaultCampusLoyola;
+    }
+    return AppSettingsState.defaultCampusSgw;
   }
 
   static void setAccessibilityMode(bool enabled) {
@@ -119,6 +141,12 @@ class AppSettingsController {
 
   static void setCalendarAccess(bool enabled) {
     _updateState(state.copyWith(calendarAccessEnabled: enabled));
+  }
+
+  static void setDefaultCampus(String campus) {
+    _updateState(
+      state.copyWith(defaultCampus: _normalizeDefaultCampus(campus)),
+    );
   }
 }
 
