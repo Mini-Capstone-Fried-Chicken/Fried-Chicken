@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -1499,11 +1500,76 @@ void main() {
   // 24. Saved directions flow (lines 224-290)
   // =========================================================================
   group('Saved directions request flow', () {
-    testWidgets('requesting directions with concordia building is accepted by listener', (
+    const geolocatorChannel = MethodChannel('flutter.baseflow.com/geolocator');
+
+    Future<void> mockGeolocatorSuccess() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(geolocatorChannel, (MethodCall call) async {
+            switch (call.method) {
+              case 'isLocationServiceEnabled':
+                return true;
+              case 'checkPermission':
+                return 3;
+              case 'requestPermission':
+                return 3;
+              case 'getCurrentPosition':
+                return {
+                  'latitude': 45.4973,
+                  'longitude': -73.5789,
+                  'accuracy': 10.0,
+                  'altitude': 0.0,
+                  'speed': 0.0,
+                  'speed_accuracy': 0.0,
+                  'heading': 0.0,
+                  'timestamp': DateTime.now().millisecondsSinceEpoch,
+                  'floor': null,
+                  'is_mocked': false,
+                };
+              default:
+                return null;
+            }
+          });
+    }
+
+    Future<void> mockGeolocatorFailure() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(geolocatorChannel, (MethodCall call) async {
+            switch (call.method) {
+              case 'isLocationServiceEnabled':
+                return false;
+              case 'checkPermission':
+                return 0;
+              case 'requestPermission':
+                return 0;
+              case 'getCurrentPosition':
+                throw PlatformException(code: 'UNAVAILABLE');
+              default:
+                return null;
+            }
+          });
+    }
+
+    tearDown(() async {
+      SavedDirectionsController.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(geolocatorChannel, null);
+    });
+
+    testWidgets('uses current location branch when directions are requested after location resolves', (
       tester,
     ) async {
+      await mockGeolocatorSuccess();
+
+      await pumpPage(
+        tester,
+        initialCampus: Campus.sgw,
+      );
+
+      // Allow init location requests to populate _currentLocation first.
+      await tester.pump(const Duration(milliseconds: 120));
+
       final target = firstBuilding;
-      SavedDirectionsController.notifier.value =
+      SavedDirectionsController.requestDirections(
         SavedPlace(
           id: target.code,
           name: target.name,
@@ -1511,22 +1577,20 @@ void main() {
           latitude: target.center.latitude,
           longitude: target.center.longitude,
           openingHoursToday: 'Open today: Hours unavailable',
-      );
-
-      await pumpPage(
-        tester,
-        initialCampus: Campus.sgw,
+        ),
       );
 
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(SavedDirectionsController.notifier.value, isNotNull);
+      expect(SavedDirectionsController.notifier.value, isNull);
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('requesting directions with non-building id is accepted by listener', (
+    testWidgets('falls back to last camera target when geolocator cannot provide origin', (
       tester,
     ) async {
+      await mockGeolocatorFailure();
+
       SavedDirectionsController.notifier.value = const SavedPlace(
           id: 'non_concordia_place',
           name: 'Coffee Shop',
@@ -1543,13 +1607,15 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(SavedDirectionsController.notifier.value, isNotNull);
+      expect(SavedDirectionsController.notifier.value, isNull);
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
 
-    testWidgets('invalid saved place coordinates path does not crash widget', (
+    testWidgets('invalid destination coordinates hit catch/finally path and clear notifier', (
       tester,
     ) async {
+      await mockGeolocatorFailure();
+
       SavedDirectionsController.notifier.value = const SavedPlace(
           id: 'broken_place',
           name: 'Broken Place',
@@ -1563,7 +1629,7 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(SavedDirectionsController.notifier.value, isNotNull);
+      expect(SavedDirectionsController.notifier.value, isNull);
       expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
   });
