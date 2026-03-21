@@ -13,23 +13,27 @@
 // - Replicate pure-logic algorithms at the test level and validate them.
 // - Drive navigation, transit segment, and indoor map code paths.
 
-import 'dart:async';
-
+import 'package:campus_app/data/building_polygons.dart';
+import 'package:campus_app/features/indoor/data/building_info.dart';
+import 'package:campus_app/models/campus.dart';
+import 'package:campus_app/services/google_directions_service.dart';
+import 'package:campus_app/services/indoor_maps/indoor_floor_config.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_controller.dart';
+import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
+import 'package:campus_app/services/location/googlemaps_livelocation.dart';
+import 'package:campus_app/services/location/indoor_navigation_session.dart';
+import 'package:campus_app/services/location/indoor_route_service.dart';
+import 'package:campus_app/services/navigation_steps.dart';
+import 'package:campus_app/shared/widgets/building_info_popup.dart';
+import 'package:campus_app/shared/widgets/campus_toggle.dart';
+import 'package:campus_app/shared/widgets/map_search_bar.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:campus_app/shared/widgets/route_preview_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-
-import 'package:campus_app/services/location/googlemaps_livelocation.dart';
-import 'package:campus_app/data/building_polygons.dart';
-import 'package:campus_app/shared/widgets/campus_toggle.dart';
-import 'package:campus_app/shared/widgets/building_info_popup.dart';
-import 'package:campus_app/shared/widgets/route_preview_panel.dart';
-import 'package:campus_app/services/google_directions_service.dart';
-import 'package:campus_app/services/navigation_steps.dart';
-import 'package:campus_app/features/indoor/data/building_info.dart';
-import 'package:campus_app/models/campus.dart';
 
 // ============================================================================
 // GoogleMap MethodChannel mock
@@ -138,6 +142,8 @@ Future<void> pumpWithMap(
   BuildingPolygon? debugSelectedBuilding,
   Offset? debugAnchorOffset,
   String? debugLinkOverride,
+  IndoorRouteService? debugIndoorRouteService,
+  IndoorMapController? debugIndoorMapController,
 }) async {
   _setupGoogleMapsMock();
   _setupGeolocatorMock();
@@ -150,6 +156,8 @@ Future<void> pumpWithMap(
         debugSelectedBuilding: debugSelectedBuilding,
         debugAnchorOffset: debugAnchorOffset,
         debugLinkOverride: debugLinkOverride,
+        debugIndoorRouteService: debugIndoorRouteService,
+        debugIndoorMapController: debugIndoorMapController,
       ),
     ),
   );
@@ -164,6 +172,8 @@ Future<void> pumpNoMap(
   BuildingPolygon? debugSelectedBuilding,
   Offset? debugAnchorOffset,
   String? debugLinkOverride,
+  IndoorRouteService? debugIndoorRouteService,
+  IndoorMapController? debugIndoorMapController,
 }) async {
   _setupGeolocatorMock();
 
@@ -177,6 +187,8 @@ Future<void> pumpNoMap(
         debugSelectedBuilding: debugSelectedBuilding,
         debugAnchorOffset: debugAnchorOffset,
         debugLinkOverride: debugLinkOverride,
+        debugIndoorRouteService: debugIndoorRouteService,
+        debugIndoorMapController: debugIndoorMapController,
       ),
     ),
   );
@@ -184,6 +196,203 @@ Future<void> pumpNoMap(
 }
 
 BuildingPolygon get firstBuilding => buildingPolygons.first;
+BuildingPolygon get hallBuilding =>
+    buildingPolygons.firstWhere((b) => b.code.toUpperCase() == 'HALL');
+const _hallFloor8Asset = 'assets/indoor_maps/geojson/Hall/h8.geojson.json';
+const _hallFloor9Asset = 'assets/indoor_maps/geojson/Hall/h9.geojson.json';
+
+IndoorNavigationSession _fakeHallIndoorSession() {
+  final originRoom = IndoorResolvedRoom(
+    buildingCode: 'HALL',
+    roomCode: '803',
+    floorLabel: '8',
+    floorLevel: '8',
+    floorAssetPath: _hallFloor8Asset,
+    floorGeoJson: const {'type': 'FeatureCollection', 'features': []},
+    center: const LatLng(45.49770, -73.57870),
+  );
+  final destinationRoom = IndoorResolvedRoom(
+    buildingCode: 'HALL',
+    roomCode: '909',
+    floorLabel: '9',
+    floorLevel: '9',
+    floorAssetPath: _hallFloor9Asset,
+    floorGeoJson: const {'type': 'FeatureCollection', 'features': []},
+    center: const LatLng(45.49755, -73.57845),
+  );
+
+  final routePlan = IndoorRoutePlan(
+    buildingCode: 'HALL',
+    originRoomCode: '803',
+    destinationRoomCode: '909',
+    originRoom: originRoom,
+    destinationRoom: destinationRoom,
+    segments: const [
+      IndoorRouteSegment(
+        kind: IndoorRouteSegmentKind.walk,
+        floorAssetPath: _hallFloor8Asset,
+        floorLabel: '8',
+        points: [
+          LatLng(45.49770, -73.57870),
+          LatLng(45.49766, -73.57863),
+          LatLng(45.49763, -73.57858),
+        ],
+      ),
+      IndoorRouteSegment(
+        kind: IndoorRouteSegmentKind.transition,
+        floorAssetPath: _hallFloor9Asset,
+        floorLabel: '9',
+        points: const [],
+        transitionMode: IndoorTransitionMode.stairs,
+        instruction: 'Take the stairs from floor 8 to floor 9',
+      ),
+      IndoorRouteSegment(
+        kind: IndoorRouteSegmentKind.walk,
+        floorAssetPath: _hallFloor9Asset,
+        floorLabel: '9',
+        points: [
+          LatLng(45.49760, -73.57855),
+          LatLng(45.49758, -73.57850),
+          LatLng(45.49755, -73.57845),
+        ],
+      ),
+    ],
+    totalDistanceMeters: 48,
+  );
+
+  return IndoorNavigationSession(
+    routePlan: routePlan,
+    steps: const [
+      NavigationStep(
+        instruction: 'Walk ahead',
+        travelMode: 'walking',
+        distanceText: '8 m',
+        durationText: '1 min',
+        maneuver: 'straight',
+        points: [LatLng(45.49770, -73.57870), LatLng(45.49766, -73.57863)],
+        indoorFloorAssetPath: _hallFloor8Asset,
+        indoorFloorLabel: '8',
+      ),
+      NavigationStep(
+        instruction: 'Turn right',
+        travelMode: 'walking',
+        distanceText: '6 m',
+        durationText: '1 min',
+        maneuver: 'turn-right',
+        points: [LatLng(45.49766, -73.57863), LatLng(45.49763, -73.57858)],
+        indoorFloorAssetPath: _hallFloor8Asset,
+        indoorFloorLabel: '8',
+      ),
+      NavigationStep(
+        instruction: 'Take the stairs from floor 8 to floor 9',
+        travelMode: 'walking',
+        indoorTransitionMode: 'stairs',
+        points: [LatLng(45.49760, -73.57855)],
+        indoorFloorAssetPath: _hallFloor9Asset,
+        indoorFloorLabel: '9',
+      ),
+      NavigationStep(
+        instruction: 'Turn left',
+        travelMode: 'walking',
+        distanceText: '7 m',
+        durationText: '1 min',
+        maneuver: 'turn-left',
+        points: [LatLng(45.49760, -73.57855), LatLng(45.49758, -73.57850)],
+        indoorFloorAssetPath: _hallFloor9Asset,
+        indoorFloorLabel: '9',
+      ),
+      NavigationStep(
+        instruction: 'Arrive at your destination room',
+        travelMode: 'walking',
+        points: [LatLng(45.49755, -73.57845)],
+        indoorFloorAssetPath: _hallFloor9Asset,
+        indoorFloorLabel: '9',
+      ),
+    ],
+    polylinesByFloorAsset: {
+      _hallFloor8Asset: {
+        const Polyline(
+          polylineId: PolylineId('indoor_walk_8'),
+          points: [
+            LatLng(45.49770, -73.57870),
+            LatLng(45.49766, -73.57863),
+            LatLng(45.49763, -73.57858),
+          ],
+        ),
+      },
+      _hallFloor9Asset: {
+        const Polyline(
+          polylineId: PolylineId('indoor_walk_9'),
+          points: [
+            LatLng(45.49760, -73.57855),
+            LatLng(45.49758, -73.57850),
+            LatLng(45.49755, -73.57845),
+          ],
+        ),
+      },
+    },
+    originMarker: const Marker(
+      markerId: MarkerId('origin_room'),
+      position: LatLng(45.49770, -73.57870),
+    ),
+    destinationMarker: const Marker(
+      markerId: MarkerId('destination_room'),
+      position: LatLng(45.49755, -73.57845),
+    ),
+    initialFloorAssetPath: _hallFloor8Asset,
+    distanceText: '48 m',
+    durationText: '2 min',
+  );
+}
+
+class _FakeIndoorRouteService extends IndoorRouteService {
+  final IndoorNavigationSession session;
+
+  _FakeIndoorRouteService(this.session);
+
+  @override
+  Future<IndoorNavigationSession?> buildIndoorNavigationSession({
+    required String buildingCode,
+    required String originRoomCode,
+    required String destinationRoomCode,
+  }) async {
+    return session;
+  }
+}
+
+class _FakeIndoorMapController extends IndoorMapController {
+  @override
+  List<IndoorFloorOption> floorsForBuilding(String buildingCode) {
+    return const [
+      IndoorFloorOption(label: '8', assetPath: _hallFloor8Asset),
+      IndoorFloorOption(label: '9', assetPath: _hallFloor9Asset),
+    ];
+  }
+
+  @override
+  Future<IndoorLoadResult> loadFloor(String assetPath) async {
+    return IndoorLoadResult(
+      polygons: const {},
+      labels: const {},
+      amenityIcons: const {},
+      geoJson: const {'type': 'FeatureCollection', 'features': []},
+    );
+  }
+}
+
+Future<void> _pumpUntilFound(
+  WidgetTester tester,
+  Finder finder, {
+  int maxPumps = 20,
+  Duration step = const Duration(milliseconds: 150),
+}) async {
+  for (var i = 0; i < maxPumps; i++) {
+    await tester.pump(step);
+    if (finder.evaluate().isNotEmpty) {
+      return;
+    }
+  }
+}
 
 // ============================================================================
 // Algorithm replicas – used to verify behaviour matches source code
@@ -1741,6 +1950,159 @@ void main() {
         expect(find.byType(BuildingInfoPopup), findsOneWidget);
       }
     });
+  });
+
+  // --------------------------------------------------------------------------
+  // 30. Indoor manual navigation flow
+  // --------------------------------------------------------------------------
+  group('Indoor manual navigation flow', () {
+    testWidgets('supported indoor map loads room fields and floor dropdown', (
+      tester,
+    ) async {
+      await pumpNoMap(
+        tester,
+        debugSelectedBuilding: hallBuilding,
+        debugAnchorOffset: const Offset(200, 400),
+        isLoggedIn: true,
+        debugIndoorRouteService: _FakeIndoorRouteService(
+          _fakeHallIndoorSession(),
+        ),
+        debugIndoorMapController: _FakeIndoorMapController(),
+      );
+      await tester.pumpAndSettle();
+
+      final popup = find.byType(BuildingInfoPopup);
+      final indoorButton = find.descendant(
+        of: popup,
+        matching: find.byIcon(Icons.map),
+      );
+
+      expect(indoorButton, findsOneWidget);
+
+      await tester.tap(indoorButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Origin Room'), findsOneWidget);
+      expect(find.text('Destination Room'), findsOneWidget);
+      expect(find.byType(RoomFieldsSection), findsOneWidget);
+    });
+
+    testWidgets(
+      'multi-floor indoor route supports steps, next, previous, and stop',
+      (tester) async {
+        await pumpNoMap(
+          tester,
+          debugSelectedBuilding: hallBuilding,
+          debugAnchorOffset: const Offset(200, 400),
+          isLoggedIn: true,
+          debugIndoorRouteService: _FakeIndoorRouteService(
+            _fakeHallIndoorSession(),
+          ),
+          debugIndoorMapController: _FakeIndoorMapController(),
+        );
+        await tester.pumpAndSettle();
+
+        final popup = find.byType(BuildingInfoPopup);
+        final indoorButton = find.descendant(
+          of: popup,
+          matching: find.byIcon(Icons.map),
+        );
+        await tester.tap(indoorButton);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final roomFields = find.descendant(
+          of: find.byType(MapSearchBar),
+          matching: find.byType(TextField),
+        );
+        final originField = roomFields.at(1);
+        final destinationField = roomFields.at(2);
+        final roomSection = tester.widget<RoomFieldsSection>(
+          find.byType(RoomFieldsSection),
+        );
+
+        await tester.tap(originField);
+        await tester.enterText(originField, '803');
+        await tester.tap(destinationField);
+        await tester.enterText(destinationField, '909');
+
+        final originResult = roomSection.onOriginRoomSubmitted?.call(
+          'HALL',
+          '803',
+        );
+        if (originResult is Future<void>) {
+          await originResult;
+        }
+
+        final destinationResult = roomSection.onDestinationRoomSubmitted?.call(
+          'HALL',
+          '909',
+        );
+        if (destinationResult is Future<void>) {
+          await destinationResult;
+        }
+        await _pumpUntilFound(tester, find.text('Next Step'));
+
+        expect(find.text('Next Step'), findsOneWidget);
+        expect(find.text('Stop'), findsOneWidget);
+        expect(find.text('Steps'), findsOneWidget);
+        expect(find.textContaining('Floor 8'), findsWidgets);
+
+        await tester.tap(find.text('Steps'));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Indoor'), findsWidgets);
+        Navigator.of(tester.element(find.byType(OutdoorMapPage))).pop();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final progressFinder = find.textContaining('/');
+        expect(progressFinder, findsOneWidget);
+        final initialProgress = tester.widget<Text>(progressFinder).data;
+
+        await tester.tap(find.text('Next Step'));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final previousButton = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Previous'),
+        );
+        expect(previousButton.onPressed, isNotNull);
+
+        final progressedLabel = tester.widget<Text>(progressFinder).data;
+        expect(progressedLabel, isNot(equals(initialProgress)));
+
+        await tester.tap(find.text('Previous'));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(tester.widget<Text>(progressFinder).data, initialProgress);
+
+        await tester.tap(find.text('Next Step'));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        var reachedFloorNine = find
+            .textContaining('Floor 9')
+            .evaluate()
+            .isNotEmpty;
+        for (var i = 0; i < 12 && !reachedFloorNine; i++) {
+          final nextButton = tester.widget<ElevatedButton>(
+            find.widgetWithText(ElevatedButton, 'Next Step'),
+          );
+          if (nextButton.onPressed == null) {
+            break;
+          }
+
+          await tester.tap(find.text('Next Step'));
+          await tester.pump(const Duration(milliseconds: 300));
+          reachedFloorNine = find
+              .textContaining('Floor 9')
+              .evaluate()
+              .isNotEmpty;
+        }
+
+        expect(reachedFloorNine, isTrue);
+
+        await tester.tap(find.text('Stop'));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Next Step'), findsNothing);
+        expect(find.text('Stop'), findsNothing);
+      },
+    );
   });
 }
 

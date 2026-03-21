@@ -95,6 +95,12 @@ class OutdoorMapPage extends StatefulWidget {
   @visibleForTesting
   final String? debugLinkOverride;
 
+  @visibleForTesting
+  final IndoorRouteService? debugIndoorRouteService;
+
+  @visibleForTesting
+  final IndoorMapController? debugIndoorMapController;
+
   const OutdoorMapPage({
     super.key,
     required this.initialCampus,
@@ -103,6 +109,8 @@ class OutdoorMapPage extends StatefulWidget {
     this.debugDisableMap = false,
     this.debugDisableLocation = false,
     this.debugLinkOverride,
+    this.debugIndoorRouteService,
+    this.debugIndoorMapController,
     required this.isLoggedIn,
   });
 
@@ -111,7 +119,7 @@ class OutdoorMapPage extends StatefulWidget {
 }
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
-  final IndoorRouteService _indoorRouteService = IndoorRouteService();
+  late final IndoorRouteService _indoorRouteService;
   final IndoorManualNavigationController _indoorNavigationController =
       IndoorManualNavigationController();
   final TextEditingController _searchController = TextEditingController();
@@ -127,7 +135,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _showIndoor = false;
   List<IndoorFloorOption> _indoorFloors = const [];
   String? _selectedIndoorFloorAsset;
-  final IndoorMapController _indoorController = IndoorMapController();
+  late final IndoorMapController _indoorController;
 
   // --- Indoor floors state ---
   GoogleMapController? _mapController;
@@ -2001,12 +2009,24 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   @override
   void initState() {
     super.initState();
+    _indoorRouteService =
+        widget.debugIndoorRouteService ?? IndoorRouteService();
+    _indoorController =
+        widget.debugIndoorMapController ?? IndoorMapController();
 
     _highContrastMode = AppSettingsController.state.highContrastModeEnabled;
     AppSettingsController.notifier.addListener(_onAppSettingsChanged);
     _indoorNavigationController.addListener(_onIndoorNavigationChanged);
 
     _selectedCampus = widget.initialCampus;
+
+    if (widget.debugDisableMap && widget.debugSelectedBuilding != null) {
+      _selectedBuildingPoly = widget.debugSelectedBuilding;
+      _selectedBuildingCenter = geo.polygonCenter(
+        widget.debugSelectedBuilding!.points,
+      );
+      _anchorOffset = widget.debugAnchorOffset ?? const Offset(200, 420);
+    }
 
     _lastCameraTarget = widget.initialCampus == Campus.loyola
         ? concordiaLoyola
