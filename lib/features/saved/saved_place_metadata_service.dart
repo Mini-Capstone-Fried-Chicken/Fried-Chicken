@@ -9,6 +9,8 @@ typedef SavedPlaceMetadataResolver = Future<PlaceResult?> Function({
   required LatLng location,
 });
 
+const String _concordiaBuildingCategory = 'concordia building';
+
 class SavedPlaceMetadataService {
   SavedPlaceMetadataService._();
 
@@ -33,7 +35,7 @@ class SavedPlaceMetadataService {
 
       if (metadata == null) {
         if (isConcordiaBuilding) {
-          return place.copyWith(category: 'concordia building');
+          return place.copyWith(category: _concordiaBuildingCategory);
         }
         return place;
       }
@@ -46,7 +48,7 @@ class SavedPlaceMetadataService {
       final openingHours = _todayOpeningHours(metadata.weekdayDescriptions);
 
       final resolvedCategory = isConcordiaBuilding
-          ? 'concordia building'
+          ? _concordiaBuildingCategory
           : (category ?? place.category);
 
       return place.copyWith(
@@ -56,7 +58,7 @@ class SavedPlaceMetadataService {
       );
     } catch (_) {
       if (isConcordiaBuilding) {
-        return place.copyWith(category: 'concordia building');
+        return place.copyWith(category: _concordiaBuildingCategory);
       }
       return place;
     }
@@ -115,7 +117,7 @@ class SavedPlaceMetadataService {
     }
 
     if (tokenized == 'university' || tokenized == 'school' || tokenized == 'college') {
-      return 'concordia building';
+      return _concordiaBuildingCategory;
     }
 
     return tokenized.replaceAll('_', ' ');
