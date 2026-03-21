@@ -1,6 +1,9 @@
+import 'package:campus_app/features/saved/saved_place.dart';
+import 'package:campus_app/features/saved/saved_places_controller.dart';
 import 'package:campus_app/shared/widgets/building_info_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('BuildingInfoPopup Widget Tests', () {
@@ -10,9 +13,20 @@ void main() {
     setUp(() {
       closePressed = false;
       morePressed = false;
+      SharedPreferences.setMockInitialValues({});
+      SavedPlacesController.debugSetUserIdResolver(() => null);
+      SavedPlacesController.notifier.value = const <SavedPlace>[];
     });
 
-    Widget createPopupUnderTest({required bool isLoggedIn}) {
+    tearDown(() {
+      SavedPlacesController.debugResetUserIdResolver();
+      SavedPlacesController.notifier.value = const <SavedPlace>[];
+    });
+
+    Widget createPopupUnderTest({
+      required bool isLoggedIn,
+      SavedPlace? savedPlace,
+    }) {
       return MaterialApp(
         home: Scaffold(
           body: BuildingInfoPopup(
@@ -26,6 +40,7 @@ void main() {
             },
             isLoggedIn: isLoggedIn,
             onGetDirections: () {},
+            savedPlace: savedPlace,
           ),
         ),
       );
@@ -109,6 +124,72 @@ void main() {
       await tester.pump();
 
       expect(find.byIcon(Icons.bookmark), findsOneWidget);
+    });
+
+    testWidgets('close button stays right aligned without facility icons', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(createPopupUnderTest(isLoggedIn: true));
+
+      final saveRect = tester.getRect(find.byIcon(Icons.bookmark_border));
+      final closeRect = tester.getRect(find.byIcon(Icons.close));
+
+      expect(closeRect.left, greaterThan(saveRect.right + 120));
+    });
+
+    testWidgets('recognizes saved place alias with places/ prefix', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'saved_places__anonymous':
+            '[{"id":"abc123","name":"Cafe","category":"cafe","latitude":45.5,"longitude":-73.5,"openingHoursToday":"Open today: Hours unavailable"}]',
+      });
+
+      const savedPlace = SavedPlace(
+        id: 'places/abc123',
+        name: 'Cafe',
+        category: 'cafe',
+        latitude: 45.5,
+        longitude: -73.5,
+        openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await tester.pumpWidget(
+        createPopupUnderTest(isLoggedIn: true, savedPlace: savedPlace),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.bookmark), findsOneWidget);
+    });
+
+    testWidgets('unsave removes all id aliases', (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({
+        'saved_places__anonymous':
+            '[{"id":"abc123","name":"Cafe","category":"cafe","latitude":45.5,"longitude":-73.5,"openingHoursToday":"Open today: Hours unavailable"},{"id":"places/abc123","name":"Cafe","category":"cafe","latitude":45.5,"longitude":-73.5,"openingHoursToday":"Open today: Hours unavailable"}]',
+      });
+
+      const savedPlace = SavedPlace(
+        id: 'places/abc123',
+        name: 'Cafe',
+        category: 'cafe',
+        latitude: 45.5,
+        longitude: -73.5,
+        openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await tester.pumpWidget(
+        createPopupUnderTest(isLoggedIn: true, savedPlace: savedPlace),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.bookmark), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('save_toggle_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+      expect(SavedPlacesController.isSaved('abc123'), isFalse);
+      expect(SavedPlacesController.isSaved('places/abc123'), isFalse);
     });
 
     testWidgets('close button triggers onClose callback', (

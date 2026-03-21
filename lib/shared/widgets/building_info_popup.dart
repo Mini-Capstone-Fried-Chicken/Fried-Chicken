@@ -73,10 +73,36 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     _syncSavedState();
   }
 
+  Set<String> _savedIdAliases(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return const <String>{};
+
+    final aliases = <String>{trimmed};
+    if (trimmed.startsWith('places/')) {
+      aliases.add(trimmed.substring('places/'.length));
+    } else {
+      aliases.add('places/$trimmed');
+    }
+    return aliases;
+  }
+
+  bool _isAnyAliasSaved(String id) {
+    final aliases = _savedIdAliases(id);
+    if (aliases.isEmpty) return false;
+    return aliases.any(SavedPlacesController.isSaved);
+  }
+
+  Future<void> _removeAllAliases(String id) async {
+    final aliases = _savedIdAliases(id);
+    for (final alias in aliases) {
+      await SavedPlacesController.removePlace(alias);
+    }
+  }
+
   void _syncSavedState() {
     final placeId = widget.savedPlace?.id;
     if (placeId == null || !mounted) return;
-    final savedNow = SavedPlacesController.isSaved(placeId);
+    final savedNow = _isAnyAliasSaved(placeId);
     if (savedNow != _isSaved) {
       setState(() {
         _isSaved = savedNow;
@@ -94,11 +120,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       return;
     }
     await SavedPlacesController.ensureInitialized();
-    final alreadySaved = SavedPlacesController.isSaved(place.id);
+    final alreadySaved = _isAnyAliasSaved(place.id);
 
     bool isSavedNow;
     if (alreadySaved) {
-      await SavedPlacesController.removePlace(place.id);
+      await _removeAllAliases(place.id);
       isSavedNow = false;
     } else {
       final enriched = await SavedPlaceMetadataService.enrichFromGoogle(place);
@@ -316,16 +342,17 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                   ),
                   const SizedBox(width: 6),
                 ],
-                if (topIcons.isNotEmpty)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 2),
-                      child: Wrap(
-                        spacing: -15,
-                        runSpacing: -15,
-                        children: topIcons,
-                      ),
-                    ),
+                Expanded(
+                  child: topIcons.isEmpty
+                      ? const SizedBox.shrink()
+                      : Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: Wrap(
+                            spacing: -15,
+                            runSpacing: -15,
+                            children: topIcons,
+                          ),
+                        ),
                   ),
                 Tooltip(
                   message: 'Close',
