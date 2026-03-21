@@ -18,6 +18,7 @@ import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
 import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
 import '../../shared/widgets/outdoor/outdoor_map_view.dart';
+import '../../shared/widgets/outdoor/outdoor_poi_popup.dart';
 import '../../shared/widgets/outdoor/outdoor_top_search.dart';
 import '../../shared/widgets/route_preview_panel.dart';
 import '../building_search_service.dart';
@@ -196,6 +197,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   List<PoiPlace> _nearbyPois = [];
   bool _poisLoaded = false;
   final Map<PoiCategory, BitmapDescriptor> _poiIcons = {};
+  PoiPlace? _selectedPoi;
 
   StreamSubscription<Position>? _posSub;
 
@@ -430,6 +432,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = b;
       _selectedBuildingCenter = center;
+      _selectedPoi = null;
       _anchorOffset = null;
       _cameraMoving = true;
       _clearIndoorState();
@@ -459,6 +462,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
       _selectedSearchResult = null;
+      _selectedPoi = null;
       _anchorOffset = null;
       _routePolylines = {};
       _showRoutePreview = false;
@@ -879,6 +883,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       //reset indoor map and building selection state
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
       _anchorOffset = null;
       _destinationRoomMarker = null;
       _originRoomController.clear();
@@ -1219,9 +1224,53 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             snippet: _poiCategoryLabel(poi.category),
           ),
           zIndexInt: 0,
+          onTap: () => _onPoiTapped(poi),
         ),
       );
     }
+  }
+
+  void _onPoiTapped(PoiPlace poi) {
+    setState(() {
+      _selectedPoi = poi;
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+    });
+  }
+
+  void _closePoiPopup() {
+    setState(() {
+      _selectedPoi = null;
+    });
+  }
+
+  Future<void> _getDirectionsToPoi() async {
+    final poi = _selectedPoi;
+    if (poi == null) return;
+
+    final origin = _currentLocation;
+    if (origin == null) {
+      print('[ERROR] Cannot get directions: Current location is null');
+      return;
+    }
+
+    final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
+    setState(() {
+      _selectedPoi = null;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _showRoutePreview = true;
+      _routeOrigin = origin;
+      _routeDestination = poi.location;
+      _routeOriginText = currentLocationTag;
+      _routeDestinationText = poi.name;
+      _routeOriginBuildingCode = currentBuildingCode;
+      _routeDestinationBuildingCode = null;
+    });
+
+    await _fetchRoutesAndDurations();
   }
 
   String _poiCategoryLabel(PoiCategory category) {
@@ -2364,6 +2413,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onGetDirections: _getDirections,
               onOpenLink: _openLink,
               isLoggedIn: widget.isLoggedIn,
+              highContrastMode: _highContrastMode,
+            ),
+
+          if (_selectedPoi != null && !_showRoutePreview)
+            OutdoorPoiPopup(
+              poi: _selectedPoi!,
+              onClose: _closePoiPopup,
+              onGetDirections: _getDirectionsToPoi,
               highContrastMode: _highContrastMode,
             ),
 
