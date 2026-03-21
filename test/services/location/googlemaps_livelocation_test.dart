@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/data/building_polygons.dart';
+import 'package:campus_app/features/saved/saved_directions_controller.dart';
+import 'package:campus_app/features/saved/saved_place.dart';
 import 'package:campus_app/shared/widgets/campus_toggle.dart';
 import 'package:campus_app/shared/widgets/map_search_bar.dart';
 import 'package:campus_app/shared/widgets/building_info_popup.dart';
@@ -1490,6 +1492,79 @@ void main() {
       final result = formatArrivalTime(secs);
       expect(result, isNotNull);
       expect(result!.startsWith('0:'), isFalse);
+    });
+  });
+
+  // =========================================================================
+  // 24. Saved directions flow (lines 224-290)
+  // =========================================================================
+  group('Saved directions request flow', () {
+    testWidgets('requesting directions with concordia building is accepted by listener', (
+      tester,
+    ) async {
+      final target = firstBuilding;
+      SavedDirectionsController.notifier.value =
+        SavedPlace(
+          id: target.code,
+          name: target.name,
+          category: 'concordia building',
+          latitude: target.center.latitude,
+          longitude: target.center.longitude,
+          openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await pumpPage(
+        tester,
+        initialCampus: Campus.sgw,
+      );
+
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(SavedDirectionsController.notifier.value, isNotNull);
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
+    });
+
+    testWidgets('requesting directions with non-building id is accepted by listener', (
+      tester,
+    ) async {
+      SavedDirectionsController.notifier.value = const SavedPlace(
+          id: 'non_concordia_place',
+          name: 'Coffee Shop',
+          category: 'cafe',
+          latitude: 45.497,
+          longitude: -73.579,
+          openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await pumpPage(
+        tester,
+        initialCampus: Campus.loyola,
+      );
+
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(SavedDirectionsController.notifier.value, isNotNull);
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
+    });
+
+    testWidgets('invalid saved place coordinates path does not crash widget', (
+      tester,
+    ) async {
+      SavedDirectionsController.notifier.value = const SavedPlace(
+          id: 'broken_place',
+          name: 'Broken Place',
+          category: 'all',
+          latitude: 200,
+          longitude: -73.579,
+          openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await pumpPage(tester);
+
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(SavedDirectionsController.notifier.value, isNotNull);
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
   });
 
