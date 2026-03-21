@@ -126,6 +126,22 @@ void main() {
 
       expect(step.transitLabel, 'Transit River Shuttle');
     });
+
+    test('indoor fields are preserved for manual indoor navigation', () {
+      const step = NavigationStep(
+        instruction: 'Take the elevator',
+        travelMode: 'walking',
+        indoorFloorAssetPath: 'floor_9',
+        indoorFloorLabel: '9',
+        indoorTransitionMode: 'elevator',
+        points: [LatLng(45.0, -73.0)],
+      );
+
+      expect(step.indoorFloorAssetPath, 'floor_9');
+      expect(step.indoorFloorLabel, '9');
+      expect(step.indoorTransitionMode, 'elevator');
+      expect(step.startPoint, const LatLng(45.0, -73.0));
+    });
   });
 
   group('NavigationStepsSheet widgets', () {
@@ -234,6 +250,30 @@ void main() {
       expect(find.byIcon(Icons.straight), findsOneWidget);
       expect(find.byIcon(Icons.directions_subway), findsOneWidget);
       expect(find.byIcon(Icons.navigation), findsOneWidget);
+    });
+
+    testWidgets('renders indoor transition icons for stairs and elevator', (
+      tester,
+    ) async {
+      final steps = [
+        const NavigationStep(
+          instruction: 'Take the stairs',
+          travelMode: 'walking',
+          indoorTransitionMode: 'stairs',
+        ),
+        const NavigationStep(
+          instruction: 'Take the elevator',
+          travelMode: 'walking',
+          indoorTransitionMode: 'elevator',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        makeApp(NavigationStepsSheet(title: 'Indoor', steps: steps)),
+      );
+
+      expect(find.byIcon(Icons.stairs), findsOneWidget);
+      expect(find.byIcon(Icons.elevator), findsOneWidget);
     });
 
     testWidgets(
@@ -371,6 +411,49 @@ void main() {
 
       expect(find.text('Turn right on Pine Ave'), findsOneWidget);
       expect(find.text('80 m'), findsOneWidget);
+    });
+
+    testWidgets('shows indoor floor label and manual previous/next controls', (
+      tester,
+    ) async {
+      var previousTapped = false;
+      var nextTapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NavigationNextStepHeader(
+              modeLabel: 'Indoor',
+              nextStep: const NavigationStep(
+                instruction: 'Take the stairs',
+                travelMode: 'walking',
+                indoorFloorLabel: '9',
+                indoorTransitionMode: 'stairs',
+                points: [LatLng(45.0, -73.0)],
+              ),
+              onStop: () {},
+              onShowSteps: () {},
+              onPrevious: () => previousTapped = true,
+              onNext: () => nextTapped = true,
+              canGoPrevious: true,
+              canGoNext: true,
+              progressLabel: '5/11',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Floor 9'), findsOneWidget);
+      expect(find.text('5/11'), findsOneWidget);
+      expect(find.text('Previous'), findsOneWidget);
+      expect(find.text('Next Step'), findsOneWidget);
+
+      await tester.tap(find.text('Previous'));
+      await tester.tap(find.text('Next Step'));
+      await tester.pump();
+
+      expect(previousTapped, isTrue);
+      expect(nextTapped, isTrue);
     });
   });
 }

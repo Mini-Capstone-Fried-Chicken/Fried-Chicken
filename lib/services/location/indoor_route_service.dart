@@ -124,6 +124,15 @@ class IndoorRouteService {
     );
   }
 
+  Marker buildIndoorProgressMarker(LatLng point, {String? title}) {
+    return Marker(
+      markerId: const MarkerId('indoor_progress'),
+      position: point,
+      infoWindow: InfoWindow(title: title ?? 'Current step'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+    );
+  }
+
   Set<Polyline> buildIndoorRoutePolylines(
     List<LatLng> routePoints, {
     String polylineId = 'indoor_same_floor_route',
@@ -221,6 +230,7 @@ class IndoorRouteService {
           travelMode: 'walking',
           indoorFloorAssetPath: floorAssetPath,
           indoorFloorLabel: floorLabel,
+          points: routePoints.isEmpty ? const [] : [routePoints.last],
         ),
       );
     }
@@ -275,6 +285,7 @@ class IndoorRouteService {
           steps.addAll(summary.steps);
           break;
         case IndoorRouteSegmentKind.transition:
+          final transitionPoint = _transitionStepPoint(routePlan.segments, i);
           steps.add(
             NavigationStep(
               instruction:
@@ -284,6 +295,7 @@ class IndoorRouteService {
               indoorFloorAssetPath: segment.floorAssetPath,
               indoorFloorLabel: segment.floorLabel,
               indoorTransitionMode: _transitionModeName(segment.transitionMode),
+              points: transitionPoint == null ? const [] : [transitionPoint],
             ),
           );
           break;
@@ -300,6 +312,26 @@ class IndoorRouteService {
       IndoorTransitionMode.escalator => 'escalator',
       null => null,
     };
+  }
+
+  LatLng? _transitionStepPoint(List<IndoorRouteSegment> segments, int index) {
+    for (var i = index + 1; i < segments.length; i++) {
+      final nextSegment = segments[i];
+      if (nextSegment.kind == IndoorRouteSegmentKind.walk &&
+          nextSegment.points.isNotEmpty) {
+        return nextSegment.points.first;
+      }
+    }
+
+    for (var i = index - 1; i >= 0; i--) {
+      final previousSegment = segments[i];
+      if (previousSegment.kind == IndoorRouteSegmentKind.walk &&
+          previousSegment.points.isNotEmpty) {
+        return previousSegment.points.last;
+      }
+    }
+
+    return null;
   }
 
   String _metersText(double meters) {

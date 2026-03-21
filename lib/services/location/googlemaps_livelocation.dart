@@ -262,10 +262,26 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       await _loadIndoorFloor(displayedFloorAssetPath);
     }
 
+    final currentStep = _currentIndoorStep;
+    final progressPoint =
+        currentStep?.startPoint ??
+        (displayedFloorAssetPath ==
+                session.routePlan.destinationRoom.floorAssetPath
+            ? session.routePlan.destinationRoom.center
+            : session.routePlan.originRoom.center);
+    final showDestinationMarker =
+        displayedFloorAssetPath ==
+        session.routePlan.destinationRoom.floorAssetPath;
+
     if (!mounted) return;
     setState(() {
-      _originRoomMarker = session.originMarker;
-      _destinationRoomMarker = session.destinationMarker;
+      _originRoomMarker = _indoorRouteService.buildIndoorProgressMarker(
+        progressPoint,
+        title: currentStep?.instruction,
+      );
+      _destinationRoomMarker = showDestinationMarker
+          ? session.destinationMarker
+          : null;
       _routePolylines = displayedFloorAssetPath == null
           ? {}
           : session.polylinesByFloorAsset[displayedFloorAssetPath] ?? {};
@@ -1998,28 +2014,53 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     _createBlueDotIcon();
     _createShuttleStopIcon();
-    _determineUserLocationAndBuilding().then((_) {
-      _startLocationUpdates();
-    });
+    _bootstrapLocationState();
 
     _searchController.addListener(_onSearchChanged);
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
-    _determineUserLocationAndBuilding();
 
     // Initialise POI icons and fetch nearby places
     _initPois();
   }
 
+  Future<void> _bootstrapLocationState() async {
+    await _determineUserLocationAndBuilding();
+    if (!mounted) return;
+    await _startLocationUpdates();
+  }
+
   Future<void> _determineUserLocationAndBuilding() async {
-    final position = await Geolocator.getCurrentPosition();
-    _currentLocation = LatLng(position.latitude, position.longitude);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return;
+      }
 
-    final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
 
-    setState(() {
-      _currentBuildingCode = buildingAtLocation?.code;
-    });
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final currentLocation = LatLng(position.latitude, position.longitude);
+      final buildingAtLocation = _findBuildingAtLocation(currentLocation);
+
+      if (!mounted) return;
+      setState(() {
+        _currentLocation = currentLocation;
+        _currentCampus = detectCampus(currentLocation);
+        _currentBuildingPoly = detectBuildingPoly(currentLocation);
+        _currentBuildingCode = buildingAtLocation?.code;
+      });
+    } catch (_) {
+      return;
+    }
   }
 
   BuildingPolygon? _findBuildingAtLocation(LatLng location) {

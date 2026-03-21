@@ -149,6 +149,24 @@ class IndoorMultiFloorRouter {
       return null;
     }
 
+    final originTransitionNode = _nodeById(
+      originNodes,
+      bestCandidate.transitionCandidate.originNodeId,
+    );
+    final destinationTransitionNode = _nodeById(
+      destinationNodes,
+      bestCandidate.transitionCandidate.destinationNodeId,
+    );
+
+    final originWalkPath = _trimTrailingTransitionCenter(
+      bestCandidate.originWalkPath,
+      originTransitionNode,
+    );
+    final destinationWalkPath = _trimLeadingTransitionCenter(
+      bestCandidate.destinationWalkPath,
+      destinationTransitionNode,
+    );
+
     final transitionInstruction = _transitionInstruction(
       mode: bestCandidate.transitionCandidate.mode,
       originFloorLabel: originRoom.floorLabel,
@@ -166,7 +184,7 @@ class IndoorMultiFloorRouter {
           kind: IndoorRouteSegmentKind.walk,
           floorAssetPath: originRoom.floorAssetPath,
           floorLabel: originRoom.floorLabel,
-          points: bestCandidate.originWalkPath,
+          points: originWalkPath,
         ),
         IndoorRouteSegment(
           kind: IndoorRouteSegmentKind.transition,
@@ -182,13 +200,52 @@ class IndoorMultiFloorRouter {
           kind: IndoorRouteSegmentKind.walk,
           floorAssetPath: destinationRoom.floorAssetPath,
           floorLabel: destinationRoom.floorLabel,
-          points: bestCandidate.destinationWalkPath,
+          points: destinationWalkPath,
         ),
       ],
       totalDistanceMeters:
-          geometry.polylineLengthMeters(bestCandidate.originWalkPath) +
-          geometry.polylineLengthMeters(bestCandidate.destinationWalkPath),
+          geometry.polylineLengthMeters(originWalkPath) +
+          geometry.polylineLengthMeters(destinationWalkPath),
     );
+  }
+
+  IndoorRoutingNode? _nodeById(List<IndoorRoutingNode> nodes, int nodeId) {
+    for (final node in nodes) {
+      if (node.id == nodeId) {
+        return node;
+      }
+    }
+    return null;
+  }
+
+  List<LatLng> _trimLeadingTransitionCenter(
+    List<LatLng> path,
+    IndoorRoutingNode? transitionNode,
+  ) {
+    if (transitionNode == null || path.length < 2) {
+      return path;
+    }
+
+    if (!geometry.areSameLatLng(path.first, transitionNode.center)) {
+      return path;
+    }
+
+    return path.sublist(1);
+  }
+
+  List<LatLng> _trimTrailingTransitionCenter(
+    List<LatLng> path,
+    IndoorRoutingNode? transitionNode,
+  ) {
+    if (transitionNode == null || path.length < 2) {
+      return path;
+    }
+
+    if (!geometry.areSameLatLng(path.last, transitionNode.center)) {
+      return path;
+    }
+
+    return path.sublist(0, path.length - 1);
   }
 
   IndoorRoutingNode? _findRoomNode(
