@@ -1,14 +1,24 @@
 import 'dart:convert';
+
+import 'package:campus_app/services/indoor_maps/indoor_floor_config.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
 
 class TestIndoorMapRepository extends IndoorMapRepository {
   final List<String> mockedPaths;
   TestIndoorMapRepository(this.mockedPaths);
+
   @override
   List<String> getAssetPathsForBuilding(String buildingCode) {
     return mockedPaths;
+  }
+
+  @override
+  List<IndoorFloorOption> getFloorOptionsForBuilding(String buildingCode) {
+    return mockedPaths
+        .map((path) => IndoorFloorOption(label: path, assetPath: path))
+        .toList(growable: false);
   }
 }
 

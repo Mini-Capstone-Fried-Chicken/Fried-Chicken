@@ -8,6 +8,12 @@ class IndoorRoutingNodeType {
   static const String transition = 'transition';
 }
 
+class IndoorTransitionType {
+  static const String stairs = 'stairs';
+  static const String elevator = 'elevator';
+  static const String escalator = 'escalator';
+}
+
 // A node used in the indoor routing graph.
 // Each node comes from one polygon in the floor GeoJSON.
 class IndoorRoutingNode {
@@ -38,6 +44,8 @@ class IndoorRoutingNode {
   // Rooms are not considered walkable connectors in the graph.
   // Corridors and transitions are.
   bool get isWalkable => nodeType != IndoorRoutingNodeType.room;
+
+  bool get isTransition => nodeType == IndoorRoutingNodeType.transition;
 }
 
 // A weighted edge from one routing node to another.

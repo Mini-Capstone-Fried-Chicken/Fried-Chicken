@@ -1,6 +1,6 @@
+import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:campus_app/features/settings/app_settings.dart';
 
 /// A single navigation instruction row (like Google Maps steps).
 class NavigationStep {
@@ -20,6 +20,9 @@ class NavigationStep {
   final String? transitLineShortName; // e.g. 165
   final String? transitLineName; // e.g. "STM 165"
   final String? transitHeadsign; // destination direction
+  final String? indoorFloorAssetPath;
+  final String? indoorFloorLabel;
+  final String? indoorTransitionMode;
 
   const NavigationStep({
     required this.instruction,
@@ -31,6 +34,9 @@ class NavigationStep {
     this.transitLineShortName,
     this.transitLineName,
     this.transitHeadsign,
+    this.indoorFloorAssetPath,
+    this.indoorFloorLabel,
+    this.indoorTransitionMode,
     this.points = const [],
   });
 
@@ -49,11 +55,12 @@ class NavigationStep {
   }
 
   String get transitLabel {
-    final fallbackLineName =
-    transitLineName?.trim().isNotEmpty == true ? transitLineName!.trim() : null;
+    final fallbackLineName = transitLineName?.trim().isNotEmpty == true
+        ? transitLineName!.trim()
+        : null;
     final line = transitLineShortName?.trim().isNotEmpty == true
-    ? transitLineShortName!.trim()
-    : fallbackLineName;
+        ? transitLineShortName!.trim()
+        : fallbackLineName;
 
     if (line == null) return 'Transit';
     final vehicle = transitVehicleType?.toUpperCase();
@@ -98,11 +105,11 @@ class NavigationStepsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleColor = highContrastMode
-      ? Colors.black
-      : const Color(0xFF76263D);
+        ? Colors.black
+        : const Color(0xFF76263D);
     final sheetBackground = highContrastMode
-      ? const Color(0xFF89D9C2)
-      : Colors.white;
+        ? const Color(0xFF89D9C2)
+        : Colors.white;
     final dividerColor = highContrastMode ? Colors.black26 : null;
     final emptyTextColor = highContrastMode ? Colors.black54 : Colors.black54;
 
@@ -162,7 +169,7 @@ class NavigationStepsSheet extends StatelessWidget {
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
                       itemCount: steps.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final step = steps[index];
                         return _StepTile(
@@ -268,25 +275,25 @@ class _StepTile extends StatelessWidget {
 
     final icon = _iconFor(step);
     final iconBg = highContrastMode
-      ? Colors.black.withValues(alpha: 0.08)
-      : step.travelMode == 'transit'
-      ? Colors.black.withValues(alpha: 0.06)
-      : burgundy.withValues(alpha: 0.12);
+        ? Colors.black.withValues(alpha: 0.08)
+        : step.travelMode == 'transit'
+        ? Colors.black.withValues(alpha: 0.06)
+        : burgundy.withValues(alpha: 0.12);
     final iconColor = highContrastMode
-      ? Colors.black
-      : step.travelMode == 'transit'
-      ? Colors.black87
-      : burgundy;
+        ? Colors.black
+        : step.travelMode == 'transit'
+        ? Colors.black87
+        : burgundy;
     final tileBackground = highContrastMode
-      ? const Color(0xFF6CCEB5)
-      : Colors.white;
+        ? const Color(0xFF6CCEB5)
+        : Colors.white;
     final tileBorder = highContrastMode
-      ? Colors.black.withValues(alpha: 0.12)
-      : Colors.black.withValues(alpha: 0.06);
+        ? Colors.black.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.06);
     final mainTextColor = highContrastMode ? Colors.black : Colors.black87;
     final secondaryTextColor = highContrastMode
-      ? Colors.black.withValues(alpha: 0.72)
-      : Colors.black.withValues(alpha: 0.6);
+        ? Colors.black.withValues(alpha: 0.72)
+        : Colors.black.withValues(alpha: 0.6);
 
     // For transit steps, prefer a transit label + headsign line.
     final mainText = step.travelMode == 'transit'
@@ -372,6 +379,17 @@ class _StepTile extends StatelessWidget {
   }
 
   IconData _iconFor(NavigationStep s) {
+    final indoorTransitionMode = s.indoorTransitionMode?.toLowerCase();
+    if (indoorTransitionMode == 'stairs') {
+      return Icons.stairs;
+    }
+    if (indoorTransitionMode == 'elevator') {
+      return Icons.elevator;
+    }
+    if (indoorTransitionMode == 'escalator') {
+      return Icons.escalator;
+    }
+
     final mode = s.travelMode.toLowerCase();
 
     if (mode == 'walking') {
@@ -421,6 +439,11 @@ class NavigationNextStepHeader extends StatelessWidget {
   final String? nextDistance; // optional override
   final VoidCallback onStop;
   final VoidCallback onShowSteps;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final bool canGoPrevious;
+  final bool canGoNext;
+  final String? progressLabel;
   final bool highContrastMode;
 
   const NavigationNextStepHeader({
@@ -429,6 +452,11 @@ class NavigationNextStepHeader extends StatelessWidget {
     required this.nextStep,
     required this.onStop,
     required this.onShowSteps,
+    this.onPrevious,
+    this.onNext,
+    this.canGoPrevious = false,
+    this.canGoNext = false,
+    this.progressLabel,
     this.nextDistance,
     this.highContrastMode = false,
   });
@@ -436,18 +464,18 @@ class NavigationNextStepHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = highContrastMode
-      ? AppUiColors.highContrastPrimary
-      : const Color(0xFF76263D);
+        ? AppUiColors.highContrastPrimary
+        : const Color(0xFF76263D);
     final primaryText = highContrastMode ? Colors.black : Colors.white;
     final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
     final chipBg = highContrastMode
-      ? const Color(0xFF5EBFA7)
-      : Colors.white.withValues(alpha: 0.14);
+        ? const Color(0xFF5EBFA7)
+        : Colors.white.withValues(alpha: 0.14);
 
     final step = nextStep;
     final stepLabel = step != null && step.travelMode == 'transit'
-    ? step.transitLabel
-    : step?.instruction;
+        ? step.transitLabel
+        : step?.instruction;
     final primary = stepLabel ?? 'Continue';
 
     final secondaryParts = <String>[];
@@ -462,6 +490,9 @@ class NavigationNextStepHeader extends StatelessWidget {
         ? nextDistance
         : fallback;
     if (dist != null && dist.trim().isNotEmpty) secondaryParts.add(dist.trim());
+    if (step?.indoorFloorLabel?.trim().isNotEmpty == true) {
+      secondaryParts.add('Floor ${step!.indoorFloorLabel!.trim()}');
+    }
 
     return SafeArea(
       bottom: false,
@@ -481,89 +512,131 @@ class NavigationNextStepHeader extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Leading icon
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: chipBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.navigation, color: primaryText),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: chipBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.navigation, color: primaryText),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            primary,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: primaryText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            secondaryParts.isEmpty
+                                ? modeLabel
+                                : secondaryParts.join(' • '),
+                            style: TextStyle(
+                              color: secondaryText,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        TextButton(
+                          onPressed: onShowSteps,
+                          style: TextButton.styleFrom(
+                            foregroundColor: primaryText,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Steps',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        TextButton(
+                          onPressed: onStop,
+                          style: TextButton.styleFrom(
+                            foregroundColor: primaryText,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Stop',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-
-                // Text
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (onPrevious != null || onNext != null) ...[
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
-                      Text(
-                        primary,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: primaryText,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15,
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: canGoPrevious ? onPrevious : null,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryText,
+                            side: BorderSide(color: secondaryText),
+                          ),
+                          child: const Text('Previous'),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        secondaryParts.isEmpty
-                            ? modeLabel
-                            : secondaryParts.join(' • '),
-                        style: TextStyle(
-                          color: secondaryText,
-                          fontSize: 12,
+                      if (progressLabel != null) ...[
+                        const SizedBox(width: 10),
+                        Text(
+                          progressLabel!,
+                          style: TextStyle(
+                            color: secondaryText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ] else
+                        const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: canGoNext ? onNext : null,
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: highContrastMode
+                                ? Colors.black
+                                : const Color(0xFF76263D),
+                            backgroundColor: Colors.white,
+                          ),
+                          child: const Text('Next Step'),
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                // Actions
-                Column(
-                  children: [
-                    TextButton(
-                      onPressed: onShowSteps,
-                      style: TextButton.styleFrom(
-                        foregroundColor: primaryText,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Steps',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    TextButton(
-                      onPressed: onStop,
-                      style: TextButton.styleFrom(
-                        foregroundColor: primaryText,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Stop',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ],
             ),
           ),

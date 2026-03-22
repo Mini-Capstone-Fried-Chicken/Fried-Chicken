@@ -1,48 +1,12 @@
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:campus_app/shared/widgets/rooms_field_section.dart';
-import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-class FakeIndoorMapRepository implements IndoorMapRepository {
+class FakeIndoorMapRepository extends IndoorMapRepository {
   @override
   Future<bool> roomExists(String buildingCode, String room) async {
     return room == '101';
-  }
-
-  @override
-  Future<LatLng?> getRoomLocation(String building, String room) async => null;
-
-  @override
-  List<String> getAssetPathsForBuilding(String building) => [];
-
-  @override
-  Future<List<String>> getRoomCodesForBuilding(String building) async => [];
-
-  @override
-  Future<Map<String, dynamic>> loadGeoJsonAsset(String assetPath) async => {};
-
-  @override
-  LatLng calculatePolygonCenter(List<List<double>> coordinates) {
-    return LatLng(0, 0);
-  }
-
-  @override
-  List<List<double>>? extractPolygonCoordinates(Map<String, dynamic> feature) {
-    return [];
-  }
-
-  @override
-  List<String> extractRoomCodesFromGeoJson(Map<String, dynamic> geoJson) {
-    return [];
-  }
-
-  @override
-  LatLng? findRoomLocationInFeatures(
-    List<dynamic> features,
-    String searchCode,
-  ) {
-    return null;
   }
 }
 
