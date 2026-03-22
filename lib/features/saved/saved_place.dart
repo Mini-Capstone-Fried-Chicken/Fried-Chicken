@@ -7,6 +7,12 @@ class SavedPlace {
   final String openingHoursToday;
   final String? googlePlaceType;
 
+  /// Optional destination room code to prefill in Explore's route preview.
+  ///
+  /// This is used by Calendar "Go to Room" and should not be confused with
+  /// [category] which is metadata for Saved places (e.g. "concordia building").
+  final String? roomCode;
+
   const SavedPlace({
     required this.id,
     required this.name,
@@ -15,6 +21,7 @@ class SavedPlace {
     required this.longitude,
     required this.openingHoursToday,
     this.googlePlaceType,
+    this.roomCode,
   });
 
   SavedPlace copyWith({
@@ -25,6 +32,7 @@ class SavedPlace {
     double? longitude,
     String? openingHoursToday,
     String? googlePlaceType,
+    String? roomCode,
   }) {
     return SavedPlace(
       id: id ?? this.id,
@@ -34,6 +42,7 @@ class SavedPlace {
       longitude: longitude ?? this.longitude,
       openingHoursToday: openingHoursToday ?? this.openingHoursToday,
       googlePlaceType: googlePlaceType ?? this.googlePlaceType,
+      roomCode: roomCode ?? this.roomCode,
     );
   }
 
@@ -46,6 +55,7 @@ class SavedPlace {
       'longitude': longitude,
       'openingHoursToday': openingHoursToday,
       'googlePlaceType': googlePlaceType,
+      'roomCode': roomCode,
     };
   }
 
@@ -56,8 +66,12 @@ class SavedPlace {
       category: (json['category'] ?? 'all') as String,
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
-      openingHoursToday: (json['openingHoursToday'] ?? 'Hours unavailable today') as String,
+      openingHoursToday:
+          (json['openingHoursToday'] ?? 'Hours unavailable today') as String,
       googlePlaceType: json['googlePlaceType'] as String?,
+      roomCode: (json['roomCode'] as String?)?.trim().isEmpty == true
+          ? null
+          : json['roomCode'] as String?,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:campus_app/features/calendar/data/models/google_calendar_event.dart';
 import 'package:campus_app/features/calendar/ui/widgets/calendar_schedule_view.dart';
 import 'package:campus_app/features/calendar/ui/widgets/calendar_event_popup.dart';
+import 'package:campus_app/features/saved/saved_directions_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
@@ -208,33 +209,34 @@ void main() {
       expect(weekChip.selected, isFalse);
     });
 
-    testWidgets('high contrast mode applies expected calendar header and time label styles', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        makeTestableWidget(
-          CalendarScheduleView(
-            selectedCalendarLabel: 'SOEN 341',
-            events: sampleEvents,
-            onBack: () {},
-            highContrastMode: true,
+    testWidgets(
+      'high contrast mode applies expected calendar header and time label styles',
+      (tester) async {
+        await tester.pumpWidget(
+          makeTestableWidget(
+            CalendarScheduleView(
+              selectedCalendarLabel: 'SOEN 341',
+              events: sampleEvents,
+              onBack: () {},
+              highContrastMode: true,
+            ),
           ),
-        ),
-      );
+        );
 
-      final calendar = tester.widget<SfCalendar>(find.byType(SfCalendar));
+        final calendar = tester.widget<SfCalendar>(find.byType(SfCalendar));
 
-      expect(calendar.headerStyle.backgroundColor, const Color(0xFF89D9C2));
-      expect(calendar.headerStyle.textStyle?.color, Colors.black);
-      expect(
-        calendar.viewHeaderStyle.backgroundColor,
-        const Color(0xFF89D9C2),
-      );
-      expect(
-        calendar.timeSlotViewSettings.timeTextStyle?.color,
-        Colors.white,
-      );
-    });
+        expect(calendar.headerStyle.backgroundColor, const Color(0xFF89D9C2));
+        expect(calendar.headerStyle.textStyle?.color, Colors.black);
+        expect(
+          calendar.viewHeaderStyle.backgroundColor,
+          const Color(0xFF89D9C2),
+        );
+        expect(
+          calendar.timeSlotViewSettings.timeTextStyle?.color,
+          Colors.white,
+        );
+      },
+    );
 
     testWidgets('showEventPopup displays popup with event title', (
       tester,
@@ -284,6 +286,10 @@ void main() {
       GoogleCalendarEvent? receivedEvent;
       String? receivedBuildingCode;
 
+      // Ensure clean state before the interaction.
+      SavedDirectionsController.clear();
+      expect(SavedDirectionsController.notifier.value, isNull);
+
       await tester.pumpWidget(
         makeTestableWidget(
           CalendarScheduleView(
@@ -308,11 +314,23 @@ void main() {
       expect(receivedEvent, isNotNull);
       expect(receivedEvent!.id, 'popup_1');
       expect(receivedBuildingCode, isNotEmpty);
+
+      // New behavior: tapping Go to Building requests directions in Explore flow.
+      final requested = SavedDirectionsController.notifier.value;
+      expect(requested, isNotNull);
+      expect(
+        requested!.id.toUpperCase(),
+        receivedBuildingCode!.trim().toUpperCase(),
+      );
     });
     testWidgets('popup Go to Room calls onGoToRoom callback', (tester) async {
       GoogleCalendarEvent? receivedEvent;
       String? receivedBuildingCode;
       String? receivedRoomNumber;
+
+      // Ensure clean state before the interaction.
+      SavedDirectionsController.clear();
+      expect(SavedDirectionsController.notifier.value, isNull);
 
       await tester.pumpWidget(
         makeTestableWidget(
@@ -339,6 +357,17 @@ void main() {
       expect(receivedEvent, isNotNull);
       expect(receivedBuildingCode, isNotEmpty);
       expect(receivedRoomNumber, 'H-937');
+
+      // New behavior: Go to Room requests directions (like Go to Building),
+      // and carries the room code for Explore to prefill.
+      final requested = SavedDirectionsController.notifier.value;
+      expect(requested, isNotNull);
+      expect(
+        requested!.id.toUpperCase(),
+        receivedBuildingCode!.trim().toUpperCase(),
+      );
+      expect(requested.roomCode, receivedRoomNumber);
+      expect(requested.roomCode!.toLowerCase(), isNot('all'));
     });
     testWidgets('popup Save calls onSave callback', (tester) async {
       GoogleCalendarEvent? receivedEvent;
