@@ -77,7 +77,6 @@ class DefaultGoogleSignInGateway implements GoogleSignInGateway {
     required List<String> scopeHint,
   }) async {
     final account = await _signIn.authenticate(scopeHint: scopeHint);
-    if (account == null) return null;
     return _GoogleSignedInUserAdapter(account);
   }
 

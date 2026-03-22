@@ -26,9 +26,6 @@ class CalendarSelectionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryText = highContrastMode ? Colors.white : Colors.black87;
-    final secondaryText = highContrastMode ? Colors.white70 : Colors.black54;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(

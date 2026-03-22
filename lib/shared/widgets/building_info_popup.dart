@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
+import 'package:campus_app/features/saved/saved_place.dart';
+import 'package:campus_app/features/saved/saved_place_metadata_service.dart';
+import 'package:campus_app/features/saved/saved_places_controller.dart';
 
 class BuildingInfoPopup extends StatefulWidget {
   final String title;
@@ -15,6 +18,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final bool isLoggedIn;
   final VoidCallback onGetDirections;
   final bool highContrastMode;
+  final SavedPlace? savedPlace;
 
   const BuildingInfoPopup({
     super.key,
@@ -28,6 +32,7 @@ class BuildingInfoPopup extends StatefulWidget {
     required this.isLoggedIn,
     required this.onGetDirections,
     this.highContrastMode = false,
+    this.savedPlace,
   });
 
   @override
@@ -46,6 +51,91 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     return isTouch ? TooltipTriggerMode.longPress : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    SavedPlacesController.notifier.addListener(_syncSavedState);
+    unawaited(_initializeSavedState());
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildingInfoPopup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.savedPlace?.id != widget.savedPlace?.id) {
+      unawaited(_initializeSavedState());
+    }
+  }
+
+  Future<void> _initializeSavedState() async {
+    await SavedPlacesController.ensureInitialized();
+    _syncSavedState();
+  }
+
+  Set<String> _savedIdAliases(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return const <String>{};
+
+    final aliases = <String>{trimmed};
+    if (trimmed.startsWith('places/')) {
+      aliases.add(trimmed.substring('places/'.length));
+    } else {
+      aliases.add('places/$trimmed');
+    }
+    return aliases;
+  }
+
+  bool _isAnyAliasSaved(String id) {
+    final aliases = _savedIdAliases(id);
+    if (aliases.isEmpty) return false;
+    return aliases.any(SavedPlacesController.isSaved);
+  }
+
+  Future<void> _removeAllAliases(String id) async {
+    final aliases = _savedIdAliases(id);
+    for (final alias in aliases) {
+      await SavedPlacesController.removePlace(alias);
+    }
+  }
+
+  void _syncSavedState() {
+    final placeId = widget.savedPlace?.id;
+    if (placeId == null || !mounted) return;
+    final savedNow = _isAnyAliasSaved(placeId);
+    if (savedNow != _isSaved) {
+      setState(() {
+        _isSaved = savedNow;
+      });
+    }
+  }
+
+  Future<void> _toggleSavedPlace() async {
+    final place = widget.savedPlace;
+    if (place == null) {
+      if (!mounted) return;
+      setState(() {
+        _isSaved = !_isSaved;
+      });
+      return;
+    }
+    await SavedPlacesController.ensureInitialized();
+    final alreadySaved = _isAnyAliasSaved(place.id);
+
+    bool isSavedNow;
+    if (alreadySaved) {
+      await _removeAllAliases(place.id);
+      isSavedNow = false;
+    } else {
+      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(place);
+      await SavedPlacesController.savePlace(enriched);
+      isSavedNow = true;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSaved = isSavedNow;
+    });
   }
 
   void _hideIconLabel() {
@@ -248,24 +338,21 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                     icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
                     tooltip: _isSaved ? 'Unsave' : 'Save',
                     key: const Key('save_toggle_button'),
-                    onPressed: () {
-                      setState(() {
-                        _isSaved = !_isSaved;
-                      });
-                    },
+                    onPressed: () => unawaited(_toggleSavedPlace()),
                   ),
                   const SizedBox(width: 6),
                 ],
-                if (topIcons.isNotEmpty)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 2),
-                      child: Wrap(
-                        spacing: -15,
-                        runSpacing: -15,
-                        children: topIcons,
-                      ),
-                    ),
+                Expanded(
+                  child: topIcons.isEmpty
+                      ? const SizedBox.shrink()
+                      : Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: Wrap(
+                            spacing: -15,
+                            runSpacing: -15,
+                            children: topIcons,
+                          ),
+                        ),
                   ),
                 Tooltip(
                   message: 'Close',
@@ -343,6 +430,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   @override
   void dispose() {
+    SavedPlacesController.notifier.removeListener(_syncSavedState);
     _hideIconLabel();
     super.dispose();
   }

@@ -21,11 +21,37 @@ void main() {
       await tester.pumpWidget(
         makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('General Settings'), findsOneWidget);
       expect(find.text('Accessibility Settings'), findsOneWidget);
+      expect(find.text('Default Campus'), findsOneWidget);
       expect(find.text('Permission Management'), findsOneWidget);
       expect(find.text('Sign Out'), findsOneWidget);
+      expect(find.byIcon(Icons.logout), findsOneWidget);
+      expect(find.text('Sign In'), findsNothing);
+    });
+
+    testWidgets('shows sign in button when guest mode', (tester) async {
+      await tester.pumpWidget(
+        makeTestableWidget(const SettingsScreen(isLoggedIn: false)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.byIcon(Icons.login), findsOneWidget);
+      expect(find.text('Sign Out'), findsNothing);
+    });
+
+    testWidgets('renders campus segmented control options', (tester) async {
+      await tester.pumpWidget(
+        makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SGW'), findsWidgets);
+      expect(find.text('Loyola'), findsWidgets);
+      expect(find.byType(SegmentedButton<String>), findsOneWidget);
     });
 
     testWidgets('keeps large text disabled until accessibility mode is enabled', (
@@ -34,6 +60,7 @@ void main() {
       await tester.pumpWidget(
         makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
       );
+      await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Large Text'));
       await tester.tap(find.text('Large Text'), warnIfMissed: false);
@@ -46,6 +73,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(AppSettingsController.state.largeTextModeEnabled, isTrue);
+    });
+
+    testWidgets('accepts isLoggedIn parameter correctly', (tester) async {
+      const screenLoggedIn = SettingsScreen(isLoggedIn: true);
+      const screenLoggedOut = SettingsScreen(isLoggedIn: false);
+
+      expect(screenLoggedIn.isLoggedIn, isTrue);
+      expect(screenLoggedOut.isLoggedIn, isFalse);
     });
   });
 }

@@ -49,17 +49,6 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final secondaryText = isHighContrast
       ? const Color(0xFF89D9C2)
       : const Color(0xFF8B1E3F);
-    final chipSelectedBg = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
-    final chipSelectedText = isHighContrast ? Colors.black : Colors.white;
-    final chipUnselectedBg = isHighContrast ? const Color(0xFF111111) : Colors.white;
-    final chipUnselectedText = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
-    final chipBorder = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
 
     final dataSource = GoogleCalendarDataSource(widget.events);
 
