@@ -359,15 +359,15 @@ void main() {
       expect(receivedRoomNumber, 'H-937');
 
       // New behavior: Go to Room requests directions (like Go to Building),
-      // but also carries the room code for Explore to prefill.
+      // and carries the room code for Explore to prefill.
       final requested = SavedDirectionsController.notifier.value;
       expect(requested, isNotNull);
       expect(
         requested!.id.toUpperCase(),
         receivedBuildingCode!.trim().toUpperCase(),
       );
-      expect(requested.category, receivedRoomNumber);
-      expect(requested.category.toLowerCase(), isNot('all'));
+      expect(requested.roomCode, receivedRoomNumber);
+      expect(requested.roomCode!.toLowerCase(), isNot('all'));
     });
     testWidgets('popup Save calls onSave callback', (tester) async {
       GoogleCalendarEvent? receivedEvent;

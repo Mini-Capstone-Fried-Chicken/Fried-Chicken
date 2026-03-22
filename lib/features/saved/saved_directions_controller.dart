@@ -69,11 +69,11 @@ class SavedDirectionsController {
       SavedPlace(
         id: building.code,
         name: building.name.isNotEmpty ? building.name : building.code,
-        // Encode the desired destination room for the Explore UI to prefill.
-        category: room,
+        category: 'all',
         latitude: building.center.latitude,
         longitude: building.center.longitude,
         openingHoursToday: 'Hours unavailable today',
+        roomCode: room,
       ),
     );
   }

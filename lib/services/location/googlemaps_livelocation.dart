@@ -293,11 +293,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeOriginBuildingCode = currentBuildingCode;
         _routeDestinationBuildingCode = selectedBuilding?.code;
 
-        // If the caller provided a room code (Calendar "Go to Room"), prefill it.
-        // Saved places and building-only directions use category='all', which should
-        // never be treated as a room.
-        final requestedRoom = place.category.trim();
-        if (requestedRoom.isNotEmpty && requestedRoom.toLowerCase() != 'all') {
+        // Prefill destination room only when explicitly provided (Calendar Go to Room).
+        final requestedRoom = (place.roomCode ?? '').trim();
+        if (requestedRoom.isNotEmpty) {
           _destinationRoomController.text = requestedRoom;
         }
       });
@@ -2911,7 +2909,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 ),
               ),
 
-          if (!_showRoutePreview)
+          if (!_showRoutePreview && !_isIndoorNavigationActive)
             OutdoorBottomControls(
               currentLocation: _currentLocation,
               currentCampus: _currentCampus,

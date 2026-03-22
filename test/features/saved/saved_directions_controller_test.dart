@@ -79,5 +79,21 @@ void main() {
         expect(value.name.isNotEmpty, isTrue);
       },
     );
+    test('requestDirectionsToBuildingRoom emits SavedPlace with roomCode', () {
+      expect(buildingPolygons, isNotEmpty);
+
+      final existing = buildingPolygons.first;
+
+      SavedDirectionsController.requestDirectionsToBuildingRoom(
+        buildingCode: existing.code.toLowerCase(),
+        roomCode: 'H-937',
+      );
+
+      final value = SavedDirectionsController.notifier.value;
+      expect(value, isNotNull);
+      expect(value!.id.toUpperCase(), existing.code.toUpperCase());
+      expect(value.roomCode, 'H-937');
+      expect(value.category, 'all');
+    });
   });
 }
