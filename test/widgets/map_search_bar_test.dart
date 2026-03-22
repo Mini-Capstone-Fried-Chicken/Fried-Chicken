@@ -2,11 +2,30 @@ import 'package:campus_app/data/building_names.dart';
 import 'package:campus_app/data/search_suggestion.dart';
 import 'package:campus_app/features/saved/saved_place.dart';
 import 'package:campus_app/features/saved/saved_places_controller.dart';
+import 'package:campus_app/services/google_places_service.dart';
 import 'package:campus_app/shared/widgets/map_search_bar.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _MockHttpClient extends http.BaseClient {
+  final http.Response Function(http.Request request) handler;
+
+  _MockHttpClient(this.handler);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final response = handler(request as http.Request);
+    return http.StreamedResponse(
+      Stream.value(response.bodyBytes),
+      response.statusCode,
+      headers: response.headers,
+      request: request,
+    );
+  }
+}
 
 void main() {
   setUp(() {
@@ -446,6 +465,86 @@ void main() {
 
     expect(SavedPlacesController.notifier.value, isEmpty);
     expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+  });
+
+  testWidgets('Add to saved stores valid concordia suggestion', (
+    WidgetTester tester,
+  ) async {
+    final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
+    final suggestion = concordiaBuildingNames.firstWhere((b) => b.code == 'MB');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapSearchBar(
+            controller: controller,
+            suggestions: [SearchSuggestion.fromConcordiaBuilding(suggestion)],
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(TextField).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Add to saved'));
+    await tester.pumpAndSettle();
+
+    expect(SavedPlacesController.isSaved('MB'), isTrue);
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
+  });
+
+  testWidgets('Add to saved stores valid non-concordia suggestion with injected places service', (
+    WidgetTester tester,
+  ) async {
+    final mockClient = _MockHttpClient((request) {
+      return http.Response(
+        '{"id":"place_123","displayName":{"text":"Injected Place"},"location":{"latitude":45.501,"longitude":-73.571},"primaryType":"cafe","types":["cafe"]}',
+        200,
+      );
+    });
+    final injectedPlacesService = GooglePlacesService(client: mockClient);
+
+    final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
+
+    final suggestion = SearchSuggestion.fromGooglePlace(
+      name: 'Injected Place',
+      subtitle: 'Montreal',
+      placeId: 'place_123',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapSearchBar(
+            controller: controller,
+            suggestions: [suggestion],
+            placesService: injectedPlacesService,
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(TextField).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Add to saved'));
+    await tester.pumpAndSettle();
+
+    expect(SavedPlacesController.isSaved('place_123'), isTrue);
+    final saved = SavedPlacesController.notifier.value.firstWhere(
+      (p) => p.id == 'place_123',
+    );
+    expect(saved.name, 'Injected Place');
+    expect(saved.googlePlaceType, 'cafe');
   });
 
   testWidgets('External room controller changes rebuild without crashing', (

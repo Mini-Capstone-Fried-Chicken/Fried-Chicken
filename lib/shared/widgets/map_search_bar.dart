@@ -31,6 +31,7 @@ class MapSearchBar extends StatefulWidget {
   final String? currentBuildingCode;
   final bool showRoomFields;
   final bool highContrastMode;
+  final GooglePlacesService? placesService;
 
   const MapSearchBar({
     super.key,
@@ -50,6 +51,7 @@ class MapSearchBar extends StatefulWidget {
     this.currentBuildingCode,
     this.showRoomFields = false,
     this.highContrastMode = false,
+    this.placesService,
   });
 
   @override
@@ -190,7 +192,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
     final placeId = suggestion.placeId;
     if (placeId == null || placeId.isEmpty) return null;
 
-    final details = await GooglePlacesService.instance.getPlaceDetails(
+    final placesService = widget.placesService ?? GooglePlacesService.instance;
+    final details = await placesService.getPlaceDetails(
       placeId,
       includeMetadata: true,
     );

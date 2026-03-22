@@ -25,6 +25,27 @@ void main() {
       );
     });
 
+    test('AppSettingsState.copyWith updates selected fields only', () {
+      const base = AppSettingsState(
+        accessibilityModeEnabled: true,
+        highContrastModeEnabled: true,
+        largeTextModeEnabled: false,
+        calendarAccessEnabled: true,
+        defaultCampus: AppSettingsState.defaultCampusSgw,
+      );
+
+      final updated = base.copyWith(
+        largeTextModeEnabled: true,
+        defaultCampus: AppSettingsState.defaultCampusLoyola,
+      );
+
+      expect(updated.accessibilityModeEnabled, isTrue);
+      expect(updated.highContrastModeEnabled, isTrue);
+      expect(updated.largeTextModeEnabled, isTrue);
+      expect(updated.calendarAccessEnabled, isTrue);
+      expect(updated.defaultCampus, AppSettingsState.defaultCampusLoyola);
+    });
+
     test('setAccessibilityMode(false) clears high contrast and large text', () {
       AppSettingsController.setAccessibilityMode(true);
       AppSettingsController.setHighContrastMode(true);
@@ -95,6 +116,57 @@ void main() {
         AppSettingsController.state.defaultCampus,
         AppSettingsState.defaultCampusLoyola,
       );
+    });
+
+    test('restore reads legacy unscoped keys when scoped key is absent', () async {
+      SharedPreferences.setMockInitialValues({
+        'settings_accessibility_mode_enabled': true,
+        'settings_high_contrast_mode_enabled': true,
+        'settings_large_text_mode_enabled': true,
+        'settings_calendar_access_enabled': false,
+        'settings_default_campus': AppSettingsState.defaultCampusLoyola,
+      });
+
+      await AppSettingsController.restore(force: true);
+
+      expect(AppSettingsController.state.accessibilityModeEnabled, isTrue);
+      expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
+      expect(AppSettingsController.state.largeTextModeEnabled, isTrue);
+      expect(AppSettingsController.state.calendarAccessEnabled, isFalse);
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusLoyola,
+      );
+    });
+
+    test('restore skips work when already initialized for same scope', () async {
+      SharedPreferences.setMockInitialValues({
+        'settings_default_campus__anonymous': AppSettingsState.defaultCampusLoyola,
+      });
+      await AppSettingsController.restore(force: true);
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusLoyola,
+      );
+
+      SharedPreferences.setMockInitialValues({
+        'settings_default_campus__anonymous': AppSettingsState.defaultCampusSgw,
+      });
+      await AppSettingsController.restore();
+
+      expect(
+        AppSettingsController.state.defaultCampus,
+        AppSettingsState.defaultCampusLoyola,
+      );
+    });
+
+    test('restore with default resolver does not crash in test environment', () async {
+      SharedPreferences.setMockInitialValues({});
+      AppSettingsController.debugResetUserIdResolver();
+
+      await AppSettingsController.restore(force: true);
+
+      expect(AppSettingsController.state, isA<AppSettingsState>());
     });
 
     test('setDefaultCampus persists to shared preferences', () async {
