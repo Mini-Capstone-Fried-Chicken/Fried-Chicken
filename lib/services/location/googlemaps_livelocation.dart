@@ -734,7 +734,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = b;
       _selectedBuildingCenter = center;
-      _anchorOffset = widget.debugAnchorOffset ?? const Offset(200, 420);
+      _anchorOffset = widget.debugAnchorOffset;
       _cameraMoving = false;
     });
   }
@@ -2228,7 +2228,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedBuildingCenter = geo.polygonCenter(
         widget.debugSelectedBuilding!.points,
       );
-      _anchorOffset = widget.debugAnchorOffset ?? const Offset(200, 420);
+      _anchorOffset = widget.debugAnchorOffset;
     }
 
     _lastCameraTarget = widget.initialCampus == Campus.loyola
@@ -2243,7 +2243,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
 
-    _determineUserLocationAndBuilding();
     // Initialise POI icons and fetch nearby places
     _initPois();
 
@@ -2282,17 +2281,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _currentLocation = currentLocation;
         _currentCampus = detectCampus(currentLocation);
         _currentBuildingPoly = detectBuildingPoly(currentLocation);
-        _currentBuildingCode = buildingAtLocation?.code;
-      });
-    } catch (_) {
-      return;
-      final position = await Geolocator.getCurrentPosition();
-      _currentLocation = LatLng(position.latitude, position.longitude);
-
-      final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
-
-      if (!mounted) return;
-      setState(() {
         _currentBuildingCode = buildingAtLocation?.code;
       });
     } catch (_) {

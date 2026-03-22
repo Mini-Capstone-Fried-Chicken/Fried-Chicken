@@ -77,6 +77,45 @@ void main() {
       },
     );
 
+    test(
+      'resolveRoom trims floor level and skips malformed features while scanning',
+      () async {
+        final repository = _FakeFloorLoadingRepository(
+          options: const [IndoorFloorOption(label: '9', assetPath: 'floor_9')],
+          geoJsonByAssetPath: {
+            'floor_9': {
+              'type': 'FeatureCollection',
+              'features': [
+                'not-a-map',
+                {
+                  'type': 'Feature',
+                  'properties': {'level': '   '},
+                  'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': [
+                      [
+                        [-73.10000, 45.10000],
+                        [-73.09995, 45.10000],
+                        [-73.09995, 45.10005],
+                        [-73.10000, 45.10005],
+                        [-73.10000, 45.10000],
+                      ],
+                    ],
+                  },
+                },
+                _roomFeature(ref: 'H-900', level: ' 9 '),
+              ],
+            },
+          },
+        );
+
+        final room = await repository.resolveRoom('HALL', 'H-900');
+
+        expect(room, isNotNull);
+        expect(room!.floorLevel, '9');
+      },
+    );
+
     test('resolveRoom returns null when the room does not exist', () async {
       final repository = _FakeFloorLoadingRepository(
         options: const [IndoorFloorOption(label: '8', assetPath: 'floor_8')],
@@ -117,27 +156,29 @@ class _FakeFloorLoadingRepository extends IndoorMapRepository {
 Map<String, dynamic> _floorGeoJson({required String ref, String? level}) {
   return {
     'type': 'FeatureCollection',
-    'features': [
-      {
-        'type': 'Feature',
-        'properties': {
-          'indoor': 'room',
-          'ref': ref,
-          if (level != null) 'level': level,
-        },
-        'geometry': {
-          'type': 'Polygon',
-          'coordinates': [
-            [
-              [-73.00000, 45.00000],
-              [-72.99995, 45.00000],
-              [-72.99995, 45.00005],
-              [-73.00000, 45.00005],
-              [-73.00000, 45.00000],
-            ],
-          ],
-        },
-      },
-    ],
+    'features': [_roomFeature(ref: ref, level: level)],
+  };
+}
+
+Map<String, dynamic> _roomFeature({required String ref, String? level}) {
+  return {
+    'type': 'Feature',
+    'properties': {
+      'indoor': 'room',
+      'ref': ref,
+      if (level != null) 'level': level,
+    },
+    'geometry': {
+      'type': 'Polygon',
+      'coordinates': [
+        [
+          [-73.00000, 45.00000],
+          [-72.99995, 45.00000],
+          [-72.99995, 45.00005],
+          [-73.00000, 45.00005],
+          [-73.00000, 45.00000],
+        ],
+      ],
+    },
   };
 }

@@ -7,29 +7,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../indoors_routing/core/indoor_route_plan_models.dart';
 import 'indoor_floor_config.dart';
 
-/// Maps building codes to their indoor map asset paths (by floor)
-const Map<String, List<String>> _buildingAssetPaths = {
-  'HALL': [
-    'assets/indoor_maps/geojson/Hall/h1.geojson.json',
-    'assets/indoor_maps/geojson/Hall/h2.geojson.json',
-    'assets/indoor_maps/geojson/Hall/h8.geojson.json',
-    'assets/indoor_maps/geojson/Hall/h9.geojson.json',
-  ],
-  'MB': [
-    'assets/indoor_maps/geojson/MB/mb1.geojson.json',
-    'assets/indoor_maps/geojson/MB/mbS2.geojson.json',
-  ],
-  'VE': [
-    'assets/indoor_maps/geojson/VE/ve1.geojson.json',
-    'assets/indoor_maps/geojson/VE/ve2.geojson.json',
-  ],
-  'VL': [
-    'assets/indoor_maps/geojson/VL/vl1.geojson.json',
-    'assets/indoor_maps/geojson/VL/vl2.geojson.json',
-  ],
-  'CC': ['assets/indoor_maps/geojson/CC/cc1.geojson.json'],
-};
-
 /// Handles building code aliases (ex: H -> HALL)
 const Map<String, String> _buildingCodeAliases = {'H': 'HALL'};
 
@@ -82,17 +59,14 @@ class IndoorMapRepository {
     if (features == null) return rooms;
 
     for (final feature in features) {
-      try {
-        final featureMap = feature as Map<String, dynamic>;
-        final props = featureMap['properties'] as Map<String, dynamic>?;
-        if (props == null) continue;
+      if (feature is! Map<String, dynamic>) continue;
 
-        final roomCode = props['ref']?.toString();
-        if (roomCode != null && roomCode.isNotEmpty) {
-          rooms.add(roomCode.toUpperCase());
-        }
-      } catch (e) {
-        continue;
+      final props = feature['properties'];
+      if (props is! Map<String, dynamic>) continue;
+
+      final roomCode = props['ref']?.toString();
+      if (roomCode != null && roomCode.isNotEmpty) {
+        rooms.add(roomCode.toUpperCase());
       }
     }
 
@@ -101,9 +75,9 @@ class IndoorMapRepository {
 
   Future<List<String>> getRoomCodesForBuilding(String buildingCode) async {
     final rooms = <String>{};
+
     for (final loadedFloor in await loadFloorsForBuilding(buildingCode)) {
-      final roomsInFloor = extractRoomCodesFromGeoJson(loadedFloor.$2);
-      rooms.addAll(roomsInFloor);
+      rooms.addAll(extractRoomCodesFromGeoJson(loadedFloor.$2));
     }
 
     return rooms.toList();
@@ -131,7 +105,7 @@ class IndoorMapRepository {
         final list = c as List;
         return [(list[0] as num).toDouble(), (list[1] as num).toDouble()];
       }).toList();
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
@@ -154,7 +128,6 @@ class IndoorMapRepository {
     return LatLng(lat / count, lng / count);
   }
 
-  /// Get the location (center coordinates) of a specific room in a building
   Future<LatLng?> getRoomLocation(String buildingCode, String roomCode) async {
     return (await resolveRoom(buildingCode, roomCode))?.center;
   }
@@ -172,14 +145,10 @@ class IndoorMapRepository {
       final option = loadedFloor.$1;
       final geoJson = loadedFloor.$2;
       final features = geoJson['features'] as List?;
-      if (features == null) {
-        continue;
-      }
+      if (features == null) continue;
 
       final location = _findRoomLocationInFeatures(features, searchCode);
-      if (location == null) {
-        continue;
-      }
+      if (location == null) continue;
 
       final floorLevel =
           _extractFloorLevel(features) ??
@@ -212,21 +181,17 @@ class IndoorMapRepository {
     String searchCode,
   ) {
     for (final feature in features) {
-      try {
-        final featureMap = feature as Map<String, dynamic>;
-        final props = featureMap['properties'] as Map<String, dynamic>?;
+      if (feature is! Map<String, dynamic>) continue;
 
-        if (props == null) continue;
+      final props = feature['properties'];
+      if (props is! Map<String, dynamic>) continue;
 
-        final roomRefCode = props['ref']?.toString().toUpperCase();
-        if (roomRefCode == searchCode) {
-          final coords = extractPolygonCoordinates(featureMap);
-          if (coords != null && coords.isNotEmpty) {
-            return calculatePolygonCenter(coords);
-          }
+      final roomRefCode = props['ref']?.toString().toUpperCase();
+      if (roomRefCode == searchCode) {
+        final coords = extractPolygonCoordinates(feature);
+        if (coords != null && coords.isNotEmpty) {
+          return calculatePolygonCenter(coords);
         }
-      } catch (e) {
-        continue;
       }
     }
 
@@ -235,18 +200,37 @@ class IndoorMapRepository {
 
   String? _extractFloorLevel(List<dynamic> features) {
     for (final feature in features) {
-      try {
-        final featureMap = feature as Map<String, dynamic>;
-        final props = featureMap['properties'] as Map<String, dynamic>?;
-        final level = props?['level']?.toString();
-        if (level != null && level.trim().isNotEmpty) {
-          return level;
-        }
-      } catch (_) {
+      if (feature is! Map<String, dynamic>) {
+        _logMalformedFeature('_extractFloorLevel: feature is not a map');
         continue;
+      }
+
+      final props = feature['properties'];
+      if (props is! Map<String, dynamic>) {
+        _logMalformedFeature(
+          '_extractFloorLevel: properties missing or malformed',
+        );
+        continue;
+      }
+
+      final trimmedLevel = _trimmedNonEmpty(props['level']);
+      if (trimmedLevel != null) {
+        return trimmedLevel;
       }
     }
 
     return null;
+  }
+
+  String? _trimmedNonEmpty(Object? value) {
+    final trimmed = value?.toString().trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  void _logMalformedFeature(String message) {
+    if (kDebugMode) {
+      debugPrint('IndoorMapRepository: $message');
+    }
   }
 }

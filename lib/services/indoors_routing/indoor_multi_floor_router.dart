@@ -15,13 +15,18 @@ class IndoorMultiFloorRouter {
     IndoorSameFloorRouter? sameFloorRouter,
     IndoorGeometry? geometry,
     IndoorTransitionMatcher? transitionMatcher,
-  }) : sameFloorRouter = sameFloorRouter ?? IndoorSameFloorRouter(),
-       geometry = geometry ?? const IndoorGeometry(),
-       transitionMatcher =
-           transitionMatcher ??
-           IndoorTransitionMatcher(
-             geometry: geometry ?? const IndoorGeometry(),
-           );
+  }) : this._resolved(
+         sameFloorRouter: sameFloorRouter ?? IndoorSameFloorRouter(),
+         geometry: geometry ?? const IndoorGeometry(),
+         transitionMatcher: transitionMatcher,
+       );
+
+  IndoorMultiFloorRouter._resolved({
+    required this.sameFloorRouter,
+    required this.geometry,
+    IndoorTransitionMatcher? transitionMatcher,
+  }) : transitionMatcher =
+           transitionMatcher ?? IndoorTransitionMatcher(geometry: geometry);
 
   IndoorRoutePlan? buildRoute({
     required IndoorResolvedRoom originRoom,
