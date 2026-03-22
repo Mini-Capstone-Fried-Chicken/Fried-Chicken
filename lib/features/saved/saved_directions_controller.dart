@@ -14,68 +14,54 @@ class SavedDirectionsController {
     notifier.value = place;
   }
 
+  static BuildingPolygon? _findBuildingByCode(String buildingCode) {
+    final code = buildingCode.trim();
+    if (code.isEmpty) return null;
+
+    for (final item in buildingPolygons) {
+      if (item.code.toUpperCase() == code.toUpperCase()) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  static SavedPlace _toSavedPlace(
+    BuildingPolygon building, {
+    String? roomCode,
+  }) {
+    return SavedPlace(
+      id: building.code,
+      name: building.name.isNotEmpty ? building.name : building.code,
+      category: 'all',
+      latitude: building.center.latitude,
+      longitude: building.center.longitude,
+      openingHoursToday: 'Hours unavailable today',
+      roomCode: roomCode?.trim().isEmpty == true ? null : roomCode?.trim(),
+    );
+  }
+
   /// Convenience helper to request directions to a Concordia building by its code.
   ///
   /// This reuses the existing directions pipeline in `OutdoorMapPage` which listens
   /// to [notifier] and starts a route preview from the user's current location.
   static void requestDirectionsToBuildingCode(String buildingCode) {
-    final code = buildingCode.trim();
-    if (code.isEmpty) return;
-
-    BuildingPolygon? building;
-    for (final item in buildingPolygons) {
-      if (item.code.toUpperCase() == code.toUpperCase()) {
-        building = item;
-        break;
-      }
-    }
+    final building = _findBuildingByCode(buildingCode);
     if (building == null) return;
 
-    requestDirections(
-      SavedPlace(
-        id: building.code,
-        name: building.name.isNotEmpty ? building.name : building.code,
-        category: 'all',
-        latitude: building.center.latitude,
-        longitude: building.center.longitude,
-        openingHoursToday: 'Hours unavailable today',
-      ),
-    );
+    requestDirections(_toSavedPlace(building));
   }
 
   /// Request directions to a building and prefill the destination room field.
-  ///
-  /// Uses the same Explore directions pipeline as [requestDirectionsToBuildingCode].
-  /// The room is passed via the [SavedPlace.category] field to avoid changing the
-  /// existing notifier payload type.
   static void requestDirectionsToBuildingRoom({
     required String buildingCode,
     required String roomCode,
   }) {
-    final code = buildingCode.trim();
-    final room = roomCode.trim();
-    if (code.isEmpty) return;
-
-    BuildingPolygon? building;
-    for (final item in buildingPolygons) {
-      if (item.code.toUpperCase() == code.toUpperCase()) {
-        building = item;
-        break;
-      }
-    }
+    final building = _findBuildingByCode(buildingCode);
     if (building == null) return;
 
-    requestDirections(
-      SavedPlace(
-        id: building.code,
-        name: building.name.isNotEmpty ? building.name : building.code,
-        category: 'all',
-        latitude: building.center.latitude,
-        longitude: building.center.longitude,
-        openingHoursToday: 'Hours unavailable today',
-        roomCode: room,
-      ),
-    );
+    requestDirections(_toSavedPlace(building, roomCode: roomCode));
   }
 
   static void clear() {
