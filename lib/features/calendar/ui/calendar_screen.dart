@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
 
@@ -145,6 +147,7 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   late final CalendarRepositoryContract _repository;
   late final CalendarSessionContract _session;
+  bool _calendarAccessEnabled = true;
 
   CalendarConnectionStep _step = CalendarConnectionStep.connect;
   bool _isLoading = false;
@@ -163,11 +166,50 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _session =
         widget.session ??
         DefaultCalendarSessionAdapter(GoogleCalendarSession.instance);
-    _initializeCalendarState();
+    _calendarAccessEnabled = AppSettingsController.state.calendarAccessEnabled;
+    AppSettingsController.notifier.addListener(_onSettingsChanged);
+    if (_calendarAccessEnabled) {
+      _initializeCalendarState();
+    }
+  }
+
+  @override
+  void dispose() {
+    AppSettingsController.notifier.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    final enabled = AppSettingsController.state.calendarAccessEnabled;
+    if (enabled == _calendarAccessEnabled) {
+      return;
+    }
+
+    _calendarAccessEnabled = enabled;
+
+    if (!enabled) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = null;
+        _step = CalendarConnectionStep.connect;
+      });
+      return;
+    }
+
+    unawaited(_initializeCalendarState());
   }
 
   Future<void> _initializeCalendarState() async {
+    if (!_calendarAccessEnabled) {
+      return;
+    }
+
     await _session.restore();
+
+    if (!_calendarAccessEnabled) {
+      return;
+    }
 
     _step = _session.step;
     _selectedCalendarIds = Set.from(_session.selectedCalendarIds);
@@ -222,6 +264,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _connectCalendar() async {
+    if (!_calendarAccessEnabled) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -269,6 +315,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _continueWithCalendars() async {
+    if (!_calendarAccessEnabled) {
+      return;
+    }
+
     if (_selectedCalendarIds.isEmpty) return;
 
     setState(() {

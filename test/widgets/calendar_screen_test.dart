@@ -534,6 +534,8 @@ void main() {
           findsOneWidget,
         );
         expect(find.byIcon(Icons.calendar_month_outlined), findsOneWidget);
+        expect(repo.restoreCalls, 0);
+        expect(session.restoreCalls, 0);
       },
     );
 
