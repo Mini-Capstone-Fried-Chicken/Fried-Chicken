@@ -328,6 +328,10 @@ void main() {
       String? receivedBuildingCode;
       String? receivedRoomNumber;
 
+      // Ensure clean state before the interaction.
+      SavedDirectionsController.clear();
+      expect(SavedDirectionsController.notifier.value, isNull);
+
       await tester.pumpWidget(
         makeTestableWidget(
           CalendarScheduleView(
@@ -353,6 +357,17 @@ void main() {
       expect(receivedEvent, isNotNull);
       expect(receivedBuildingCode, isNotEmpty);
       expect(receivedRoomNumber, 'H-937');
+
+      // New behavior: Go to Room requests directions (like Go to Building),
+      // but also carries the room code for Explore to prefill.
+      final requested = SavedDirectionsController.notifier.value;
+      expect(requested, isNotNull);
+      expect(
+        requested!.id.toUpperCase(),
+        receivedBuildingCode!.trim().toUpperCase(),
+      );
+      expect(requested.category, receivedRoomNumber);
+      expect(requested.category.toLowerCase(), isNot('all'));
     });
     testWidgets('popup Save calls onSave callback', (tester) async {
       GoogleCalendarEvent? receivedEvent;

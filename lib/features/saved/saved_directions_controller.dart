@@ -43,6 +43,41 @@ class SavedDirectionsController {
     );
   }
 
+  /// Request directions to a building and prefill the destination room field.
+  ///
+  /// Uses the same Explore directions pipeline as [requestDirectionsToBuildingCode].
+  /// The room is passed via the [SavedPlace.category] field to avoid changing the
+  /// existing notifier payload type.
+  static void requestDirectionsToBuildingRoom({
+    required String buildingCode,
+    required String roomCode,
+  }) {
+    final code = buildingCode.trim();
+    final room = roomCode.trim();
+    if (code.isEmpty) return;
+
+    BuildingPolygon? building;
+    for (final item in buildingPolygons) {
+      if (item.code.toUpperCase() == code.toUpperCase()) {
+        building = item;
+        break;
+      }
+    }
+    if (building == null) return;
+
+    requestDirections(
+      SavedPlace(
+        id: building.code,
+        name: building.name.isNotEmpty ? building.name : building.code,
+        // Encode the desired destination room for the Explore UI to prefill.
+        category: room,
+        latitude: building.center.latitude,
+        longitude: building.center.longitude,
+        openingHoursToday: 'Hours unavailable today',
+      ),
+    );
+  }
+
   static void clear() {
     notifier.value = null;
   }

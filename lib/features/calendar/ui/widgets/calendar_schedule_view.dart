@@ -241,6 +241,10 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
               },
               onGoToRoom: () {
                 Navigator.of(context).pop();
+                SavedDirectionsController.requestDirectionsToBuildingRoom(
+                  buildingCode: buildingCode,
+                  roomCode: roomNumber,
+                );
                 widget.onGoToRoom?.call(event, buildingCode, roomNumber);
               },
               onSave: () {
