@@ -292,6 +292,169 @@ void main() {
         expect(result!.location.latitude, 0.0);
         expect(result.location.longitude, 0.0);
       });
+
+      test('parses types and prefers current weekday descriptions', () async {
+        final mockClient = MockHttpClient((request) {
+          return http.Response(
+            json.encode({
+              'id': 'ChIJ_TYPES',
+              'displayName': {'text': 'Typed Place'},
+              'location': {'latitude': 45.5, 'longitude': -73.5},
+              'types': ['cafe', 'restaurant'],
+              'currentOpeningHours': {
+                'weekdayDescriptions': [
+                  'Monday: 8:00 AM - 5:00 PM',
+                  'Tuesday: 8:00 AM - 5:00 PM',
+                ],
+              },
+              'regularOpeningHours': {
+                'weekdayDescriptions': ['Monday: 9:00 AM - 6:00 PM'],
+              },
+            }),
+            200,
+          );
+        });
+
+        final service = GooglePlacesService(client: mockClient);
+        final result = await service.getPlaceDetails(
+          'ChIJ_TYPES',
+          includeMetadata: true,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.types, ['cafe', 'restaurant']);
+        expect(result.weekdayDescriptions.first, 'Monday: 8:00 AM - 5:00 PM');
+      });
+
+      test('falls back to regular weekday descriptions when current is empty', () async {
+        final mockClient = MockHttpClient((request) {
+          return http.Response(
+            json.encode({
+              'id': 'ChIJ_REGULAR',
+              'displayName': {'text': 'Regular Hours Place'},
+              'location': {'latitude': 45.5, 'longitude': -73.5},
+              'types': ['library'],
+              'currentOpeningHours': {
+                'weekdayDescriptions': <String>[],
+              },
+              'regularOpeningHours': {
+                'weekdayDescriptions': ['Wednesday: 10:00 AM - 4:00 PM'],
+              },
+            }),
+            200,
+          );
+        });
+
+        final service = GooglePlacesService(client: mockClient);
+        final result = await service.getPlaceDetails(
+          'ChIJ_REGULAR',
+          includeMetadata: true,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.weekdayDescriptions, ['Wednesday: 10:00 AM - 4:00 PM']);
+      });
+
+      test('weekday descriptions are empty when neither current nor regular provide values', () async {
+        final mockClient = MockHttpClient((request) {
+          return http.Response(
+            json.encode({
+              'id': 'ChIJ_NONE',
+              'displayName': {'text': 'No Hours Place'},
+              'location': {'latitude': 45.5, 'longitude': -73.5},
+              'types': ['point_of_interest'],
+            }),
+            200,
+          );
+        });
+
+        final service = GooglePlacesService(client: mockClient);
+        final result = await service.getPlaceDetails(
+          'ChIJ_NONE',
+          includeMetadata: true,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.weekdayDescriptions, isEmpty);
+      });
+    });
+
+    group('resolvePlaceMetadata method', () {
+      test('returns null when search yields no candidates', () async {
+        final mockClient = MockHttpClient((request) {
+          if (request.url.path.contains('/places:searchText')) {
+            return http.Response(json.encode({'places': []}), 200);
+          }
+          return http.Response('Unexpected request', 500);
+        });
+
+        final service = GooglePlacesService(client: mockClient);
+        final result = await service.resolvePlaceMetadata(
+          query: 'nowhere',
+          location: const LatLng(45.5, -73.5),
+        );
+
+        expect(result, isNull);
+      });
+
+      test('chooses nearest candidate and fetches details with includeMetadata', () async {
+        String? detailsPath;
+        String? fieldMask;
+
+        final mockClient = MockHttpClient((request) {
+          if (request.url.path.contains('/places:searchText')) {
+            return http.Response(
+              json.encode({
+                'places': [
+                  {
+                    'id': 'far_place',
+                    'displayName': {'text': 'Far Place'},
+                    'location': {'latitude': 45.9, 'longitude': -73.9},
+                  },
+                  {
+                    'id': 'near_place',
+                    'displayName': {'text': 'Near Place'},
+                    'location': {'latitude': 45.5001, 'longitude': -73.5001},
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+
+          if (request.url.path.contains('/places/near_place')) {
+            detailsPath = request.url.path;
+            fieldMask = request.headers['X-Goog-FieldMask'];
+            return http.Response(
+              json.encode({
+                'id': 'near_place',
+                'displayName': {'text': 'Near Place'},
+                'formattedAddress': '1 Near St',
+                'location': {'latitude': 45.5001, 'longitude': -73.5001},
+                'primaryType': 'cafe',
+                'types': ['cafe'],
+                'regularOpeningHours': {
+                  'weekdayDescriptions': ['Monday: 9:00 AM - 5:00 PM'],
+                },
+              }),
+              200,
+            );
+          }
+
+          return http.Response('Unexpected request', 500);
+        });
+
+        final service = GooglePlacesService(client: mockClient);
+        final result = await service.resolvePlaceMetadata(
+          query: 'coffee',
+          location: const LatLng(45.5, -73.5),
+        );
+
+        expect(result, isNotNull);
+        expect(result!.placeId, 'near_place');
+        expect(detailsPath, contains('/places/near_place'));
+        expect(fieldMask, contains('currentOpeningHours.weekdayDescriptions'));
+      });
     });
 
     group('getAutocompletePredictions method', () {

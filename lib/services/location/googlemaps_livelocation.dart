@@ -12,11 +12,14 @@ import '../../data/building_polygons.dart';
 import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
 import '../../features/indoor/data/building_info.dart';
+import '../../features/saved/saved_directions_controller.dart';
+import '../../features/saved/saved_place.dart';
 import '../../features/settings/app_settings.dart';
 import '../../services/concordia_shuttle_service.dart';
 import '../../services/navigation_steps.dart';
 import '../../services/nearby_poi_service.dart';
 import '../../services/poi_icon_factory.dart';
+import '../../shared/widgets/building_info_popup.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
 import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
 import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
@@ -69,6 +72,8 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
+/// Merges outdoor and indoor polylines into a single set.
+/// Returns an empty set if both inputs are empty.
 Set<Polyline> mergeMapPolylines({
   required Set<Polyline> outdoorPolylines,
   required Set<Polyline> indoorPolylines,
@@ -213,6 +218,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   List<PoiPlace> _nearbyPois = [];
   bool _poisLoaded = false;
   final Map<PoiCategory, BitmapDescriptor> _poiIcons = {};
+  PoiPlace? _selectedPoi;
+  PlaceResult? _selectedPoiDetails;
+  LatLng? _selectedPoiCenter;
 
   StreamSubscription<Position>? _posSub;
 
@@ -229,6 +237,75 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _lastCameraTarget;
   bool _highContrastMode = false;
+
+  void _onSavedDirectionsRequested() {
+    final place = SavedDirectionsController.notifier.value;
+    if (place == null) return;
+    unawaited(_startDirectionsForSavedPlace(place));
+  }
+
+  Future<LatLng> _resolveOriginForSavedDirections() async {
+    if (_currentLocation != null) {
+      return _currentLocation!;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      final origin = LatLng(position.latitude, position.longitude);
+      if (mounted) {
+        setState(() {
+          _currentLocation = origin;
+        });
+      }
+      return origin;
+    } catch (_) {
+      // Fall back to map context when GPS is unavailable/denied.
+    }
+
+    if (_lastCameraTarget != null) {
+      return _lastCameraTarget!;
+    }
+
+    return _selectedCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+  }
+
+  Future<void> _startDirectionsForSavedPlace(SavedPlace place) async {
+    try {
+      final origin = await _resolveOriginForSavedDirections();
+
+      final destination = LatLng(place.latitude, place.longitude);
+      final selectedBuilding = _findBuildingByCode(place.id);
+      final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
+      if (!mounted) return;
+      setState(() {
+        _selectedBuildingPoly = selectedBuilding;
+        _selectedBuildingCenter = null;
+        _selectedPoi = null;
+        _selectedPoiDetails = null;
+        _selectedPoiCenter = null;
+        _anchorOffset = null;
+        _showRoutePreview = true;
+        _routeOrigin = origin;
+        _routeDestination = destination;
+        _routeOriginText = currentLocationTag;
+        _routeDestinationText = place.name;
+        _routeOriginBuildingCode = currentBuildingCode;
+        _routeDestinationBuildingCode = selectedBuilding?.code;
+      });
+
+      await _fetchRoutesAndDurations();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to start directions for this place.'),
+        ),
+      );
+    } finally {
+      SavedDirectionsController.clear();
+    }
+  }
 
   void _onAppSettingsChanged() {
     final enabled = AppSettingsController.state.highContrastModeEnabled;
@@ -601,8 +678,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
 
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (ok) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Could not open link")));
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -620,7 +703,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Future<void> _updatePopupOffset() async {
     final controller = _mapController;
-    final center = _selectedBuildingCenter;
+    final center = _selectedBuildingCenter ?? _selectedPoiCenter;
     if (!mounted || controller == null || center == null) return;
 
     final sc = await controller.getScreenCoordinate(center);
@@ -672,6 +755,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = b;
       _selectedBuildingCenter = center;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _cameraMoving = true;
       _clearIndoorState();
@@ -696,11 +782,121 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _clearSelectedBuilding(clearSearch: true);
   }
 
+  Future<void> _onPoiTapped(PoiPlace poi) async {
+    final controller = _mapController;
+
+    setState(() {
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _selectedPoi = poi;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = poi.location;
+      _anchorOffset = null;
+      _cameraMoving = true;
+      _clearIndoorState();
+      _roomLabelMarkers = {};
+    });
+
+    if (controller != null) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(poi.location, 18),
+      );
+      if (!mounted) return;
+      await _updatePopupOffset();
+      if (!mounted) return;
+      setState(() {
+        _cameraMoving = false;
+      });
+    }
+
+    final details = await GooglePlacesService.instance.getPlaceDetails(
+      poi.placeId,
+      includeMetadata: true,
+    );
+
+    if (!mounted) return;
+    if (_selectedPoi?.placeId != poi.placeId) return;
+
+    setState(() {
+      _selectedPoiDetails = details;
+    });
+  }
+
+  Future<void> _getDirectionsToSelectedPoi() async {
+    final poi = _selectedPoi;
+    final origin = _currentLocation;
+    if (poi == null || origin == null) {
+      return;
+    }
+
+    final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
+    setState(() {
+      _selectedBuildingCenter = null;
+      _selectedPoiCenter = null;
+      _anchorOffset = null;
+      _showRoutePreview = true;
+      _routeOrigin = origin;
+      _routeDestination = poi.location;
+      _routeOriginText = currentLocationTag;
+      _routeDestinationText = poi.name;
+      _routeOriginBuildingCode = currentBuildingCode;
+      _routeDestinationBuildingCode = null;
+    });
+
+    await _fetchRoutesAndDurations();
+  }
+
+  String _poiDescription(PoiPlace poi) {
+    final details = _selectedPoiDetails;
+    final address = details?.formattedAddress?.trim();
+    final category = _poiCategoryLabel(poi.category);
+
+    if (address != null && address.isNotEmpty) {
+      return '$address\n$category';
+    }
+
+    return category;
+  }
+
+  List<String> _poiFacilities() {
+    final types = _selectedPoiDetails?.types ?? const <String>[];
+    return types.map((t) => t.replaceAll('_', ' ')).toList();
+  }
+
+  SavedPlace? _selectedPoiSavedPlace() {
+    final poi = _selectedPoi;
+    if (poi == null) return null;
+
+    return SavedPlace(
+      id: poi.placeId.startsWith('places/')
+          ? poi.placeId
+          : 'places/${poi.placeId}',
+      name: _selectedPoiDetails?.name ?? poi.name,
+      category: _poiCategoryLabel(poi.category).toLowerCase(),
+      latitude: poi.location.latitude,
+      longitude: poi.location.longitude,
+      openingHoursToday: 'Open today: Hours unavailable',
+      googlePlaceType: _selectedPoiDetails?.primaryType,
+    );
+  }
+
+  Future<void> _openSelectedPoiLink() async {
+    final poi = _selectedPoi;
+    if (poi == null) return;
+    await _openLink(
+      'https://www.google.com/maps/place/?q=place_id:${poi.placeId}',
+    );
+  }
+
   void _clearSelectedBuilding({bool clearSearch = false}) {
     _indoorNavigationController.stop();
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _selectedSearchResult = null;
       _anchorOffset = null;
       _routePolylines = {};
@@ -1124,6 +1320,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       //reset indoor map and building selection state
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _destinationRoomMarker = null;
       _originRoomController.clear();
@@ -1459,10 +1658,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           markerId: MarkerId('poi_${poi.placeId}'),
           position: poi.location,
           icon: icon,
-          infoWindow: InfoWindow(
-            title: poi.name,
-            snippet: _poiCategoryLabel(poi.category),
-          ),
+          onTap: () => unawaited(_onPoiTapped(poi)),
           zIndexInt: 0,
         ),
       );
@@ -1756,7 +1952,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _hideBuildingPopup() {
-    if (_selectedBuildingPoly == null) return;
+    if (_selectedBuildingPoly == null && _selectedPoi == null) return;
 
     _clearSelectedBuilding();
   }
@@ -1820,6 +2016,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _selectedSearchResult = result;
     });
 
@@ -1870,6 +2069,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _showRoutePreview = true;
       _routeOrigin = _currentLocation;
@@ -2017,6 +2219,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _highContrastMode = AppSettingsController.state.highContrastModeEnabled;
     AppSettingsController.notifier.addListener(_onAppSettingsChanged);
     _indoorNavigationController.addListener(_onIndoorNavigationChanged);
+    SavedDirectionsController.notifier.addListener(_onSavedDirectionsRequested);
 
     _selectedCampus = widget.initialCampus;
 
@@ -2040,8 +2243,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
 
+    _determineUserLocationAndBuilding();
     // Initialise POI icons and fetch nearby places
     _initPois();
+
+    _onSavedDirectionsRequested();
   }
 
   Future<void> _bootstrapLocationState() async {
@@ -2080,12 +2286,35 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       });
     } catch (_) {
       return;
+      final position = await Geolocator.getCurrentPosition();
+      _currentLocation = LatLng(position.latitude, position.longitude);
+
+      final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
+
+      if (!mounted) return;
+      setState(() {
+        _currentBuildingCode = buildingAtLocation?.code;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentBuildingCode = null;
+      });
     }
   }
 
   BuildingPolygon? _findBuildingAtLocation(LatLng location) {
     for (final building in buildingPolygons) {
       if (_isPointInPolygon(location, building.points)) {
+        return building;
+      }
+    }
+    return null;
+  }
+
+  BuildingPolygon? _findBuildingByCode(String code) {
+    for (final building in buildingPolygons) {
+      if (building.code.toUpperCase() == code.toUpperCase()) {
         return building;
       }
     }
@@ -2403,6 +2632,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedCampus = newCampus;
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _cameraMoving = false;
       _searchController.clear();
@@ -2485,15 +2717,24 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               onMapCreated: (c) => _mapController = c,
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
-                if (_selectedBuildingCenter != null) _schedulePopupUpdate();
+                if (_selectedBuildingCenter != null ||
+                    _selectedPoiCenter != null) {
+                  _schedulePopupUpdate();
+                }
               },
               onCameraMoveStarted: () {
-                if (_selectedBuildingCenter == null) return;
+                if (_selectedBuildingCenter == null &&
+                    _selectedPoiCenter == null) {
+                  return;
+                }
                 setState(() => _cameraMoving = true);
               },
               onCameraIdle: () {
                 _syncToggleWithCameraCenter();
-                if (_selectedBuildingCenter == null) return;
+                if (_selectedBuildingCenter == null &&
+                    _selectedPoiCenter == null) {
+                  return;
+                }
                 setState(() => _cameraMoving = false);
                 _updatePopupOffset();
               },
@@ -2651,6 +2892,30 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             ),
 
           if (!_showRoutePreview && !_isIndoorNavigationActive)
+            if (selectedBuilding == null &&
+                _selectedPoi != null &&
+                popupPos != null)
+              Positioned(
+                left: popupPos.dx,
+                top: popupPos.dy,
+                child: PointerInterceptor(
+                  child: BuildingInfoPopup(
+                    title: _selectedPoiDetails?.name ?? _selectedPoi!.name,
+                    description: _poiDescription(_selectedPoi!),
+                    accessibility: false,
+                    facilities: _poiFacilities(),
+                    onMore: () => unawaited(_openSelectedPoiLink()),
+                    onClose: _closePopup,
+                    isLoggedIn: widget.isLoggedIn,
+                    onGetDirections: () =>
+                        unawaited(_getDirectionsToSelectedPoi()),
+                    highContrastMode: _highContrastMode,
+                    savedPlace: _selectedPoiSavedPlace(),
+                  ),
+                ),
+              ),
+
+          if (!_showRoutePreview)
             OutdoorBottomControls(
               currentLocation: _currentLocation,
               currentCampus: _currentCampus,
@@ -2794,6 +3059,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     AppSettingsController.notifier.removeListener(_onAppSettingsChanged);
     _indoorNavigationController.removeListener(_onIndoorNavigationChanged);
     _indoorNavigationController.dispose();
+    SavedDirectionsController.notifier.removeListener(
+      _onSavedDirectionsRequested,
+    );
     _posSub?.cancel();
     _popupDebounce?.cancel();
     _debounceTimer?.cancel();
