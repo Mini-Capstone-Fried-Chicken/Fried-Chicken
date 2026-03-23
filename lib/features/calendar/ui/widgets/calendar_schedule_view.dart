@@ -247,10 +247,6 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                 );
                 widget.onGoToRoom?.call(event, buildingCode, roomNumber);
               },
-              onSave: () {
-                Navigator.of(context).pop();
-                widget.onSave?.call(event, buildingCode);
-              },
             ),
           ),
         );
