@@ -292,6 +292,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDestinationText = place.name;
         _routeOriginBuildingCode = currentBuildingCode;
         _routeDestinationBuildingCode = selectedBuilding?.code;
+
+        // Prefill destination room only when explicitly provided (Calendar Go to Room).
+        final requestedRoom = (place.roomCode ?? '').trim();
+        if (requestedRoom.isNotEmpty) {
+          _destinationRoomController.text = requestedRoom;
+        }
       });
 
       await _fetchRoutesAndDurations();
@@ -1744,14 +1750,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 patterns: [PatternItem.dot, PatternItem.gap(10)],
               ),
             };
-          });
 
-          if (_mapController != null) {
-            final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
-            _mapController!.animateCamera(
-              CameraUpdate.newLatLngBounds(bounds, 100),
-            );
-          }
+            if (_mapController != null) {
+              final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
+              _mapController!.animateCamera(
+                CameraUpdate.newLatLngBounds(bounds, 100),
+              );
+            }
+          });
         } else {
           setState(() {
             _routePolylines = {};
@@ -2903,7 +2909,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 ),
               ),
 
-          if (!_showRoutePreview)
+          if (!_showRoutePreview && !_isIndoorNavigationActive)
             OutdoorBottomControls(
               currentLocation: _currentLocation,
               currentCampus: _currentCampus,
