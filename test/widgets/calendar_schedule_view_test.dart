@@ -343,12 +343,13 @@ void main() {
     testWidgets('popup Save calls onSave callback', (tester) async {
       GoogleCalendarEvent? receivedEvent;
       String? receivedBuildingCode;
+      final saveEvent = popupEvent.copyWith(location: 'H-937');
 
       await tester.pumpWidget(
         makeTestableWidget(
           CalendarScheduleView(
             selectedCalendarLabel: 'SOEN 357',
-            events: [popupEvent],
+            events: [saveEvent],
             onBack: () {},
             onSave: (event, buildingCode) {
               receivedEvent = event;
@@ -359,42 +360,15 @@ void main() {
       );
 
       final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
-      state.showEventPopup(popupEvent);
+      state.showEventPopup(saveEvent);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(receivedEvent, isNotNull);
-      expect(receivedBuildingCode, isNotEmpty);
-    });
-    testWidgets('popup Save calls onSave callback', (tester) async {
-      GoogleCalendarEvent? receivedEvent;
-      String? receivedBuildingCode;
-
-      await tester.pumpWidget(
-        makeTestableWidget(
-          CalendarScheduleView(
-            selectedCalendarLabel: 'SOEN 357',
-            events: [popupEvent],
-            onBack: () {},
-            onSave: (event, buildingCode) {
-              receivedEvent = event;
-              receivedBuildingCode = buildingCode;
-            },
-          ),
-        ),
-      );
-
-      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
-      state.showEventPopup(popupEvent);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(receivedEvent, isNotNull);
-      expect(receivedBuildingCode, isNotEmpty);
+      expect(receivedEvent!.id, 'popup_1');
+      expect(receivedBuildingCode, 'HALL');
     });
     testWidgets('handleCalendarTap ignores non-appointment targets', (
       tester,
