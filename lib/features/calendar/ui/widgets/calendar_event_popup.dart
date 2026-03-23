@@ -11,6 +11,13 @@ class CalendarEventPopup extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onClose;
 
+  static const String popupKey = 'calendar_event_popup';
+  static const String closeButtonKey = 'calendar_popup_close_button';
+  static const String goToBuildingButtonKey =
+      'calendar_popup_go_to_building_button';
+  static const String goToRoomButtonKey = 'calendar_popup_go_to_room_button';
+  static const String saveButtonKey = 'calendar_popup_save_button';
+
   const CalendarEventPopup({
     super.key,
     required this.event,
@@ -47,6 +54,7 @@ class CalendarEventPopup extends StatelessWidget {
     final canSave = hasBuilding;
 
     return Dialog(
+      key: const Key(popupKey),
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 90),
       child: Container(
@@ -62,6 +70,7 @@ class CalendarEventPopup extends StatelessWidget {
             Align(
               alignment: Alignment.topRight,
               child: InkWell(
+                key: const Key(closeButtonKey),
                 onTap: onClose,
                 borderRadius: BorderRadius.circular(20),
                 child: const Padding(
@@ -87,16 +96,22 @@ class CalendarEventPopup extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             popupButton(
+              key: const Key(goToBuildingButtonKey),
               label: 'Go to Building',
               onPressed: canGoToBuilding ? onGoToBuilding : null,
             ),
             const SizedBox(height: 8),
             popupButton(
+              key: const Key(goToRoomButtonKey),
               label: 'Go to Room',
               onPressed: canGoToRoom ? onGoToRoom : null,
             ),
             const SizedBox(height: 8),
-            popupButton(label: 'Save', onPressed: canSave ? onSave : null),
+            popupButton(
+              key: const Key(saveButtonKey),
+              label: 'Save',
+              onPressed: canSave ? onSave : null,
+            ),
           ],
         ),
       ),
@@ -106,11 +121,13 @@ class CalendarEventPopup extends StatelessWidget {
   Widget popupButton({
     required String label,
     required VoidCallback? onPressed,
+    Key? key,
   }) {
     return SizedBox(
       width: double.infinity,
       height: 30,
       child: ElevatedButton(
+        key: key,
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           elevation: 0,
