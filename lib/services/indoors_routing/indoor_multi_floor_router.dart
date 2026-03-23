@@ -31,6 +31,7 @@ class IndoorMultiFloorRouter {
   IndoorRoutePlan? buildRoute({
     required IndoorResolvedRoom originRoom,
     required IndoorResolvedRoom destinationRoom,
+    IndoorTransitionMode? preferredTransitionMode,
   }) {
     if (originRoom.floorAssetPath == destinationRoom.floorAssetPath) {
       return _buildSameFloorRoute(
@@ -42,6 +43,7 @@ class IndoorMultiFloorRouter {
     return _buildDifferentFloorRoute(
       originRoom: originRoom,
       destinationRoom: destinationRoom,
+      preferredTransitionMode: preferredTransitionMode,
     );
   }
 
@@ -80,6 +82,7 @@ class IndoorMultiFloorRouter {
   IndoorRoutePlan? _buildDifferentFloorRoute({
     required IndoorResolvedRoom originRoom,
     required IndoorResolvedRoom destinationRoom,
+    IndoorTransitionMode? preferredTransitionMode,
   }) {
     final originNodes = sameFloorRouter.buildNodesFromFloorGeoJson(
       originRoom.floorGeoJson,
@@ -102,7 +105,7 @@ class IndoorMultiFloorRouter {
       return null;
     }
 
-    final transitionCandidates = transitionMatcher.compatiblePairs(
+    var transitionCandidates = transitionMatcher.compatiblePairs(
       originTransitions: originNodes
           .where((node) => node.isTransition)
           .toList(),
@@ -110,6 +113,12 @@ class IndoorMultiFloorRouter {
           .where((node) => node.isTransition)
           .toList(),
     );
+
+    if (preferredTransitionMode != null) {
+      transitionCandidates = transitionCandidates
+          .where((candidate) => candidate.mode == preferredTransitionMode)
+          .toList();
+    }
 
     _ScoredRouteCandidate? bestCandidate;
 

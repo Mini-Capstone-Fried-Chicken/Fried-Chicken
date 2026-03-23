@@ -171,6 +171,7 @@ void main() {
               buildingCode: 'HALL',
               originRoomCode: 'A801',
               destinationRoomCode: 'B901',
+              preferredTransitionMode: IndoorTransitionMode.stairs,
             );
 
         expect(session, isNotNull);
@@ -194,11 +195,76 @@ void main() {
         expect(session.destinationMarker.infoWindow.title, 'Room B901');
       },
     );
+
+    test(
+      'buildIndoorNavigationSession forwards preferred transition mode',
+      () async {
+        final originRoom = IndoorResolvedRoom(
+          buildingCode: 'HALL',
+          roomCode: 'A801',
+          floorLabel: '8',
+          floorLevel: '8',
+          floorAssetPath: 'floor_8',
+          floorGeoJson: _simpleFloorGeoJson(),
+          center: const LatLng(45.000025, -72.999975),
+        );
+        final destinationRoom = IndoorResolvedRoom(
+          buildingCode: 'HALL',
+          roomCode: 'B901',
+          floorLabel: '9',
+          floorLevel: '9',
+          floorAssetPath: 'floor_9',
+          floorGeoJson: _simpleFloorGeoJson(),
+          center: const LatLng(45.000025, -72.999875),
+        );
+        final fakeRouter = _FakeIndoorMultiFloorRouter(
+          IndoorRoutePlan(
+            buildingCode: 'HALL',
+            originRoomCode: 'A801',
+            destinationRoomCode: 'B901',
+            originRoom: originRoom,
+            destinationRoom: destinationRoom,
+            segments: const [
+              IndoorRouteSegment(
+                kind: IndoorRouteSegmentKind.walk,
+                floorAssetPath: 'floor_8',
+                floorLabel: '8',
+                points: [
+                  LatLng(45.00000, -73.00000),
+                  LatLng(45.00000, -72.99995),
+                ],
+              ),
+            ],
+            totalDistanceMeters: 12,
+          ),
+        );
+
+        await IndoorRouteService(
+          sameFloorRouter: IndoorSameFloorRouter(),
+          multiFloorRouter: fakeRouter,
+          indoorRepository: _FakeIndoorMapRepository({
+            'A801': originRoom,
+            'B901': destinationRoom,
+          }),
+        ).buildIndoorNavigationSession(
+          buildingCode: 'HALL',
+          originRoomCode: 'A801',
+          destinationRoomCode: 'B901',
+          preferredTransitionMode: IndoorTransitionMode.elevator,
+        );
+
+        expect(
+          fakeRouter.lastPreferredTransitionMode,
+          IndoorTransitionMode.elevator,
+        );
+      },
+    );
   });
 }
 
 class _FakeIndoorMultiFloorRouter extends IndoorMultiFloorRouter {
   final IndoorRoutePlan routePlan;
+  IndoorTransitionMode? lastPreferredTransitionMode;
 
   _FakeIndoorMultiFloorRouter(this.routePlan);
 
@@ -206,7 +272,9 @@ class _FakeIndoorMultiFloorRouter extends IndoorMultiFloorRouter {
   IndoorRoutePlan? buildRoute({
     required IndoorResolvedRoom originRoom,
     required IndoorResolvedRoom destinationRoom,
+    IndoorTransitionMode? preferredTransitionMode,
   }) {
+    lastPreferredTransitionMode = preferredTransitionMode;
     return routePlan;
   }
 }

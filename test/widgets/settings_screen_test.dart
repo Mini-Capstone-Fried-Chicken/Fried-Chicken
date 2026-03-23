@@ -1,6 +1,6 @@
-import 'package:campus_app/features/settings/ui/settings_screen.dart';
-import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:campus_app/features/auth/ui/login_page.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
+import 'package:campus_app/features/settings/ui/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -241,7 +241,7 @@ void main() {
       },
     );
 
-    testWidgets('wheelchair routing switch updates local widget state', (
+    testWidgets('wheelchair routing switch updates shared settings state', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -253,7 +253,10 @@ void main() {
 
       await tester.ensureVisible(find.text('Wheelchair routing as default'));
       final wheelchairSwitch = find.descendant(
-        of: find.widgetWithText(SwitchListTile, 'Wheelchair routing as default'),
+        of: find.widgetWithText(
+          SwitchListTile,
+          'Wheelchair routing as default',
+        ),
         matching: find.byType(Switch),
       );
       await tester.tap(wheelchairSwitch, warnIfMissed: false);
@@ -263,6 +266,10 @@ void main() {
         find.widgetWithText(SwitchListTile, 'Wheelchair routing as default'),
       );
       expect(switchTile.value, isTrue);
+      expect(
+        AppSettingsController.state.wheelchairRoutingDefaultEnabled,
+        isTrue,
+      );
     });
 
     testWidgets('sign in button routes to SignInPage when logged out', (
