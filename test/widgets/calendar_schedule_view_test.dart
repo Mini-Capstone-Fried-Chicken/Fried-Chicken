@@ -368,6 +368,34 @@ void main() {
       expect(receivedEvent, isNotNull);
       expect(receivedBuildingCode, isNotEmpty);
     });
+    testWidgets('popup Save calls onSave callback', (tester) async {
+      GoogleCalendarEvent? receivedEvent;
+      String? receivedBuildingCode;
+
+      await tester.pumpWidget(
+        makeTestableWidget(
+          CalendarScheduleView(
+            selectedCalendarLabel: 'SOEN 357',
+            events: [popupEvent],
+            onBack: () {},
+            onSave: (event, buildingCode) {
+              receivedEvent = event;
+              receivedBuildingCode = buildingCode;
+            },
+          ),
+        ),
+      );
+
+      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
+      state.showEventPopup(popupEvent);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(receivedEvent, isNotNull);
+      expect(receivedBuildingCode, isNotEmpty);
+    });
     testWidgets('handleCalendarTap ignores non-appointment targets', (
       tester,
     ) async {
