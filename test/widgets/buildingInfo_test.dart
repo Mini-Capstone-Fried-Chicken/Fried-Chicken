@@ -4,6 +4,7 @@ import 'package:campus_app/shared/widgets/building_info_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:campus_app/services/nearby_poi_service.dart';
 
 void main() {
   group('BuildingInfoPopup Widget Tests', () {
@@ -26,6 +27,8 @@ void main() {
     Widget createPopupUnderTest({
       required bool isLoggedIn,
       SavedPlace? savedPlace,
+      PoiCategory? poiCategory,
+      List<String> facilities = const [],
     }) {
       return MaterialApp(
         home: Scaffold(
@@ -41,6 +44,8 @@ void main() {
             isLoggedIn: isLoggedIn,
             onGetDirections: () {},
             savedPlace: savedPlace,
+            poiCategory: poiCategory,
+            facilities: facilities,
           ),
         ),
       );
@@ -434,6 +439,87 @@ void main() {
       await tester.pump();
       expect(find.text('Washrooms'), findsOneWidget);
       expect(find.text('Coffee'), findsNothing);
+    });
+
+    testWidgets('POI popup uses cafe icon from poiCategory', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        createPopupUnderTest(isLoggedIn: false, poiCategory: PoiCategory.cafe),
+      );
+
+      expect(find.byIcon(Icons.local_cafe), findsOneWidget);
+      expect(find.byIcon(Icons.restaurant), findsNothing);
+    });
+
+    testWidgets('POI popup uses restaurant icon from poiCategory', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        createPopupUnderTest(
+          isLoggedIn: false,
+          poiCategory: PoiCategory.restaurant,
+        ),
+      );
+
+      expect(find.byIcon(Icons.restaurant), findsOneWidget);
+      expect(find.byIcon(Icons.local_cafe), findsNothing);
+    });
+
+    testWidgets(
+      'POI popup ignores facility-based restaurant icon when category is cafe',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          createPopupUnderTest(
+            isLoggedIn: false,
+            poiCategory: PoiCategory.cafe,
+            facilities: const ['Restaurant', 'Food', 'Coffee shop'],
+          ),
+        );
+
+        expect(find.byIcon(Icons.local_cafe), findsOneWidget);
+        expect(find.byIcon(Icons.restaurant), findsNothing);
+      },
+    );
+
+    testWidgets('POI popup uses pharmacy icon from poiCategory', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        createPopupUnderTest(
+          isLoggedIn: false,
+          poiCategory: PoiCategory.pharmacy,
+        ),
+      );
+
+      expect(find.byIcon(Icons.local_pharmacy), findsOneWidget);
+    });
+
+    testWidgets('POI popup uses depanneur icon from poiCategory', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        createPopupUnderTest(
+          isLoggedIn: false,
+          poiCategory: PoiCategory.depanneur,
+        ),
+      );
+
+      expect(find.byIcon(Icons.storefront), findsOneWidget);
+    });
+
+    testWidgets('non-POI popup still uses facility-based icons', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        createPopupUnderTest(
+          isLoggedIn: false,
+          facilities: const ['Coffee shop', 'Restaurant'],
+        ),
+      );
+
+      expect(find.byIcon(Icons.local_cafe), findsOneWidget);
+      expect(find.byIcon(Icons.restaurant), findsOneWidget);
     });
   });
 }

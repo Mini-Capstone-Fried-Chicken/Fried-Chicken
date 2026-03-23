@@ -2897,6 +2897,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     title: _selectedPoiDetails?.name ?? _selectedPoi!.name,
                     description: _poiDescription(_selectedPoi!),
                     accessibility: false,
+                    poiCategory: _selectedPoi!.category,
                     facilities: _poiFacilities(),
                     onMore: () => unawaited(_openSelectedPoiLink()),
                     onClose: _closePopup,
