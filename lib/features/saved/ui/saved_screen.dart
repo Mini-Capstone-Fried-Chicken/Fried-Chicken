@@ -15,12 +15,20 @@ class SavedScreen extends StatefulWidget {
 }
 
 class _SavedScreenState extends State<SavedScreen> {
-  int _radiusOptionIndex = 11;
+  int _radiusOptionIndex = 19;
   String _selectedFilter = 'all';
   Position? _currentPosition;
 
   static const List<int?> _radiusOptions = <int?>[
     1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
     10,
     20,
     30,
