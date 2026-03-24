@@ -1,8 +1,8 @@
-import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
-import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
-import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
+import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
 
 class FakeIndoorMapRepository extends IndoorMapRepository {
   @override
@@ -185,5 +185,46 @@ void main() {
 
     expect(stairsChip.onSelected, isNull);
     expect(elevatorChip.selected, isTrue);
+  });
+
+  testWidgets('wheelchair routing shows helper text and disables escalator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestWidget(
+        originBuildingCode: 'H',
+        destinationBuildingCode: 'H',
+        wheelchairRoutingDefaultEnabled: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final escalatorChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Escalator'),
+    );
+
+    expect(
+      find.text('Wheelchair routing defaults to elevators.'),
+      findsOneWidget,
+    );
+    expect(escalatorChip.onSelected, isNull);
+  });
+
+  testWidgets('enabled unselected transition chip remains tappable', (
+    tester,
+  ) async {
+    selectedMode = IndoorTransitionMode.stairs;
+
+    await tester.pumpWidget(
+      buildTestWidget(originBuildingCode: 'H', destinationBuildingCode: 'H'),
+    );
+    await tester.pumpAndSettle();
+
+    final elevatorChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Elevator'),
+    );
+
+    expect(elevatorChip.selected, isFalse);
+    expect(elevatorChip.onSelected, isNotNull);
   });
 }
