@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
-import '../../data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
-import '../../services/indoor_maps/indoor_map_repository.dart';
+import 'package:flutter/material.dart';
+
+import '../../data/search_suggestion.dart';
 import '../../features/settings/app_settings.dart';
+import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../../services/indoors_routing/core/indoor_route_plan_models.dart';
 
 enum RouteTravelMode { driving, walking, bicycling, transit, shuttle }
 
@@ -62,6 +64,9 @@ class RoutePreviewPanel extends StatefulWidget {
   final Function(String, String)? onOriginRoomSubmitted;
   final IndoorMapRepository? indoorRepository;
   final bool highContrastMode;
+  final IndoorTransitionMode? selectedTransitionMode;
+  final ValueChanged<IndoorTransitionMode?>? onTransitionModeChanged;
+  final bool wheelchairRoutingDefaultEnabled;
 
   const RoutePreviewPanel({
     super.key,
@@ -87,6 +92,9 @@ class RoutePreviewPanel extends StatefulWidget {
     this.onOriginRoomSubmitted,
     this.indoorRepository,
     this.highContrastMode = false,
+    this.selectedTransitionMode,
+    this.onTransitionModeChanged,
+    this.wheelchairRoutingDefaultEnabled = false,
   });
 
   @override
@@ -203,7 +211,9 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
         ? AppUiColors.highContrastPrimary
         : const Color(0xFF76263D);
     final headerText = widget.highContrastMode ? Colors.black : Colors.white;
-    final headerHint = widget.highContrastMode ? Colors.black54 : Colors.white70;
+    final headerHint = widget.highContrastMode
+        ? Colors.black54
+        : Colors.white70;
     return Center(
       child: SizedBox(
         width: 340,
@@ -254,9 +264,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'Starting location',
-                                  hintStyle: TextStyle(
-                                    color: headerHint,
-                                  ),
+                                  hintStyle: TextStyle(color: headerHint),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -297,11 +305,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.place,
-                              color: headerText,
-                              size: 18,
-                            ),
+                            Icon(Icons.place, color: headerText, size: 18),
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
@@ -314,9 +318,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'Choose destination',
-                                  hintStyle: TextStyle(
-                                    color: headerHint,
-                                  ),
+                                  hintStyle: TextStyle(color: headerHint),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -358,6 +360,12 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                             onDestinationRoomSubmitted:
                                 widget.onDestinationRoomSubmitted,
                             indoorRepository: widget.indoorRepository,
+                            selectedTransitionMode:
+                                widget.selectedTransitionMode,
+                            onTransitionModeChanged:
+                                widget.onTransitionModeChanged,
+                            wheelchairRoutingDefaultEnabled:
+                                widget.wheelchairRoutingDefaultEnabled,
                           ),
                         ),
                     ],
@@ -453,7 +461,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   }
 }
 
-
 class RouteTravelModeBar extends StatelessWidget {
   final RouteTravelMode selectedTravelMode;
   final ValueChanged<RouteTravelMode> onTravelModeSelected;
@@ -467,7 +474,6 @@ class RouteTravelModeBar extends StatelessWidget {
   final VoidCallback onStart;
   final bool isNavigating;
   final bool highContrastMode;
-
 
   final List<String> shuttleNextBuses;
 
@@ -501,19 +507,17 @@ class RouteTravelModeBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final barBg = highContrastMode
         ? AppUiColors.highContrastPrimary
-      : const Color(0xFF76263D);
-    final selectedText = highContrastMode
-      ? Colors.black
-      : Colors.white;
-    final mutedText = highContrastMode
-      ? Colors.black54
-      : Colors.white70;
+        : const Color(0xFF76263D);
+    final selectedText = highContrastMode ? Colors.black : Colors.white;
+    final mutedText = highContrastMode ? Colors.black54 : Colors.white70;
     final buttonActive = highContrastMode
-      ? const Color(0xFF89D9C2)
-      : Colors.white;
+        ? const Color(0xFF89D9C2)
+        : Colors.white;
     final selectedLabel = selectedTravelMode.label;
     final selectedDuration = modeDurations[selectedTravelMode.apiValue];
-    final resolvedDuration = selectedDuration?.trim().isNotEmpty == true ? selectedDuration! : 'N/A';
+    final resolvedDuration = selectedDuration?.trim().isNotEmpty == true
+        ? selectedDuration!
+        : 'N/A';
     final durationLabel = isLoadingDurations ? '...' : resolvedDuration;
 
     final durationParts = _splitDuration(durationLabel);
@@ -573,14 +577,17 @@ class RouteTravelModeBar extends StatelessWidget {
               const SizedBox(width: 6),
 
               TextButton(
-                onPressed: (isNavigating ||
+                onPressed:
+                    (isNavigating ||
                         selectedTravelMode == RouteTravelMode.shuttle)
                     ? null
                     : onStart,
                 style: TextButton.styleFrom(
                   foregroundColor: selectedText,
                   backgroundColor: buttonActive.withValues(
-                    alpha: (isNavigating || selectedTravelMode == RouteTravelMode.shuttle)
+                    alpha:
+                        (isNavigating ||
+                            selectedTravelMode == RouteTravelMode.shuttle)
                         ? 0.20
                         : 0.40,
                   ),
@@ -672,7 +679,10 @@ class RouteTravelModeBar extends StatelessWidget {
           ),
 
           const SizedBox(height: 10),
-          Container(height: 1, color: highContrastMode ? Colors.black26 : Colors.white24),
+          Container(
+            height: 1,
+            color: highContrastMode ? Colors.black26 : Colors.white24,
+          ),
           const SizedBox(height: 10),
 
           Row(
@@ -695,10 +705,7 @@ class RouteTravelModeBar extends StatelessWidget {
                       opacity: durationParts.$2.isNotEmpty ? 1 : 0,
                       child: Text(
                         durationParts.$2.isNotEmpty ? durationParts.$2 : '--',
-                        style: TextStyle(
-                          color: mutedText,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: mutedText, fontSize: 12),
                       ),
                     ),
                   ],
@@ -712,7 +719,6 @@ class RouteTravelModeBar extends StatelessWidget {
       ),
     );
   }
-
 
   String _durationLabelFor(RouteTravelMode mode) {
     if (mode == RouteTravelMode.shuttle) {
@@ -736,11 +742,11 @@ class RouteTravelModeBar extends StatelessWidget {
     final foreground = selectedColor;
     final inactiveColor = highContrastMode ? Colors.black54 : Colors.white70;
     final selectedBg = highContrastMode
-      ? const Color(0xFF5EBFA7)
-      : Colors.white.withValues(alpha: 0.15);
+        ? const Color(0xFF5EBFA7)
+        : Colors.white.withValues(alpha: 0.15);
     final selectedBorder = highContrastMode
-      ? Colors.black26
-      : Colors.transparent;
+        ? Colors.black26
+        : Colors.transparent;
 
     return GestureDetector(
       onTap: () => onTravelModeSelected(mode),
@@ -922,9 +928,7 @@ class RouteTravelModeBar extends StatelessWidget {
                   style: TextStyle(
                     color: isNext ? primaryText : secondaryText,
                     fontSize: isNext ? 12 : 11,
-                    fontWeight: isNext
-                        ? FontWeight.w700
-                        : FontWeight.w400,
+                    fontWeight: isNext ? FontWeight.w700 : FontWeight.w400,
                   ),
                 ),
               ],

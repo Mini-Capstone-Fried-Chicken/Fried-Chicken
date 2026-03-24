@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../../services/indoors_routing/core/indoor_route_plan_models.dart';
 
 const Color validGreen = Color(0xFF4CAF50);
 const Color invalidRed = Color(0xFFE53935);
@@ -21,6 +23,9 @@ class RoomFieldsSection extends StatefulWidget {
   final Function(String buildingCode, String roomCode)?
   onDestinationRoomSubmitted;
   final Function(String buildingCode, String roomCode)? onOriginRoomSubmitted;
+  final IndoorTransitionMode? selectedTransitionMode;
+  final ValueChanged<IndoorTransitionMode?>? onTransitionModeChanged;
+  final bool wheelchairRoutingDefaultEnabled;
 
   const RoomFieldsSection({
     super.key,
@@ -37,6 +42,9 @@ class RoomFieldsSection extends StatefulWidget {
     this.onOriginRoomSubmitted,
     this.onDestinationRoomSubmitted,
     this.indoorRepository,
+    this.selectedTransitionMode,
+    this.onTransitionModeChanged,
+    this.wheelchairRoutingDefaultEnabled = false,
   });
 
   @override
@@ -152,6 +160,29 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
     return isValid ? validGreen : invalidRed;
   }
 
+  bool get _showTransitionModeSelector {
+    final originBuildingCode = widget.originBuildingCode?.trim();
+    final destinationBuildingCode = widget.destinationBuildingCode?.trim();
+
+    if (widget.onTransitionModeChanged == null ||
+        !widget.originEnabled ||
+        !widget.destinationEnabled ||
+        originBuildingCode == null ||
+        destinationBuildingCode == null ||
+        originBuildingCode.isEmpty ||
+        destinationBuildingCode.isEmpty) {
+      return false;
+    }
+
+    return originBuildingCode.toUpperCase() ==
+        destinationBuildingCode.toUpperCase();
+  }
+
+  IndoorTransitionMode? get _effectiveSelectedTransitionMode =>
+      widget.wheelchairRoutingDefaultEnabled
+      ? IndoorTransitionMode.elevator
+      : widget.selectedTransitionMode;
+
   Future<void> _handleOriginRoomSubmit(String val) async {
     if (val.isEmpty || !widget.originEnabled) return;
 
@@ -266,29 +297,133 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
     );
   }
 
+  Widget _buildTransitionModeSelector() {
+    const textStyle = TextStyle(
+      fontSize: 12,
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Switch floors by', style: textStyle),
+        if (widget.wheelchairRoutingDefaultEnabled) ...[
+          const SizedBox(height: 4),
+          const Text(
+            'Wheelchair routing defaults to elevators.',
+            style: TextStyle(fontSize: 11, color: Colors.white70),
+          ),
+        ],
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildTransitionModeChip(
+              label: 'Stairs',
+              selected:
+                  _effectiveSelectedTransitionMode ==
+                  IndoorTransitionMode.stairs,
+              onSelected: widget.wheelchairRoutingDefaultEnabled
+                  ? null
+                  : () => widget.onTransitionModeChanged?.call(
+                      IndoorTransitionMode.stairs,
+                    ),
+            ),
+            _buildTransitionModeChip(
+              label: 'Elevator',
+              selected:
+                  _effectiveSelectedTransitionMode ==
+                  IndoorTransitionMode.elevator,
+              onSelected: () => widget.onTransitionModeChanged?.call(
+                IndoorTransitionMode.elevator,
+              ),
+            ),
+            _buildTransitionModeChip(
+              label: 'Escalator',
+              selected:
+                  _effectiveSelectedTransitionMode ==
+                  IndoorTransitionMode.escalator,
+              onSelected: widget.wheelchairRoutingDefaultEnabled
+                  ? null
+                  : () => widget.onTransitionModeChanged?.call(
+                      IndoorTransitionMode.escalator,
+                    ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTransitionModeChip({
+    required String label,
+    required bool selected,
+    required VoidCallback? onSelected,
+  }) {
+    const selectedBackground = Colors.white;
+    const selectedForeground = Color(0xFF76263D);
+    const unselectedBackground = Color(0xFFF4D6DE);
+    const unselectedForeground = Color(0xFF76263D);
+    const disabledBackground = Color(0xFFE9D9DE);
+    final labelColor = selected
+        ? selectedForeground
+        : onSelected == null
+        ? unselectedForeground.withValues(alpha: 0.45)
+        : unselectedForeground;
+    final borderColor = selected
+        ? selectedForeground
+        : onSelected == null
+        ? unselectedForeground.withValues(alpha: 0.2)
+        : unselectedForeground.withValues(alpha: 0.7);
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected == null ? null : (_) => onSelected(),
+      labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w600),
+      selectedColor: selectedBackground,
+      backgroundColor: onSelected == null
+          ? disabledBackground
+          : unselectedBackground,
+      side: BorderSide(color: borderColor),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _buildTextField(
-            controller: widget.originRoomController,
-            enabled: widget.originEnabled,
-            label: 'Origin Room',
-            isValid: _originValid,
-            onChanged: _validateOriginRoom,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTextField(
+                controller: widget.originRoomController,
+                enabled: widget.originEnabled,
+                label: 'Origin Room',
+                isValid: _originValid,
+                onChanged: _validateOriginRoom,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildTextField(
+                controller: widget.destinationRoomController,
+                enabled: widget.destinationEnabled,
+                label: 'Destination Room',
+                isValid: _destinationValid,
+                onChanged: _validateDestinationRoom,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildTextField(
-            controller: widget.destinationRoomController,
-            enabled: widget.destinationEnabled,
-            label: 'Destination Room',
-            isValid: _destinationValid,
-            onChanged: _validateDestinationRoom,
-          ),
-        ),
+        if (_showTransitionModeSelector) ...[
+          const SizedBox(height: 12),
+          _buildTransitionModeSelector(),
+        ],
       ],
     );
   }
