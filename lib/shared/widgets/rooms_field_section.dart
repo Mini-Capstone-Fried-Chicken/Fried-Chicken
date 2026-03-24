@@ -367,30 +367,27 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
     const unselectedBackground = Color(0xFFF4D6DE);
     const unselectedForeground = Color(0xFF76263D);
     const disabledBackground = Color(0xFFE9D9DE);
+    final labelColor = selected
+        ? selectedForeground
+        : onSelected == null
+        ? unselectedForeground.withValues(alpha: 0.45)
+        : unselectedForeground;
+    final borderColor = selected
+        ? selectedForeground
+        : onSelected == null
+        ? unselectedForeground.withValues(alpha: 0.2)
+        : unselectedForeground.withValues(alpha: 0.7);
 
     return ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: onSelected == null ? null : (_) => onSelected(),
-      labelStyle: TextStyle(
-        color: selected
-            ? selectedForeground
-            : onSelected == null
-            ? unselectedForeground.withValues(alpha: 0.45)
-            : unselectedForeground,
-        fontWeight: FontWeight.w600,
-      ),
+      labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w600),
       selectedColor: selectedBackground,
       backgroundColor: onSelected == null
           ? disabledBackground
           : unselectedBackground,
-      side: BorderSide(
-        color: selected
-            ? selectedForeground
-            : onSelected == null
-            ? unselectedForeground.withValues(alpha: 0.2)
-            : unselectedForeground.withValues(alpha: 0.7),
-      ),
+      side: BorderSide(color: borderColor),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
