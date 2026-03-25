@@ -45,9 +45,7 @@ class OutdoorPoiPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = highContrastMode
-        ? Colors.black
-        : const Color(0xFF76263D);
+    final accent = highContrastMode ? Colors.black : const Color(0xFF76263D);
     final popupBackground = highContrastMode
         ? AppUiColors.highContrastPrimary
         : Colors.white;
@@ -55,7 +53,7 @@ class OutdoorPoiPopup extends StatelessWidget {
     const secondaryText = Colors.black54;
 
     return Positioned(
-      bottom: 100,
+      bottom: 160,
       left: 16,
       right: 16,
       child: Center(
@@ -95,11 +93,7 @@ class OutdoorPoiPopup extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Icon(
-                    _categoryIcon(poi.category),
-                    color: accent,
-                    size: 32,
-                  ),
+                  Icon(_categoryIcon(poi.category), color: accent, size: 32),
                   const SizedBox(height: 8),
                   Text(
                     poi.name,
@@ -114,7 +108,10 @@ class OutdoorPoiPopup extends StatelessWidget {
                   Text(
                     _categoryLabel(poi.category),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12.5, color: secondaryText),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: secondaryText,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(

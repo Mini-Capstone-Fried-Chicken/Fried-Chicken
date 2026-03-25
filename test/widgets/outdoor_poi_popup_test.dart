@@ -21,6 +21,7 @@ void main() {
               children: [
                 OutdoorPoiPopup(
                   poi: testPoi,
+                  position: const Offset(100, 100),
                   onClose: () {},
                   onGetDirections: () async {},
                 ),
@@ -42,6 +43,7 @@ void main() {
               children: [
                 OutdoorPoiPopup(
                   poi: testPoi,
+                  position: const Offset(100, 100),
                   onClose: () {},
                   onGetDirections: () async {},
                 ),
@@ -52,7 +54,10 @@ void main() {
       );
 
       expect(find.text('Get Directions'), findsOneWidget);
-      expect(find.byKey(const Key('poi_get_directions_button')), findsOneWidget);
+      expect(
+        find.byKey(const Key('poi_get_directions_button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('close button calls onClose', (tester) async {
@@ -64,6 +69,7 @@ void main() {
               children: [
                 OutdoorPoiPopup(
                   poi: testPoi,
+                  position: const Offset(100, 100),
                   onClose: () => closed = true,
                   onGetDirections: () async {},
                 ),
@@ -86,6 +92,7 @@ void main() {
               children: [
                 OutdoorPoiPopup(
                   poi: testPoi,
+                  position: const Offset(100, 100),
                   onClose: () {},
                   onGetDirections: () async {
                     directionsCalled = true;
@@ -125,6 +132,7 @@ void main() {
                 children: [
                   OutdoorPoiPopup(
                     poi: poi,
+                    position: const Offset(100, 100),
                     onClose: () {},
                     onGetDirections: () async {},
                   ),
@@ -161,6 +169,7 @@ void main() {
                 children: [
                   OutdoorPoiPopup(
                     poi: poi,
+                    position: const Offset(100, 100),
                     onClose: () {},
                     onGetDirections: () async {},
                   ),
@@ -182,6 +191,7 @@ void main() {
               children: [
                 OutdoorPoiPopup(
                   poi: testPoi,
+                  position: const Offset(100, 100),
                   onClose: () {},
                   onGetDirections: () async {},
                   highContrastMode: true,
@@ -205,6 +215,7 @@ void main() {
               children: [
                 OutdoorPoiPopup(
                   poi: testPoi,
+                  position: const Offset(100, 100),
                   onClose: () {},
                   onGetDirections: () async {},
                 ),
