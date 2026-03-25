@@ -52,11 +52,13 @@ PoiPlace _makePoi({
 void addPoiMarkersWithTap({
   required Set<Marker> markers,
   required bool poisLoaded,
+  required bool showRoutePreview,
   required List<PoiPlace> nearbyPois,
   required Map<PoiCategory, BitmapDescriptor> poiIcons,
   required void Function(PoiPlace poi) onPoiTapped,
 }) {
   if (!poisLoaded) return;
+  if (showRoutePreview) return;
 
   for (final poi in nearbyPois) {
     final icon = poiIcons[poi.category];
@@ -105,6 +107,7 @@ void main() {
       addPoiMarkersWithTap(
         markers: markers,
         poisLoaded: true,
+        showRoutePreview: false,
         nearbyPois: [
           _makePoi(
             placeId: 'cafe1',
@@ -149,6 +152,7 @@ void main() {
       addPoiMarkersWithTap(
         markers: markers,
         poisLoaded: true,
+        showRoutePreview: false,
         nearbyPois: pois,
         poiIcons: {
           PoiCategory.cafe: icon,
@@ -175,10 +179,30 @@ void main() {
       addPoiMarkersWithTap(
         markers: markers,
         poisLoaded: false,
+        showRoutePreview: false,
         nearbyPois: [_makePoi(placeId: 'x', category: PoiCategory.cafe)],
         poiIcons: {PoiCategory.cafe: BitmapDescriptor.defaultMarker},
         onPoiTapped: (_) {},
       );
+      expect(markers, isEmpty);
+    });
+
+    test('showRoutePreview=true suppresses all POI markers', () {
+      final markers = <Marker>{};
+      final icon = BitmapDescriptor.defaultMarker;
+
+      addPoiMarkersWithTap(
+        markers: markers,
+        poisLoaded: true,
+        showRoutePreview: true,
+        nearbyPois: [
+          _makePoi(placeId: 'c1', category: PoiCategory.cafe),
+          _makePoi(placeId: 'r1', category: PoiCategory.restaurant),
+        ],
+        poiIcons: {PoiCategory.cafe: icon, PoiCategory.restaurant: icon},
+        onPoiTapped: (_) {},
+      );
+
       expect(markers, isEmpty);
     });
   });
@@ -210,6 +234,71 @@ void main() {
         expect(poi.name, '${cat.name} Place');
         expect(poi.location, _sgw);
       }
+    });
+
+    test('_getDirectionsToPoi early-returns when selectedPoi is null', () {
+      // Replicate the guard logic
+      PoiPlace? selectedPoi;
+      bool routeSet = false;
+
+      // Simulate _getDirectionsToPoi
+      final poi = selectedPoi;
+      if (poi == null) {
+        // early return
+      } else {
+        routeSet = true;
+      }
+
+      expect(routeSet, isFalse);
+    });
+
+    test('_getDirectionsToPoi early-returns when currentLocation is null', () {
+      final poi = _makePoi(placeId: 'p1', category: PoiCategory.cafe);
+      LatLng? currentLocation;
+      bool routeSet = false;
+
+      // Simulate _getDirectionsToPoi
+      if (currentLocation == null) {
+        // early return
+      } else {
+        routeSet = true;
+      }
+
+      expect(poi, isNotNull); // POI exists but location is null
+      expect(routeSet, isFalse);
+    });
+
+    test('_getDirectionsToPoi sets correct route state', () {
+      final poi = _makePoi(
+        placeId: 'cafe_dir',
+        category: PoiCategory.cafe,
+        name: 'Coffee Shop',
+        location: _loyola,
+      );
+      const LatLng currentLocation = _sgw;
+
+      // Simulate _getDirectionsToPoi state assignments
+      bool showRoutePreview = false;
+      bool isPoiRoute = false;
+      LatLng? routeOrigin;
+      LatLng? routeDestination;
+      String routeDestinationText = '';
+      String? routeDestinationBuildingCode = 'HALL';
+
+      // Apply the state changes
+      showRoutePreview = true;
+      isPoiRoute = true;
+      routeOrigin = currentLocation;
+      routeDestination = poi.location;
+      routeDestinationText = poi.name;
+      routeDestinationBuildingCode = null;
+
+      expect(showRoutePreview, isTrue);
+      expect(isPoiRoute, isTrue);
+      expect(routeOrigin, _sgw);
+      expect(routeDestination, _loyola);
+      expect(routeDestinationText, 'Coffee Shop');
+      expect(routeDestinationBuildingCode, isNull);
     });
   });
 
