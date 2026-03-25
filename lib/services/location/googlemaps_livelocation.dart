@@ -217,7 +217,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   int? _shuttleWalkingFromDestinationMinutes;
   String _shuttleNearestStop = 'SGW';
   BitmapDescriptor? _shuttleStopIcon;
-  int? _shuttleTotalTripDuration;
+  int? _shuttleTotalTripDuration; // ignore: unused_field
   ShuttleRouteData? _shuttleRouteData;
 
   // POI state
@@ -1903,77 +1903,92 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }) async {
     if (_selectedTravelMode != RouteTravelMode.shuttle) return;
 
-    if (routeData.walkToShuttlePoints.isEmpty &&
-        routeData.shuttleRoutePoints.isEmpty) {
+    if (_noShuttlePoints(routeData)) {
       setState(() => _routePolylines = {});
       return;
     }
 
-    setState(() {
-      final polylines = <Polyline>{};
-      final opacity = routeData.isInService ? 1.0 : 0.4;
+    final opacity = routeData.isInService ? 1.0 : 0.4;
+    final polylines = <Polyline>{};
 
-      if (routeData.walkToShuttlePoints.isNotEmpty) {
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('shuttle_walk'),
-            points: routeData.walkToShuttlePoints,
-            color: _highContrastMode
-                ? AppUiColors.highContrastRoutePreview
-                : const Color(0xFF76263D).withOpacity(opacity),
-            width: 5,
-            patterns: [PatternItem.dot, PatternItem.gap(10)],
-          ),
-        );
-      }
+    // Helper to add a polyline
+    void addPolyline(
+      String id,
+      List<LatLng> points, {
+      Color? color,
+      bool geodesic = false,
+      List<PatternItem>? patterns,
+    }) {
+      if (points.isEmpty) return;
+      polylines.add(
+        Polyline(
+          polylineId: PolylineId(id),
+          points: points,
+          color:
+              color ??
+              const Color(0xFF76263D).withAlpha((opacity * 255).round()),
+          width: 5,
+          geodesic: geodesic,
+          patterns: patterns ?? [],
+        ),
+      );
+    }
 
-      //shuttle route
-      if (routeData.shuttleRoutePoints.isNotEmpty) {
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('shuttle_route'),
-            points: routeData.shuttleRoutePoints,
-            color: const Color(0xFF9C27B0).withOpacity(opacity),
-            width: 5,
-            geodesic: true,
-          ),
-        );
-      }
+    final defaultColor = const Color(
+      0xFF76263D,
+    ).withAlpha((opacity * 255).round());
+    final shuttleColor = const Color(
+      0xFF9C27B0,
+    ).withAlpha((opacity * 255).round());
+    final highContrastColor = AppUiColors.highContrastRoutePreview;
 
-      // walk from shuttle to destination
-      if (routeData.walkFromShuttlePoints.isNotEmpty) {
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('shuttle_walk_from'),
-            points: routeData.walkFromShuttlePoints,
-            color: _highContrastMode
-                ? AppUiColors.highContrastRoutePreview
-                : const Color(0xFF76263D).withOpacity(opacity),
-            width: 5,
-            patterns: [PatternItem.dot, PatternItem.gap(10)],
-          ),
-        );
-      }
+    addPolyline(
+      'shuttle_walk',
+      routeData.walkToShuttlePoints,
+      color: _highContrastMode ? highContrastColor : defaultColor,
+      patterns: [PatternItem.dot, PatternItem.gap(10)],
+    );
 
-      _routePolylines = polylines;
+    addPolyline(
+      'shuttle_route',
+      routeData.shuttleRoutePoints,
+      color: shuttleColor,
+      geodesic: true,
+    );
 
-      if (_mapController != null) {
-        final allPoints = [
-          ...routeData.walkToShuttlePoints,
-          routeData.stopLatLng,
-          ...routeData.shuttleRoutePoints,
-          nearestStop == 'SGW' ? shuttleStopLoyola : shuttleStopSGW,
-          ...routeData.walkFromShuttlePoints,
-        ];
+    addPolyline(
+      'shuttle_walk_from',
+      routeData.walkFromShuttlePoints,
+      color: _highContrastMode ? highContrastColor : defaultColor,
+      patterns: [PatternItem.dot, PatternItem.gap(10)],
+    );
 
-        if (allPoints.isNotEmpty) {
-          final bounds = geo.calculateBounds(allPoints);
-          _mapController!.animateCamera(
-            CameraUpdate.newLatLngBounds(bounds, 100),
-          );
-        }
-      }
-    });
+    setState(() => _routePolylines = polylines);
+
+    _updateCameraBounds(routeData, nearestStop);
+  }
+
+  /// Checks if there are no shuttle or walk points
+  bool _noShuttlePoints(ShuttleRouteData routeData) =>
+      routeData.walkToShuttlePoints.isEmpty &&
+      routeData.shuttleRoutePoints.isEmpty;
+
+  /// Animates camera to fit all relevant points
+  void _updateCameraBounds(ShuttleRouteData routeData, String nearestStop) {
+    if (_mapController == null) return;
+
+    final allPoints = [
+      ...routeData.walkToShuttlePoints,
+      routeData.stopLatLng,
+      ...routeData.shuttleRoutePoints,
+      nearestStop == 'SGW' ? shuttleStopLoyola : shuttleStopSGW,
+      ...routeData.walkFromShuttlePoints,
+    ];
+
+    if (allPoints.isEmpty) return;
+
+    final bounds = geo.calculateBounds(allPoints);
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
   //update shuttle info in route details UI

@@ -119,7 +119,7 @@ class ShuttleRouteService {
     return match != null ? int.parse(match.group(1)!) : 0;
   }
 
-  /// Convert shuttle status label to actual time
+  // Convert shuttle status label to actual time
   static String extractTimeFromStatusLabel(String statusLabel) {
     var regex = RegExp(r'(\d{1,2}):(\d{2})\s*(am|pm)', caseSensitive: false);
     var match = regex.firstMatch(statusLabel);
@@ -131,19 +131,28 @@ class ShuttleRouteService {
       return '$hour:$minute ${period!.toLowerCase()}';
     }
 
+    // Check for "in X min"
     regex = RegExp(r'in (\d+) min', caseSensitive: false);
     match = regex.firstMatch(statusLabel);
-    if (match != null) {
-      final waitMinutes = int.parse(match.group(1)!);
-      final departure = DateTime.now().add(Duration(minutes: waitMinutes));
-      final hour = departure.hour > 12
-          ? departure.hour - 12
-          : (departure.hour == 0 ? 12 : departure.hour);
-      final minute = departure.minute.toString().padLeft(2, '0');
-      final period = departure.hour >= 12 ? 'pm' : 'am';
-      return '$hour:$minute $period';
-    }
 
+    if (match != null) {
+      final waitMinutes = int.tryParse(match.group(1)!) ?? 0;
+      final now = DateTime.now();
+
+      // Ensure totalMinutes is always positive, wraps around 24 hours
+      int totalMinutes =
+          ((now.hour * 60 + now.minute + waitMinutes) % (24 * 60) + (24 * 60)) %
+          (24 * 60);
+
+      int hour = totalMinutes ~/ 60;
+      int minute = totalMinutes % 60;
+
+      // Convert to 12-hour format
+      final period = hour >= 12 ? 'pm' : 'am';
+      hour = hour % 12;
+      if (hour == 0) hour = 12;
+      return '$hour:${minute.toString().padLeft(2, '0')} $period';
+    }
     return statusLabel;
   }
 }

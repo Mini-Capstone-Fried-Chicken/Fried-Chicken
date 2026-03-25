@@ -891,7 +891,6 @@ class RouteTravelModeBar extends StatelessWidget {
       );
     }
 
-    // Walking faster / no shuttle required
     if (routeData == null) {
       return Text(
         'No shuttle required — walking is faster',
@@ -906,139 +905,151 @@ class RouteTravelModeBar extends StatelessWidget {
     final route = routeData;
     final isNoService = !route.isInService;
 
+    final children = <Widget>[];
+
+    Widget buildRow({
+      required IconData icon,
+      required String text,
+      required Color color,
+      double fontSize = 11,
+      FontWeight fontWeight = FontWeight.w400,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 13),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: color,
+                  fontSize: fontSize,
+                  fontWeight: fontWeight,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // no service
+    if (isNoService) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            'No service — next buses scheduled are shown below',
+            style: TextStyle(
+              color: secondaryText,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // walk to shuttle
+    if (!isNoService && (route.walkingToShuttleMinutes ?? 0) >= 1) {
+      children.add(
+        buildRow(
+          icon: Icons.directions_walk,
+          text:
+              '${route.walkingToShuttleMinutes} min walk to ${route.nearestStop}',
+          color: secondaryText,
+        ),
+      );
+    }
+
+    // wait time
+    if (!isNoService && route.buses.isNotEmpty) {
+      final busWaitMinutes =
+          ShuttleRouteService.extractWaitMinutesFromStatusLabel(
+            route.buses.first.statusLabel,
+          );
+
+      final actualWait = (busWaitMinutes - (route.walkingToShuttleMinutes ?? 0))
+          .clamp(0, 999);
+
+      children.add(
+        buildRow(
+          icon: Icons.schedule,
+          text: 'Wait: $actualWait min',
+          color: tertiaryText,
+        ),
+      );
+    }
+
+    // bus list
+    if (route.buses.isNotEmpty) {
+      for (int i = 0; i < route.buses.length; i++) {
+        final bus = route.buses[i];
+        final isNext = i == 0;
+
+        final displayTime = ShuttleRouteService.extractTimeFromStatusLabel(
+          bus.statusLabel,
+        );
+
+        children.add(
+          buildRow(
+            icon: Icons.directions_bus_filled,
+            text: displayTime,
+            color: isNoService
+                ? tertiaryText
+                : (isNext ? primaryText : secondaryText),
+            fontSize: isNext ? 12 : 11,
+            fontWeight: isNext ? FontWeight.w700 : FontWeight.w400,
+          ),
+        );
+      }
+    }
+
+    // walk from shuttle to destination
+    if (!isNoService && (route.walkingFromShuttleMinutes ?? 0) >= 1) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Row(
+            children: [
+              Icon(Icons.directions_walk, color: secondaryText, size: 13),
+              const SizedBox(width: 4),
+              Text(
+                '${route.walkingFromShuttleMinutes} min walk from shuttle',
+                style: TextStyle(color: secondaryText, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // view schedule
+    if (onViewSchedule != null) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: GestureDetector(
+            onTap: onViewSchedule,
+            child: Text(
+              'View full schedule →',
+              style: TextStyle(
+                color: tertiaryText,
+                fontSize: 11,
+                decoration: TextDecoration.underline,
+                decorationColor: tertiaryText,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        //shuttle not in service
-        if (isNoService)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              'No service — next buses scheduled are shown below',
-              style: TextStyle(
-                color: secondaryText,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        // Walking to shuttle
-        if (route.walkingToShuttleMinutes != null &&
-            route.walkingToShuttleMinutes! >= 1 &&
-            !isNoService)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Row(
-              children: [
-                Icon(Icons.directions_walk, color: secondaryText, size: 13),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    '${route.walkingToShuttleMinutes} min walk to ${route.nearestStop}',
-                    style: TextStyle(color: secondaryText, fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Wait time for first bus
-        if (route.buses.isNotEmpty && !isNoService)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Row(
-              children: [
-                Icon(Icons.schedule, color: tertiaryText, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  () {
-                    final busWaitMinutes =
-                        ShuttleRouteService.extractWaitMinutesFromStatusLabel(
-                          route.buses.first.statusLabel,
-                        );
-                    final actualWait =
-                        (busWaitMinutes - (route.walkingToShuttleMinutes ?? 0))
-                            .clamp(0, 999);
-                    return 'Wait: ${actualWait} min';
-                  }(),
-                  style: TextStyle(
-                    color: tertiaryText,
-                    fontSize: 10,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Next buses — up to 4
-        ...route.buses.take(4).toList().asMap().entries.map((entry) {
-          final index = entry.key;
-          final bus = entry.value;
-          final isNext = index == 0;
-          final displayTime = ShuttleRouteService.extractTimeFromStatusLabel(
-            bus.statusLabel,
-          );
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 3),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.directions_bus_filled,
-                  size: 13,
-                  color: isNext ? primaryText : tertiaryText,
-                ),
-                Expanded(
-                  child: Text(
-                    displayTime,
-                    style: TextStyle(
-                      color: isNext ? primaryText : secondaryText,
-                      fontSize: isNext ? 12 : 11,
-                      fontWeight: isNext ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-
-        // Walking from shuttle
-        if (route.walkingFromShuttleMinutes != null &&
-            route.walkingFromShuttleMinutes! >= 1 &&
-            !isNoService)
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Row(
-              children: [
-                Icon(Icons.directions_walk, color: secondaryText, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  '${route.walkingFromShuttleMinutes} min walk from shuttle',
-                  style: TextStyle(color: secondaryText, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-
-        // View full schedule
-        if (onViewSchedule != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: GestureDetector(
-              onTap: onViewSchedule,
-              child: Text(
-                'View full schedule →',
-                style: TextStyle(
-                  color: tertiaryText,
-                  fontSize: 11,
-                  decoration: TextDecoration.underline,
-                  decorationColor: tertiaryText,
-                ),
-              ),
-            ),
-          ),
-      ],
+      children: children,
     );
   }
 }
