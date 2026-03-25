@@ -1730,18 +1730,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
-  String _poiCategoryLabel(PoiCategory category) {
-    switch (category) {
-      case PoiCategory.cafe:
-        return 'Cafe';
-      case PoiCategory.restaurant:
-        return 'Restaurant';
-      case PoiCategory.pharmacy:
-        return 'Pharmacy';
-      case PoiCategory.depanneur:
-        return 'Dépanneur';
-    }
-  }
+  String _poiCategoryLabel(PoiCategory category) => category.label;
 
   /// Walking time + 4 next buses
   Future<void> _fetchShuttleInfo() async {

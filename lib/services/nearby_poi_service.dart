@@ -1,10 +1,39 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 //Categories of points of interest displayed on the outdoor map.
 enum PoiCategory { cafe, restaurant, pharmacy, depanneur }
+
+extension PoiCategoryX on PoiCategory {
+  String get label {
+    switch (this) {
+      case PoiCategory.cafe:
+        return 'Cafe';
+      case PoiCategory.restaurant:
+        return 'Restaurant';
+      case PoiCategory.pharmacy:
+        return 'Pharmacy';
+      case PoiCategory.depanneur:
+        return 'Dépanneur';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case PoiCategory.cafe:
+        return Icons.local_cafe;
+      case PoiCategory.restaurant:
+        return Icons.restaurant;
+      case PoiCategory.pharmacy:
+        return Icons.local_pharmacy;
+      case PoiCategory.depanneur:
+        return Icons.store;
+    }
+  }
+}
 
 //A single point of interest returned from the Places API.
 class PoiPlace {

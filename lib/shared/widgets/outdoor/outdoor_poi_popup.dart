@@ -17,32 +17,6 @@ class OutdoorPoiPopup extends StatelessWidget {
     this.highContrastMode = false,
   });
 
-  IconData _categoryIcon(PoiCategory category) {
-    switch (category) {
-      case PoiCategory.cafe:
-        return Icons.local_cafe;
-      case PoiCategory.restaurant:
-        return Icons.restaurant;
-      case PoiCategory.pharmacy:
-        return Icons.local_pharmacy;
-      case PoiCategory.depanneur:
-        return Icons.store;
-    }
-  }
-
-  String _categoryLabel(PoiCategory category) {
-    switch (category) {
-      case PoiCategory.cafe:
-        return 'Cafe';
-      case PoiCategory.restaurant:
-        return 'Restaurant';
-      case PoiCategory.pharmacy:
-        return 'Pharmacy';
-      case PoiCategory.depanneur:
-        return 'Dépanneur';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final accent = highContrastMode ? Colors.black : const Color(0xFF76263D);
@@ -93,7 +67,7 @@ class OutdoorPoiPopup extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Icon(_categoryIcon(poi.category), color: accent, size: 32),
+                  Icon(poi.category.icon, color: accent, size: 32),
                   const SizedBox(height: 8),
                   Text(
                     poi.name,
@@ -106,7 +80,7 @@ class OutdoorPoiPopup extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _categoryLabel(poi.category),
+                    poi.category.label,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 12.5,
