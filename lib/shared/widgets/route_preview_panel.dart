@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import '../../data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
-import '../../services/indoor_maps/indoor_map_repository.dart';
+import 'package:flutter/material.dart';
+
+import '../../data/search_suggestion.dart';
 import '../../features/settings/app_settings.dart';
 import '../../services/location/shuttle_route_service.dart';
+import '../../services/indoor_maps/indoor_map_repository.dart';
+import '../../services/indoors_routing/core/indoor_route_plan_models.dart';
 
 enum RouteTravelMode { driving, walking, bicycling, transit, shuttle }
 
@@ -63,6 +65,9 @@ class RoutePreviewPanel extends StatefulWidget {
   final Function(String, String)? onOriginRoomSubmitted;
   final IndoorMapRepository? indoorRepository;
   final bool highContrastMode;
+  final IndoorTransitionMode? selectedTransitionMode;
+  final ValueChanged<IndoorTransitionMode?>? onTransitionModeChanged;
+  final bool wheelchairRoutingDefaultEnabled;
 
   const RoutePreviewPanel({
     super.key,
@@ -88,6 +93,9 @@ class RoutePreviewPanel extends StatefulWidget {
     this.onOriginRoomSubmitted,
     this.indoorRepository,
     this.highContrastMode = false,
+    this.selectedTransitionMode,
+    this.onTransitionModeChanged,
+    this.wheelchairRoutingDefaultEnabled = false,
   });
 
   @override
@@ -353,6 +361,12 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                             onDestinationRoomSubmitted:
                                 widget.onDestinationRoomSubmitted,
                             indoorRepository: widget.indoorRepository,
+                            selectedTransitionMode:
+                                widget.selectedTransitionMode,
+                            onTransitionModeChanged:
+                                widget.onTransitionModeChanged,
+                            wheelchairRoutingDefaultEnabled:
+                                widget.wheelchairRoutingDefaultEnabled,
                           ),
                         ),
                     ],
