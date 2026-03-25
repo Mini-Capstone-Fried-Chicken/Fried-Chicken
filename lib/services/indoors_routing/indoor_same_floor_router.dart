@@ -87,15 +87,45 @@ class IndoorSameFloorRouter {
         null;
   }
 
+  List<IndoorRoutingNode> buildNodesFromFloorGeoJson(
+    Map<String, dynamic> floorGeoJson,
+  ) {
+    return floorGraphBuilder.buildNodesFromFloorGeoJson(floorGeoJson);
+  }
+
   LatLng? roomCenterOnFloor({
     required Map<String, dynamic> floorGeoJson,
     required String roomCode,
   }) {
-    final nodes = floorGraphBuilder.buildNodesFromFloorGeoJson(floorGeoJson);
+    final nodes = buildNodesFromFloorGeoJson(floorGeoJson);
     if (nodes.isEmpty) return null;
 
     final byRoomCode = roomLookup.indexByRoomCode(nodes);
     return roomLookup.findRoomCenter(byRoomCode, roomCode);
+  }
+
+  IndoorRoutingNode? roomNodeOnFloor({
+    required Map<String, dynamic> floorGeoJson,
+    required String roomCode,
+  }) {
+    final nodes = buildNodesFromFloorGeoJson(floorGeoJson);
+    if (nodes.isEmpty) return null;
+
+    final byRoomCode = roomLookup.indexByRoomCode(nodes);
+    return roomLookup.findRoomNode(byRoomCode, roomCode);
+  }
+
+  List<IndoorRoutingNode> transitionNodesOnFloor({
+    required Map<String, dynamic> floorGeoJson,
+    String? transitionType,
+  }) {
+    return buildNodesFromFloorGeoJson(floorGeoJson)
+        .where(
+          (node) =>
+              node.nodeType == IndoorRoutingNodeType.transition &&
+              (transitionType == null || node.transitionType == transitionType),
+        )
+        .toList(growable: false);
   }
 
   List<LatLng>? findShortestPath({
@@ -104,7 +134,7 @@ class IndoorSameFloorRouter {
     required String destinationRoomCode,
     bool enforceRoomSafeSegments = false,
   }) {
-    final nodes = floorGraphBuilder.buildNodesFromFloorGeoJson(floorGeoJson);
+    final nodes = buildNodesFromFloorGeoJson(floorGeoJson);
     if (nodes.isEmpty) return null;
 
     final byRoomCode = roomLookup.indexByRoomCode(nodes);
@@ -122,17 +152,46 @@ class IndoorSameFloorRouter {
       return [originNode.center];
     }
 
+    return findShortestPathBetweenNodeIds(
+      nodes: nodes,
+      startNodeId: originNode.id,
+      endNodeId: destinationNode.id,
+      allowedRoomIds: {originNode.id, destinationNode.id},
+      enforceRoomSafeSegments: enforceRoomSafeSegments,
+    );
+  }
+
+  List<LatLng>? findShortestPathBetweenNodeIds({
+    required List<IndoorRoutingNode> nodes,
+    required int startNodeId,
+    required int endNodeId,
+    required Set<int> allowedRoomIds,
+    bool enforceRoomSafeSegments = false,
+  }) {
+    if (nodes.isEmpty) {
+      return null;
+    }
+
+    if (startNodeId == endNodeId) {
+      for (final node in nodes) {
+        if (node.id == startNodeId) {
+          return [node.center];
+        }
+      }
+      return null;
+    }
+
     final adjacency = floorGraphBuilder.buildAdjacencyList(nodes);
     final filteredAdjacency = graphFilter.withoutIntermediateRooms(
       adjacency: adjacency,
       nodes: nodes,
-      allowedRoomIds: {originNode.id, destinationNode.id},
+      allowedRoomIds: allowedRoomIds,
     );
 
     final pathNodeIds = indoorDijkstra.shortestPathNodeIds(
       adjacency: filteredAdjacency,
-      startNodeId: originNode.id,
-      endNodeId: destinationNode.id,
+      startNodeId: startNodeId,
+      endNodeId: endNodeId,
     );
 
     if (pathNodeIds == null || pathNodeIds.isEmpty) {
@@ -142,7 +201,7 @@ class IndoorSameFloorRouter {
     final routePoints = routePointBuilder.buildRoutePointsFromNodePath(
       pathNodeIds: pathNodeIds,
       nodes: nodes,
-      allowedRoomIds: {originNode.id, destinationNode.id},
+      allowedRoomIds: allowedRoomIds,
       enforceRoomSafeSegments: enforceRoomSafeSegments,
     );
 

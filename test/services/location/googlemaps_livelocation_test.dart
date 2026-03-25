@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/data/building_polygons.dart';
+import 'package:campus_app/features/saved/saved_directions_controller.dart';
+import 'package:campus_app/features/saved/saved_place.dart';
 import 'package:campus_app/shared/widgets/campus_toggle.dart';
 import 'package:campus_app/shared/widgets/map_search_bar.dart';
 import 'package:campus_app/shared/widgets/building_info_popup.dart';
@@ -1490,6 +1493,144 @@ void main() {
       final result = formatArrivalTime(secs);
       expect(result, isNotNull);
       expect(result!.startsWith('0:'), isFalse);
+    });
+  });
+
+  // =========================================================================
+  // 24. Saved directions flow (lines 224-290)
+  // =========================================================================
+  group('Saved directions request flow', () {
+    const geolocatorChannel = MethodChannel('flutter.baseflow.com/geolocator');
+
+    Future<void> mockGeolocatorSuccess() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(geolocatorChannel, (MethodCall call) async {
+            switch (call.method) {
+              case 'isLocationServiceEnabled':
+                return true;
+              case 'checkPermission':
+                return 3;
+              case 'requestPermission':
+                return 3;
+              case 'getCurrentPosition':
+                return {
+                  'latitude': 45.4973,
+                  'longitude': -73.5789,
+                  'accuracy': 10.0,
+                  'altitude': 0.0,
+                  'speed': 0.0,
+                  'speed_accuracy': 0.0,
+                  'heading': 0.0,
+                  'timestamp': DateTime.now().millisecondsSinceEpoch,
+                  'floor': null,
+                  'is_mocked': false,
+                };
+              default:
+                return null;
+            }
+          });
+    }
+
+    Future<void> mockGeolocatorFailure() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(geolocatorChannel, (MethodCall call) async {
+            switch (call.method) {
+              case 'isLocationServiceEnabled':
+                return false;
+              case 'checkPermission':
+                return 0;
+              case 'requestPermission':
+                return 0;
+              case 'getCurrentPosition':
+                throw PlatformException(code: 'UNAVAILABLE');
+              default:
+                return null;
+            }
+          });
+    }
+
+    tearDown(() async {
+      SavedDirectionsController.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(geolocatorChannel, null);
+    });
+
+    testWidgets('uses current location branch when directions are requested after location resolves', (
+      tester,
+    ) async {
+      await mockGeolocatorSuccess();
+
+      await pumpPage(
+        tester,
+        initialCampus: Campus.sgw,
+      );
+
+      // Allow init location requests to populate _currentLocation first.
+      await tester.pump(const Duration(milliseconds: 120));
+
+      final target = firstBuilding;
+      SavedDirectionsController.requestDirections(
+        SavedPlace(
+          id: target.code,
+          name: target.name,
+          category: 'concordia building',
+          latitude: target.center.latitude,
+          longitude: target.center.longitude,
+          openingHoursToday: 'Open today: Hours unavailable',
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(SavedDirectionsController.notifier.value, isNull);
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
+    });
+
+    testWidgets('falls back to last camera target when geolocator cannot provide origin', (
+      tester,
+    ) async {
+      await mockGeolocatorFailure();
+
+      SavedDirectionsController.notifier.value = const SavedPlace(
+          id: 'non_concordia_place',
+          name: 'Coffee Shop',
+          category: 'cafe',
+          latitude: 45.497,
+          longitude: -73.579,
+          openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await pumpPage(
+        tester,
+        initialCampus: Campus.loyola,
+      );
+
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(SavedDirectionsController.notifier.value, isNull);
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
+    });
+
+    testWidgets('invalid destination coordinates hit catch/finally path and clear notifier', (
+      tester,
+    ) async {
+      await mockGeolocatorFailure();
+
+      SavedDirectionsController.notifier.value = const SavedPlace(
+          id: 'broken_place',
+          name: 'Broken Place',
+          category: 'all',
+          latitude: 200,
+          longitude: -73.579,
+          openingHoursToday: 'Open today: Hours unavailable',
+      );
+
+      await pumpPage(tester);
+
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(SavedDirectionsController.notifier.value, isNull);
+      expect(find.byType(OutdoorMapPage), findsOneWidget);
     });
   });
 

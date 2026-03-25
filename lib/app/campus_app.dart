@@ -1,10 +1,14 @@
 import "package:campus_app/app/app_shell.dart";
 import "package:campus_app/features/auth/ui/login_page.dart";
+import "package:campus_app/features/saved/saved_places_controller.dart";
 import "package:campus_app/features/settings/app_settings.dart";
 //import "package:campus_app/features/indoor/ui/pages/indoor_page.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 import "package:campus_app/utils/route_factory_indoor.dart";
+import 'dart:async';
+
+typedef RestoreSettingsCallback = Future<void> Function({bool force});
 
 class CampusApp extends StatefulWidget {
   const CampusApp({super.key});
@@ -14,6 +18,17 @@ class CampusApp extends StatefulWidget {
 }
 
 class CampusAppState extends State<CampusApp> {
+  StreamSubscription<User?>? _authStateSub;
+
+  @visibleForTesting
+  static Stream<User?> Function()? debugAuthStateChangesProvider;
+
+  @visibleForTesting
+  static RestoreSettingsCallback? debugRestoreSettings;
+
+  @visibleForTesting
+  static Future<void> Function()? debugReloadSavedPlaces;
+
   static const Map<String, String> indoorAssetsById = {
     // SVGs
     "MB-1": "assets/indoor_svg/MB-1.svg",
@@ -47,6 +62,31 @@ class CampusAppState extends State<CampusApp> {
     return null;
   }
 
+  Stream<User?> _authStateChanges() {
+    return debugAuthStateChangesProvider?.call() ??
+        FirebaseAuth.instance.authStateChanges();
+  }
+
+  void _handleAuthStateChanged(User? _) {
+    final restoreSettings = debugRestoreSettings ?? AppSettingsController.restore;
+    final reloadSavedPlaces =
+        debugReloadSavedPlaces ?? SavedPlacesController.reloadForCurrentUser;
+    unawaited(restoreSettings(force: true));
+    unawaited(reloadSavedPlaces());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _authStateSub = _authStateChanges().listen(_handleAuthStateChanged);
+  }
+
+  @override
+  void dispose() {
+    _authStateSub?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -75,7 +115,7 @@ class CampusAppState extends State<CampusApp> {
 
       // Auth gate
       home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
+        stream: _authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(

@@ -37,12 +37,18 @@ class PlaceResult {
   final String name;
   final String? formattedAddress;
   final LatLng location;
+  final String? primaryType;
+  final List<String> types;
+  final List<String> weekdayDescriptions;
 
   PlaceResult({
     required this.placeId,
     required this.name,
     this.formattedAddress,
     required this.location,
+    this.primaryType,
+    this.types = const <String>[],
+    this.weekdayDescriptions = const <String>[],
   });
 }
 
@@ -130,7 +136,10 @@ class GooglePlacesService {
     }
   }
 
-  Future<PlaceResult?> getPlaceDetails(String placeId) async {
+  Future<PlaceResult?> getPlaceDetails(
+    String placeId, {
+    bool includeMetadata = false,
+  }) async {
     try {
       print('[DEBUG] Fetching place details for placeId: $placeId');
 
@@ -148,7 +157,9 @@ class GooglePlacesService {
         headers: {
           contentTypeHeader: jsonMimeType,
           apiKeyHeader: _apiKey,
-          'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
+          'X-Goog-FieldMask': includeMetadata
+              ? 'id,displayName,formattedAddress,location,primaryType,types,currentOpeningHours.weekdayDescriptions,regularOpeningHours.weekdayDescriptions'
+              : 'id,displayName,formattedAddress,location',
         },
       );
 
@@ -160,6 +171,11 @@ class GooglePlacesService {
         print('[DEBUG] Parsed place details: $data');
         final location = data['location'] as Map<String, dynamic>?;
         final displayName = data['displayName'] as Map<String, dynamic>?;
+        final types = (data['types'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[];
+        final weekdayDescriptions = _extractWeekdayDescriptions(data);
 
         final result = PlaceResult(
           placeId: data['id'] as String? ?? placeId,
@@ -169,6 +185,9 @@ class GooglePlacesService {
             location?['latitude'] as double? ?? 0.0,
             location?['longitude'] as double? ?? 0.0,
           ),
+          primaryType: data['primaryType'] as String?,
+          types: types,
+          weekdayDescriptions: weekdayDescriptions,
         );
         print('[DEBUG] Created PlaceResult: ${result.name} at ${result.location}');
         return result;
@@ -181,6 +200,53 @@ class GooglePlacesService {
       print('[ERROR] Error getting place details: $e');
       return null;
     }
+  }
+
+  List<String> _extractWeekdayDescriptions(Map<String, dynamic> data) {
+    final current =
+        data['currentOpeningHours'] as Map<String, dynamic>?;
+    final regular =
+        data['regularOpeningHours'] as Map<String, dynamic>?;
+
+    final currentDescriptions = (current?['weekdayDescriptions'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList();
+    if (currentDescriptions != null && currentDescriptions.isNotEmpty) {
+      return currentDescriptions;
+    }
+
+    final regularDescriptions = (regular?['weekdayDescriptions'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList();
+    if (regularDescriptions != null && regularDescriptions.isNotEmpty) {
+      return regularDescriptions;
+    }
+
+    return const <String>[];
+  }
+
+  Future<PlaceResult?> resolvePlaceMetadata({
+    required String query,
+    required LatLng location,
+    int radius = 250,
+  }) async {
+    final candidates = await searchPlaces(query, location: location, radius: radius);
+    if (candidates.isEmpty) return null;
+
+    candidates.sort((a, b) {
+      final aDistance = _distanceMeters(location, a.location);
+      final bDistance = _distanceMeters(location, b.location);
+      return aDistance.compareTo(bDistance);
+    });
+
+    final nearest = candidates.first;
+    return getPlaceDetails(nearest.placeId, includeMetadata: true);
+  }
+
+  double _distanceMeters(LatLng a, LatLng b) {
+    final latDiff = a.latitude - b.latitude;
+    final lonDiff = a.longitude - b.longitude;
+    return latDiff * latDiff + lonDiff * lonDiff;
   }
 
   // Helpers extracted to reduce cognitive complexity of getAutocompletePredictions

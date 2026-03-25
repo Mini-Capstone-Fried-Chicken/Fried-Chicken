@@ -59,6 +59,13 @@ class IndoorFloorGraphBuilder {
       }
 
       if (_isTransition(parsedFeature.properties)) {
+        nodes.add(
+          _buildTransitionNode(
+            id: nodes.length,
+            rings: rings,
+            properties: parsedFeature.properties,
+          ),
+        );
         continue;
       }
     }
@@ -97,6 +104,20 @@ class IndoorFloorGraphBuilder {
     return highwayType == 'steps' || highwayType == 'elevator' || escalatorFlag;
   }
 
+  String? _transitionType(Map<String, dynamic> properties) {
+    final highwayType = properties['highway']?.toString();
+    if (highwayType == 'steps') {
+      return IndoorTransitionType.stairs;
+    }
+    if (highwayType == 'elevator') {
+      return IndoorTransitionType.elevator;
+    }
+    if (properties['escalators']?.toString().toLowerCase() == 'yes') {
+      return IndoorTransitionType.escalator;
+    }
+    return null;
+  }
+
   IndoorRoutingNode _buildRoomNode({
     required int id,
     required ({List<LatLng> outerRing, List<List<LatLng>> holeRings}) rings,
@@ -111,6 +132,25 @@ class IndoorFloorGraphBuilder {
       nodeType: IndoorRoutingNodeType.room,
       roomCode: roomCode,
       transitionType: null,
+      level: properties['level']?.toString(),
+      center: center,
+      polygonPoints: rings.outerRing,
+      holePolygons: rings.holeRings,
+    );
+  }
+
+  IndoorRoutingNode _buildTransitionNode({
+    required int id,
+    required ({List<LatLng> outerRing, List<List<LatLng>> holeRings}) rings,
+    required Map<String, dynamic> properties,
+  }) {
+    final center = geo.polygonCenter(rings.outerRing);
+
+    return IndoorRoutingNode(
+      id: id,
+      nodeType: IndoorRoutingNodeType.transition,
+      roomCode: null,
+      transitionType: _transitionType(properties),
       level: properties['level']?.toString(),
       center: center,
       polygonPoints: rings.outerRing,

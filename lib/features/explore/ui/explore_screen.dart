@@ -3,7 +3,8 @@ import '../../../services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
 
-export '../../../services/location/googlemaps_livelocation.dart' show Campus, OutdoorMapPage;  
+export '../../../services/location/googlemaps_livelocation.dart' show OutdoorMapPage;
+export 'package:campus_app/models/campus.dart' show Campus;
 
 class ExploreScreen extends StatelessWidget {
   final bool isLoggedIn;

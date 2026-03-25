@@ -1,18 +1,103 @@
 {
   "project_info": {
-    "project_number": "693887777183",
-    "project_id": "campus-11a11",
-    "storage_bucket": "campus-11a11.firebasestorage.app"
+    "project_number": "749522791928",
+    "project_id": "campus-fried-chicken",
+    "storage_bucket": "campus-fried-chicken.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:693887777183:android:0dc4addadb741ef7a45500",
+        "mobilesdk_app_id": "1:749522791928:android:b27afbc21b7ee80bd2fa0d",
         "android_client_info": {
           "package_name": "com.example.campus_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "749522791928-22jpqkvt1tn8b6e8us82bih2h0ulnji7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "834d5b27ff0c66667c90c672b0ccb03d8cbe155f"
+          }
+        },
+        {
+          "client_id": "749522791928-28rsfngmvjej1o1tm9kcgr4no8nlbfkd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "0263dd00336c781612449482777fb3b902a271f6"
+          }
+        },
+        {
+          "client_id": "749522791928-6eu52m29r0sku3sa35rb3j2j14r9gons.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "393e41257377b7dc658bc357f24f81f03c66483b"
+          }
+        },
+        {
+          "client_id": "749522791928-8mju9sjvgm54p5nk1bngfn51m1bei69d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "66c3d75970fb1119f9e93bbe483a204ea03cef83"
+          }
+        },
+        {
+          "client_id": "749522791928-j79iua489ivi0s47gotmef5fp85na04k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "c19654c9c03c708f3ea135df6568f0f76e545207"
+          }
+        },
+        {
+          "client_id": "749522791928-kin2gq73rikipj23ic5j6on3qdfh7g6k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "20da7af91684cf690aca8c78c6f721cb4ec1eeb6"
+          }
+        },
+        {
+          "client_id": "749522791928-nvlv41etof9vtg7qcdaivvsikvhqktjf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "5d50c7c04b4fe6428ce887e738f30179b6ef896e"
+          }
+        },
+        {
+          "client_id": "749522791928-pv9cd9clheekbhq0uhcahr99hrcb6c5s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "1f3655753d0f870eab3c02f83058f610509156ed"
+          }
+        },
+        {
+          "client_id": "749522791928-rte6fkc9s0vk75i3laf3ocf2ldd1ulg5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "c413c6923c108130a6ba2ad2be60e43e135ff061"
+          }
+        },
+        {
+          "client_id": "749522791928-tsl0tjdn9s242do4keg1j08qs725bpmt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_app",
+            "certificate_hash": "52f5859a24348b3be773b06a6afdf927bf9c2f26"
+          }
+        },
+        {
+          "client_id": "749522791928-hfsass6fssn6k82g5qiauseoaqmmvgod.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA1ADpfOlMu15S3gYzOrPJeeQVmQadBMFU"
@@ -20,7 +105,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "749522791928-hfsass6fssn6k82g5qiauseoaqmmvgod.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "749522791928-5e8c7nhchlj0npu07loi57v5bi3v8186.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.campusApp"
+              }
+            }
+          ]
         }
       }
     }

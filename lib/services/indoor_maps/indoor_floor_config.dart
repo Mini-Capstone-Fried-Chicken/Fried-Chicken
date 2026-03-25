@@ -67,4 +67,35 @@ class IndoorFloorConfig {
     final key = code.toUpperCase().trim();
     return _floorsByBuilding[key] ?? const [];
   }
+
+  static IndoorFloorOption? optionForAssetPath(
+    String buildingCode,
+    String assetPath,
+  ) {
+    for (final option in floorsForBuilding(buildingCode)) {
+      if (option.assetPath == assetPath) {
+        return option;
+      }
+    }
+    return null;
+  }
+
+  static String normalizeFloorLabel(String label) {
+    final normalized = label.trim().toUpperCase();
+    if (normalized == 'S2') return '-2';
+    if (normalized == 'B2') return '-2';
+    if (normalized == 'S1') return '-1';
+    if (normalized == 'B1') return '-1';
+    return normalized;
+  }
+
+  static bool matchesLevel({
+    required IndoorFloorOption option,
+    required String? level,
+  }) {
+    if (level == null || level.trim().isEmpty) {
+      return false;
+    }
+    return normalizeFloorLabel(option.label) == normalizeFloorLabel(level);
+  }
 }

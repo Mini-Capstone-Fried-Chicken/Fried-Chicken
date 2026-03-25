@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import '../features/settings/app_settings.dart';
+import '../features/saved/saved_directions_controller.dart';
 
 import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import "../features/explore/ui/explore_screen.dart";
@@ -16,6 +17,27 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    SavedDirectionsController.notifier.addListener(_onDirectionsRequested);
+  }
+
+  void _onDirectionsRequested() {
+    if (!widget.isLoggedIn) return;
+    if (SavedDirectionsController.notifier.value == null) return;
+    if (!mounted) return;
+    if (currentIndex != 0) {
+      setState(() => currentIndex = 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    SavedDirectionsController.notifier.removeListener(_onDirectionsRequested);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
+import 'package:campus_app/features/saved/saved_place.dart';
+import 'package:campus_app/features/saved/saved_place_metadata_service.dart';
+import 'package:campus_app/features/saved/saved_places_controller.dart';
+import 'package:campus_app/services/nearby_poi_service.dart';
 
 class BuildingInfoPopup extends StatefulWidget {
   final String title;
@@ -15,6 +19,8 @@ class BuildingInfoPopup extends StatefulWidget {
   final bool isLoggedIn;
   final VoidCallback onGetDirections;
   final bool highContrastMode;
+  final SavedPlace? savedPlace;
+  final PoiCategory? poiCategory;
 
   const BuildingInfoPopup({
     super.key,
@@ -28,6 +34,8 @@ class BuildingInfoPopup extends StatefulWidget {
     required this.isLoggedIn,
     required this.onGetDirections,
     this.highContrastMode = false,
+    this.savedPlace,
+    this.poiCategory,
   });
 
   @override
@@ -39,6 +47,18 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   OverlayEntry? _labelEntry;
   Timer? _labelTimer;
+  Widget poiCategoryTopIcon(PoiCategory category) {
+    switch (category) {
+      case PoiCategory.cafe:
+        return _topIcon(icon: Icons.local_cafe, tooltip: 'Coffee');
+      case PoiCategory.restaurant:
+        return _topIcon(icon: Icons.restaurant, tooltip: 'Restaurant');
+      case PoiCategory.pharmacy:
+        return _topIcon(icon: Icons.local_pharmacy, tooltip: 'Pharmacy');
+      case PoiCategory.depanneur:
+        return _topIcon(icon: Icons.storefront, tooltip: 'Dépanneur');
+    }
+  }
 
   TooltipTriggerMode? get _triggerMode {
     final isTouch =
@@ -46,6 +66,91 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     return isTouch ? TooltipTriggerMode.longPress : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    SavedPlacesController.notifier.addListener(_syncSavedState);
+    unawaited(_initializeSavedState());
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildingInfoPopup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.savedPlace?.id != widget.savedPlace?.id) {
+      unawaited(_initializeSavedState());
+    }
+  }
+
+  Future<void> _initializeSavedState() async {
+    await SavedPlacesController.ensureInitialized();
+    _syncSavedState();
+  }
+
+  Set<String> _savedIdAliases(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return const <String>{};
+
+    final aliases = <String>{trimmed};
+    if (trimmed.startsWith('places/')) {
+      aliases.add(trimmed.substring('places/'.length));
+    } else {
+      aliases.add('places/$trimmed');
+    }
+    return aliases;
+  }
+
+  bool _isAnyAliasSaved(String id) {
+    final aliases = _savedIdAliases(id);
+    if (aliases.isEmpty) return false;
+    return aliases.any(SavedPlacesController.isSaved);
+  }
+
+  Future<void> _removeAllAliases(String id) async {
+    final aliases = _savedIdAliases(id);
+    for (final alias in aliases) {
+      await SavedPlacesController.removePlace(alias);
+    }
+  }
+
+  void _syncSavedState() {
+    final placeId = widget.savedPlace?.id;
+    if (placeId == null || !mounted) return;
+    final savedNow = _isAnyAliasSaved(placeId);
+    if (savedNow != _isSaved) {
+      setState(() {
+        _isSaved = savedNow;
+      });
+    }
+  }
+
+  Future<void> _toggleSavedPlace() async {
+    final place = widget.savedPlace;
+    if (place == null) {
+      if (!mounted) return;
+      setState(() {
+        _isSaved = !_isSaved;
+      });
+      return;
+    }
+    await SavedPlacesController.ensureInitialized();
+    final alreadySaved = _isAnyAliasSaved(place.id);
+
+    bool isSavedNow;
+    if (alreadySaved) {
+      await _removeAllAliases(place.id);
+      isSavedNow = false;
+    } else {
+      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(place);
+      await SavedPlacesController.savePlace(enriched);
+      isSavedNow = true;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSaved = isSavedNow;
+    });
   }
 
   void _hideIconLabel() {
@@ -61,8 +166,8 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     final overlay = Overlay.of(context);
 
     final chipBackground = widget.highContrastMode
-      ? AppUiColors.highContrastPrimary.withValues(alpha: 0.95)
-      : Colors.white.withValues(alpha: 0.92);
+        ? AppUiColors.highContrastPrimary.withValues(alpha: 0.95)
+        : Colors.white.withValues(alpha: 0.92);
     final chipText = widget.highContrastMode ? Colors.black : Colors.black87;
 
     _labelEntry = OverlayEntry(
@@ -183,11 +288,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.highContrastMode
-      ? Colors.black
-      : const Color(0xFF76263D);
+        ? Colors.black
+        : const Color(0xFF76263D);
     final popupBackground = widget.highContrastMode
-      ? AppUiColors.highContrastPrimary
-      : Colors.white;
+        ? AppUiColors.highContrastPrimary
+        : Colors.white;
     final primaryText = Colors.black;
     final secondaryText = Colors.black54;
 
@@ -196,6 +301,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     if (widget.accessibility) {
       topIcons.add(_topIcon(icon: Icons.accessible, tooltip: 'Accessible'));
     }
+
+    if (widget.poiCategory != null) {
+      topIcons.add(poiCategoryTopIcon(widget.poiCategory!));
+    }
+
     if (_hasFacility([
       'washroom',
       'washrooms',
@@ -205,12 +315,17 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     ])) {
       topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
     }
-    if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
-      topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
+
+    // facility-based coffee/restaurant icons only for non-POI popups (concordia buildings)
+    if (widget.poiCategory == null) {
+      if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
+        topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
+      }
+      if (_hasFacility(['restaurant', 'restaurants', 'food'])) {
+        topIcons.add(_topIcon(icon: Icons.restaurant, tooltip: 'Restaurants'));
+      }
     }
-    if (_hasFacility(['restaurant', 'restaurants', 'food'])) {
-      topIcons.add(_topIcon(icon: Icons.restaurant, tooltip: 'Restaurants'));
-    }
+
     if (_hasFacility(['zen den', 'zen', 'yoga', 'meditation'])) {
       topIcons.add(_topIcon(icon: Icons.self_improvement, tooltip: 'Zen Den'));
     }
@@ -248,25 +363,22 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                     icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
                     tooltip: _isSaved ? 'Unsave' : 'Save',
                     key: const Key('save_toggle_button'),
-                    onPressed: () {
-                      setState(() {
-                        _isSaved = !_isSaved;
-                      });
-                    },
+                    onPressed: () => unawaited(_toggleSavedPlace()),
                   ),
                   const SizedBox(width: 6),
                 ],
-                if (topIcons.isNotEmpty)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 2),
-                      child: Wrap(
-                        spacing: -15,
-                        runSpacing: -15,
-                        children: topIcons,
-                      ),
-                    ),
-                  ),
+                Expanded(
+                  child: topIcons.isEmpty
+                      ? const SizedBox.shrink()
+                      : Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: Wrap(
+                            spacing: -15,
+                            runSpacing: -15,
+                            children: topIcons,
+                          ),
+                        ),
+                ),
                 Tooltip(
                   message: 'Close',
                   triggerMode: _triggerMode,
@@ -343,6 +455,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   @override
   void dispose() {
+    SavedPlacesController.notifier.removeListener(_syncSavedState);
     _hideIconLabel();
     super.dispose();
   }

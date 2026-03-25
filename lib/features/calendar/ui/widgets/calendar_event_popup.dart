@@ -8,7 +8,6 @@ class CalendarEventPopup extends StatelessWidget {
   final String roomNumber;
   final VoidCallback onGoToBuilding;
   final VoidCallback onGoToRoom;
-  final VoidCallback onSave;
   final VoidCallback onClose;
 
   const CalendarEventPopup({
@@ -18,7 +17,6 @@ class CalendarEventPopup extends StatelessWidget {
     required this.roomNumber,
     required this.onGoToBuilding,
     required this.onGoToRoom,
-    required this.onSave,
     required this.onClose,
   });
 
@@ -44,7 +42,6 @@ class CalendarEventPopup extends StatelessWidget {
 
     final canGoToBuilding = hasBuilding;
     final canGoToRoom = hasBuilding && hasRoom;
-    final canSave = hasBuilding;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -95,8 +92,6 @@ class CalendarEventPopup extends StatelessWidget {
               label: 'Go to Room',
               onPressed: canGoToRoom ? onGoToRoom : null,
             ),
-            const SizedBox(height: 8),
-            popupButton(label: 'Save', onPressed: canSave ? onSave : null),
           ],
         ),
       ),

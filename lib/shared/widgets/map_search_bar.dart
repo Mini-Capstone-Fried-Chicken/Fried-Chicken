@@ -1,9 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
-import '../../data/search_suggestion.dart';
+import 'dart:async';
+
+import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+
+import '../../data/building_polygons.dart';
+import '../../data/search_suggestion.dart';
+import '../../features/saved/saved_place.dart';
+import '../../features/saved/saved_place_metadata_service.dart';
+import '../../features/saved/saved_places_controller.dart';
 import '../../features/settings/app_settings.dart';
+import '../../services/google_places_service.dart';
 
 const Color burgundy = Color(0xFF76263D);
 
@@ -19,11 +28,15 @@ class MapSearchBar extends StatefulWidget {
   final TextEditingController destinationRoomController;
   final Function(String, String)? onDestinationRoomSubmitted;
   final Function(String, String)? onOriginRoomSubmitted;
+  final IndoorTransitionMode? selectedTransitionMode;
+  final ValueChanged<IndoorTransitionMode?>? onTransitionModeChanged;
   final Function(String buildingCode)? isConcordiaBuilding;
   final LatLng? userLocation;
   final String? currentBuildingCode;
   final bool showRoomFields;
   final bool highContrastMode;
+  final GooglePlacesService? placesService;
+  final bool wheelchairRoutingDefaultEnabled;
 
   const MapSearchBar({
     super.key,
@@ -39,10 +52,14 @@ class MapSearchBar extends StatefulWidget {
     required this.destinationRoomController,
     this.onOriginRoomSubmitted,
     this.onDestinationRoomSubmitted,
+    this.selectedTransitionMode,
+    this.onTransitionModeChanged,
     this.userLocation,
     this.currentBuildingCode,
     this.showRoomFields = false,
     this.highContrastMode = false,
+    this.placesService,
+    this.wheelchairRoutingDefaultEnabled = false,
   });
 
   @override
@@ -75,6 +92,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
     _focusNode.addListener(_onFocusChange);
     widget.originRoomController.addListener(_onRoomFieldChanged);
     widget.destinationRoomController.addListener(_onRoomFieldChanged);
+    SavedPlacesController.notifier.addListener(_onSavedPlacesChanged);
+    SavedPlacesController.ensureInitialized();
   }
 
   @override
@@ -83,7 +102,13 @@ class _MapSearchBarState extends State<MapSearchBar> {
     _focusNode.dispose();
     widget.originRoomController.removeListener(_onRoomFieldChanged);
     widget.destinationRoomController.removeListener(_onRoomFieldChanged);
+    SavedPlacesController.notifier.removeListener(_onSavedPlacesChanged);
     super.dispose();
+  }
+
+  void _onSavedPlacesChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _onRoomFieldChanged() {
@@ -117,15 +142,97 @@ class _MapSearchBarState extends State<MapSearchBar> {
     });
   }
 
+  String? _savedIdForSuggestion(SearchSuggestion suggestion) {
+    if (suggestion.isConcordiaBuilding) {
+      return suggestion.buildingName?.code;
+    }
+    return suggestion.placeId;
+  }
+
+  bool _isSuggestionSaved(SearchSuggestion suggestion) {
+    final id = _savedIdForSuggestion(suggestion);
+    if (id == null || id.isEmpty) return false;
+    return SavedPlacesController.isSaved(id);
+  }
+
+  Future<void> _toggleSuggestionSaved(SearchSuggestion suggestion) async {
+    await SavedPlacesController.ensureInitialized();
+
+    final existingId = _savedIdForSuggestion(suggestion);
+    if (existingId != null &&
+        existingId.isNotEmpty &&
+        SavedPlacesController.isSaved(existingId)) {
+      await SavedPlacesController.removePlace(existingId);
+      return;
+    }
+
+    final placeToSave = await _buildSavedPlaceFromSuggestion(suggestion);
+    if (placeToSave == null) return;
+
+    final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+      placeToSave,
+    );
+    await SavedPlacesController.savePlace(enriched);
+  }
+
+  Future<SavedPlace?> _buildSavedPlaceFromSuggestion(
+    SearchSuggestion suggestion,
+  ) async {
+    if (suggestion.isConcordiaBuilding) {
+      final code = suggestion.buildingName?.code;
+      if (code == null || code.isEmpty) return null;
+
+      BuildingPolygon? building;
+      for (final item in buildingPolygons) {
+        if (item.code.toUpperCase() == code.toUpperCase()) {
+          building = item;
+          break;
+        }
+      }
+      if (building == null) return null;
+
+      return SavedPlace(
+        id: code,
+        name: suggestion.name,
+        category: 'all',
+        latitude: building.center.latitude,
+        longitude: building.center.longitude,
+        openingHoursToday: 'Open today: Hours unavailable',
+      );
+    }
+
+    final placeId = suggestion.placeId;
+    if (placeId == null || placeId.isEmpty) return null;
+
+    final placesService = widget.placesService ?? GooglePlacesService.instance;
+    final details = await placesService.getPlaceDetails(
+      placeId,
+      includeMetadata: true,
+    );
+    if (details == null) return null;
+
+    return SavedPlace(
+      id: placeId,
+      name: details.name,
+      category: 'all',
+      latitude: details.location.latitude,
+      longitude: details.location.longitude,
+      openingHoursToday: 'Open today: Hours unavailable',
+      googlePlaceType: details.primaryType,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final barColor = widget.highContrastMode
         ? AppUiColors.highContrastPrimary
-      : burgundy;
-    final primaryTextColor = widget.highContrastMode ? Colors.black : Colors.white;
+        : burgundy;
+    final primaryTextColor = widget.highContrastMode
+        ? Colors.black
+        : Colors.white;
     final hintTextColor = widget.highContrastMode
-      ? Colors.black54
-      : Colors.white70;
+        ? Colors.black54
+        : Colors.white70;
 
     final String hint = widget.campusLabel.trim().isEmpty
         ? "Search anywhere"
@@ -150,6 +257,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                 children: [
                   /// Main search field
                   TextField(
+                    key: const Key('map_search_input'),
                     controller: widget.controller,
                     focusNode: _focusNode,
                     style: TextStyle(color: primaryTextColor),
@@ -180,6 +288,10 @@ class _MapSearchBarState extends State<MapSearchBar> {
                         onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
                         onDestinationRoomSubmitted:
                             widget.onDestinationRoomSubmitted,
+                        selectedTransitionMode: widget.selectedTransitionMode,
+                        onTransitionModeChanged: widget.onTransitionModeChanged,
+                        wheelchairRoutingDefaultEnabled:
+                            widget.wheelchairRoutingDefaultEnabled,
                       ),
                     ),
                 ],
@@ -215,8 +327,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
                               : Icons.place,
                           color: suggestion.isConcordiaBuilding
                               ? AppUiColors.primary(
-                                highContrastEnabled: widget.highContrastMode,
-                              )
+                                  highContrastEnabled: widget.highContrastMode,
+                                )
                               : Colors.grey,
                           size: 20,
                         ),
@@ -235,6 +347,25 @@ class _MapSearchBarState extends State<MapSearchBar> {
                                 ),
                               )
                             : null,
+                        trailing: IconButton(
+                          tooltip: _isSuggestionSaved(suggestion)
+                              ? 'Remove from saved'
+                              : 'Add to saved',
+                          icon: Icon(
+                            _isSuggestionSaved(suggestion)
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            size: 20,
+                            color: _isSuggestionSaved(suggestion)
+                                ? AppUiColors.primary(
+                                    highContrastEnabled:
+                                        widget.highContrastMode,
+                                  )
+                                : Colors.grey[700],
+                          ),
+                          onPressed: () =>
+                              unawaited(_toggleSuggestionSaved(suggestion)),
+                        ),
                         dense: true,
                         onTap: () => _selectSuggestion(suggestion),
                       );

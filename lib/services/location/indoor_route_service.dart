@@ -4,14 +4,39 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../indoor_maps/indoor_map_repository.dart';
+import '../indoors_routing/core/indoor_route_plan_models.dart';
+import '../indoors_routing/indoor_multi_floor_router.dart';
 import '../indoors_routing/indoor_same_floor_router.dart';
 import '../navigation_steps.dart';
+import 'indoor_navigation_session.dart';
 
 class IndoorRouteService {
-  final IndoorSameFloorRouter sameFloorRouter;
+  static const double _walkingMetersPerSecond = 1.35;
 
-  IndoorRouteService({IndoorSameFloorRouter? sameFloorRouter})
-    : sameFloorRouter = sameFloorRouter ?? IndoorSameFloorRouter();
+  final IndoorSameFloorRouter sameFloorRouter;
+  final IndoorMultiFloorRouter multiFloorRouter;
+  final IndoorMapRepository indoorRepository;
+
+  IndoorRouteService({
+    IndoorSameFloorRouter? sameFloorRouter,
+    IndoorMultiFloorRouter? multiFloorRouter,
+    IndoorMapRepository? indoorRepository,
+  }) : this._resolved(
+         sameFloorRouter ?? IndoorSameFloorRouter(),
+         multiFloorRouter,
+         indoorRepository,
+       );
+
+  IndoorRouteService._resolved(
+    IndoorSameFloorRouter resolvedSameFloorRouter,
+    IndoorMultiFloorRouter? multiFloorRouter,
+    IndoorMapRepository? indoorRepository,
+  ) : sameFloorRouter = resolvedSameFloorRouter,
+      multiFloorRouter =
+          multiFloorRouter ??
+          IndoorMultiFloorRouter(sameFloorRouter: resolvedSameFloorRouter),
+      indoorRepository = indoorRepository ?? IndoorMapRepository();
 
   LatLng? findRoomCenterOnFloor({
     required Map<String, dynamic> floorGeoJson,
@@ -35,6 +60,59 @@ class IndoorRouteService {
     );
   }
 
+  Future<IndoorNavigationSession?> buildIndoorNavigationSession({
+    required String buildingCode,
+    required String originRoomCode,
+    required String destinationRoomCode,
+    IndoorTransitionMode? preferredTransitionMode,
+  }) async {
+    final originRoom = await indoorRepository.resolveRoom(
+      buildingCode,
+      originRoomCode,
+    );
+    final destinationRoom = await indoorRepository.resolveRoom(
+      buildingCode,
+      destinationRoomCode,
+    );
+
+    if (originRoom == null || destinationRoom == null) {
+      return null;
+    }
+
+    if (originRoom.floorAssetPath != destinationRoom.floorAssetPath &&
+        preferredTransitionMode == null) {
+      return null;
+    }
+
+    final routePlan = multiFloorRouter.buildRoute(
+      originRoom: originRoom,
+      destinationRoom: destinationRoom,
+      preferredTransitionMode: preferredTransitionMode,
+    );
+    if (routePlan == null) {
+      return null;
+    }
+
+    return IndoorNavigationSession(
+      routePlan: routePlan,
+      steps: _buildStepsForRoutePlan(routePlan),
+      polylinesByFloorAsset: _buildPolylinesByFloorAsset(routePlan),
+      originMarker: buildOriginRoomMarker(
+        originRoom.roomCode,
+        originRoom.center,
+      ),
+      destinationMarker: buildDestinationRoomMarker(
+        destinationRoom.roomCode,
+        destinationRoom.center,
+      ),
+      initialFloorAssetPath: routePlan.segments.first.floorAssetPath,
+      distanceText: _metersText(routePlan.totalDistanceMeters),
+      durationText: _durationTextFromSeconds(
+        (routePlan.totalDistanceMeters / _walkingMetersPerSecond).round(),
+      ),
+    );
+  }
+
   Marker buildOriginRoomMarker(String roomCode, LatLng point) {
     return Marker(
       markerId: const MarkerId('origin_room'),
@@ -53,14 +131,26 @@ class IndoorRouteService {
     );
   }
 
-  Set<Polyline> buildIndoorRoutePolylines(List<LatLng> routePoints) {
+  Marker buildIndoorProgressMarker(LatLng point, {String? title}) {
+    return Marker(
+      markerId: const MarkerId('indoor_progress'),
+      position: point,
+      infoWindow: InfoWindow(title: title ?? 'Current step'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+    );
+  }
+
+  Set<Polyline> buildIndoorRoutePolylines(
+    List<LatLng> routePoints, {
+    String polylineId = 'indoor_same_floor_route',
+  }) {
     if (routePoints.length < 2) {
       return {};
     }
 
     return {
       Polyline(
-        polylineId: const PolylineId('indoor_same_floor_route'),
+        polylineId: PolylineId(polylineId),
         points: routePoints,
         color: const Color(0xFF0A7E4D),
         width: 6,
@@ -69,12 +159,17 @@ class IndoorRouteService {
     };
   }
 
-  IndoorNavigationSummary buildIndoorNavigation(List<LatLng> routePoints) {
+  IndoorNavigationSummary buildIndoorNavigation(
+    List<LatLng> routePoints, {
+    String? floorAssetPath,
+    String? floorLabel,
+    bool includeArrivalStep = true,
+    String arrivalInstruction = 'Arrive at your destination room',
+  }) {
     if (routePoints.length < 2) {
       return const IndoorNavigationSummary.empty();
     }
 
-    const walkingMetersPerSecond = 1.35;
     final steps = <NavigationStep>[];
     double totalMeters = 0;
 
@@ -88,7 +183,9 @@ class IndoorRouteService {
         b.longitude,
       );
 
-      if (meters < 1.0) continue;
+      if (meters < 1.0) {
+        continue;
+      }
       totalMeters += meters;
 
       String instruction;
@@ -118,7 +215,7 @@ class IndoorRouteService {
         }
       }
 
-      final stepSeconds = (meters / walkingMetersPerSecond).round();
+      final stepSeconds = (meters / _walkingMetersPerSecond).round();
       steps.add(
         NavigationStep(
           instruction: instruction,
@@ -127,22 +224,121 @@ class IndoorRouteService {
           durationText: _durationTextFromSeconds(stepSeconds),
           maneuver: maneuver,
           points: [a, b],
+          indoorFloorAssetPath: floorAssetPath,
+          indoorFloorLabel: floorLabel,
         ),
       );
     }
 
-    final totalSeconds = (totalMeters / walkingMetersPerSecond).round();
-    return IndoorNavigationSummary(
-      steps: [
-        ...steps,
-        const NavigationStep(
-          instruction: 'Arrive at your destination room',
+    if (includeArrivalStep) {
+      steps.add(
+        NavigationStep(
+          instruction: arrivalInstruction,
           travelMode: 'walking',
+          indoorFloorAssetPath: floorAssetPath,
+          indoorFloorLabel: floorLabel,
+          points: routePoints.isEmpty ? const [] : [routePoints.last],
         ),
-      ],
+      );
+    }
+
+    final totalSeconds = (totalMeters / _walkingMetersPerSecond).round();
+    return IndoorNavigationSummary(
+      steps: steps,
       distanceText: _metersText(totalMeters),
       durationText: _durationTextFromSeconds(totalSeconds),
     );
+  }
+
+  Map<String, Set<Polyline>> _buildPolylinesByFloorAsset(
+    IndoorRoutePlan routePlan,
+  ) {
+    final polylinesByFloor = <String, Set<Polyline>>{};
+
+    for (var i = 0; i < routePlan.segments.length; i++) {
+      final segment = routePlan.segments[i];
+      if (segment.kind != IndoorRouteSegmentKind.walk ||
+          segment.points.length < 2) {
+        continue;
+      }
+
+      polylinesByFloor.putIfAbsent(segment.floorAssetPath, () => <Polyline>{});
+      polylinesByFloor[segment.floorAssetPath]!.addAll(
+        buildIndoorRoutePolylines(
+          segment.points,
+          polylineId: 'indoor_route_${segment.floorAssetPath}_$i',
+        ),
+      );
+    }
+
+    return polylinesByFloor;
+  }
+
+  List<NavigationStep> _buildStepsForRoutePlan(IndoorRoutePlan routePlan) {
+    final steps = <NavigationStep>[];
+
+    for (var i = 0; i < routePlan.segments.length; i++) {
+      final segment = routePlan.segments[i];
+
+      switch (segment.kind) {
+        case IndoorRouteSegmentKind.walk:
+          final includeArrivalStep = i == routePlan.segments.length - 1;
+          final summary = buildIndoorNavigation(
+            segment.points,
+            floorAssetPath: segment.floorAssetPath,
+            floorLabel: segment.floorLabel,
+            includeArrivalStep: includeArrivalStep,
+          );
+          steps.addAll(summary.steps);
+          break;
+        case IndoorRouteSegmentKind.transition:
+          final transitionPoint = _transitionStepPoint(routePlan.segments, i);
+          steps.add(
+            NavigationStep(
+              instruction:
+                  segment.instruction ??
+                  'Change floors and continue to your destination',
+              travelMode: 'walking',
+              indoorFloorAssetPath: segment.floorAssetPath,
+              indoorFloorLabel: segment.floorLabel,
+              indoorTransitionMode: _transitionModeName(segment.transitionMode),
+              points: transitionPoint == null ? const [] : [transitionPoint],
+            ),
+          );
+          break;
+      }
+    }
+
+    return steps;
+  }
+
+  String? _transitionModeName(IndoorTransitionMode? mode) {
+    return switch (mode) {
+      IndoorTransitionMode.stairs => 'stairs',
+      IndoorTransitionMode.elevator => 'elevator',
+      IndoorTransitionMode.escalator => 'escalator',
+      null => null,
+    };
+  }
+
+  LatLng? _transitionStepPoint(List<IndoorRouteSegment> segments, int index) {
+    for (var i = index + 1; i < segments.length; i++) {
+      final nextSegment = segments[i];
+      if (nextSegment.kind == IndoorRouteSegmentKind.walk &&
+          nextSegment.points.isNotEmpty) {
+        return nextSegment.points.first;
+      }
+    }
+
+    for (var i = index - 1; i >= 0; i--) {
+      final previousSegment = segments[i];
+      if (previousSegment.kind == IndoorRouteSegmentKind.walk &&
+          previousSegment.points.isNotEmpty) {
+        return previousSegment.points.last;
+      }
+    }
+
+    return null;
   }
 
   String _metersText(double meters) {

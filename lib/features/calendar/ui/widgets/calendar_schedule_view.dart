@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'dart:ui';
 
+import '../../../saved/saved_directions_controller.dart';
 import '../../data/models/google_calendar_event.dart';
 import '../../services/calendar_building_resolver.dart';
 import '../../services/calendar_today_highlight_helper.dart';
@@ -47,19 +48,8 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final isHighContrast = widget.highContrastMode;
     final primaryText = isHighContrast ? Colors.white : Colors.black87;
     final secondaryText = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
-    final chipSelectedBg = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
-    final chipSelectedText = isHighContrast ? Colors.black : Colors.white;
-    final chipUnselectedBg = isHighContrast ? const Color(0xFF111111) : Colors.white;
-    final chipUnselectedText = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
-    final chipBorder = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
 
     final dataSource = GoogleCalendarDataSource(widget.events);
 
@@ -244,15 +234,18 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
               },
               onGoToBuilding: () {
                 Navigator.of(context).pop();
+                SavedDirectionsController.requestDirectionsToBuildingCode(
+                  buildingCode,
+                );
                 widget.onGoToBuilding?.call(event, buildingCode);
               },
               onGoToRoom: () {
                 Navigator.of(context).pop();
+                SavedDirectionsController.requestDirectionsToBuildingRoom(
+                  buildingCode: buildingCode,
+                  roomCode: roomNumber,
+                );
                 widget.onGoToRoom?.call(event, buildingCode, roomNumber);
-              },
-              onSave: () {
-                Navigator.of(context).pop();
-                widget.onSave?.call(event, buildingCode);
               },
             ),
           ),
@@ -266,16 +259,18 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final isSelected = _calendarView == view;
 
     final selectedColor = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
     final selectedText = isHighContrast ? Colors.black : Colors.white;
     final unselectedText = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
-    final backgroundColor = isHighContrast ? const Color(0xFF111111) : Colors.white;
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+    final backgroundColor = isHighContrast
+        ? const Color(0xFF111111)
+        : Colors.white;
     final borderColor = isHighContrast
-      ? const Color(0xFF89D9C2)
-      : const Color(0xFF8B1E3F);
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
 
     return ChoiceChip(
       label: Text(label),

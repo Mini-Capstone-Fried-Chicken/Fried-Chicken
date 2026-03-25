@@ -5,18 +5,125 @@ import '../data/search_suggestion.dart';
 import 'google_places_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-typedef BuildingMatcher = BuildingPolygon? Function(String normalizedQuery);
+abstract class BuildingMatchStrategy {
+  String get id;
+
+  bool canHandle(String normalizedQuery);
+
+  BuildingPolygon? match(String normalizedQuery);
+}
+
+class ExactCodeMatchStrategy implements BuildingMatchStrategy {
+  const ExactCodeMatchStrategy();
+
+  @override
+  String get id => 'exactCodeMatch';
+
+  @override
+  bool canHandle(String normalizedQuery) => true;
+
+  @override
+  BuildingPolygon? match(String normalizedQuery) {
+    return BuildingSearchService._findExactCodeMatch(normalizedQuery);
+  }
+}
+
+class ExactNameMatchStrategy implements BuildingMatchStrategy {
+  const ExactNameMatchStrategy();
+
+  @override
+  String get id => 'exactNameMatch';
+
+  @override
+  bool canHandle(String normalizedQuery) => true;
+
+  @override
+  BuildingPolygon? match(String normalizedQuery) {
+    return BuildingSearchService._findExactNameMatch(normalizedQuery);
+  }
+}
+
+class ExactSearchTermMatchStrategy implements BuildingMatchStrategy {
+  const ExactSearchTermMatchStrategy();
+
+  @override
+  String get id => 'exactSearchTermMatch';
+
+  @override
+  bool canHandle(String normalizedQuery) => true;
+
+  @override
+  BuildingPolygon? match(String normalizedQuery) {
+    return BuildingSearchService._findExactSearchTermMatch(normalizedQuery);
+  }
+}
+
+class PartialSearchTermMatchStrategy implements BuildingMatchStrategy {
+  const PartialSearchTermMatchStrategy();
+
+  @override
+  String get id => 'partialSearchTermMatch';
+
+  @override
+  bool canHandle(String normalizedQuery) => normalizedQuery.length >= 3;
+
+  @override
+  BuildingPolygon? match(String normalizedQuery) {
+    return BuildingSearchService._findPartialSearchTermMatch(normalizedQuery);
+  }
+}
 
 /// Service for searching buildings using Google Places API and Concordia building data
 class BuildingSearchService {
-  static final List<BuildingMatcher> _exactBuildingMatchers = [
-    _findExactCodeMatch,
-    _findExactNameMatch,
-    _findExactSearchTermMatch,
+  static final List<BuildingMatchStrategy> _defaultBuildingMatchStrategies = [
+    const ExactCodeMatchStrategy(),
+    const ExactNameMatchStrategy(),
+    const ExactSearchTermMatchStrategy(),
+    const PartialSearchTermMatchStrategy(),
   ];
 
-  static const BuildingMatcher _partialBuildingMatcher =
-      _findPartialSearchTermMatch;
+  static final List<BuildingMatchStrategy> _buildingMatchStrategies = List.of(
+    _defaultBuildingMatchStrategies,
+  );
+
+  static List<BuildingMatchStrategy> get buildingMatchStrategies {
+    return List.unmodifiable(_buildingMatchStrategies);
+  }
+
+  static void setBuildingMatchStrategies(
+    Iterable<BuildingMatchStrategy> strategies,
+  ) {
+    final updatedStrategies = strategies.toList(growable: true);
+    if (updatedStrategies.isEmpty) {
+      throw ArgumentError('At least one building match strategy is required.');
+    }
+    _buildingMatchStrategies
+      ..clear()
+      ..addAll(updatedStrategies);
+  }
+
+  static void registerBuildingMatchStrategy(
+    BuildingMatchStrategy strategy, {
+    bool prepend = false,
+  }) {
+    if (prepend) {
+      _buildingMatchStrategies.insert(0, strategy);
+      return;
+    }
+    _buildingMatchStrategies.add(strategy);
+  }
+
+  static bool removeBuildingMatchStrategy(String id) {
+    final initialLength = _buildingMatchStrategies.length;
+    _buildingMatchStrategies.removeWhere((strategy) => strategy.id == id);
+    return _buildingMatchStrategies.length != initialLength;
+  }
+
+  static void resetBuildingMatchStrategies() {
+    _buildingMatchStrategies
+      ..clear()
+      ..addAll(_defaultBuildingMatchStrategies);
+  }
 
   /// Search for places using Google Places API with Concordia building check
   /// Returns a list of SearchResult objects
@@ -82,20 +189,15 @@ class BuildingSearchService {
 
     final normalizedQuery = query.toLowerCase().trim();
 
-    for (final matcher in _exactBuildingMatchers) {
-      final match = matcher(normalizedQuery);
+    for (final strategy in _buildingMatchStrategies) {
+      if (!strategy.canHandle(normalizedQuery)) {
+        continue;
+      }
+
+      final match = strategy.match(normalizedQuery);
       if (match != null) {
         return match;
       }
-    }
-
-    if (normalizedQuery.length < 3) {
-      return null;
-    }
-
-    final partialMatch = _partialBuildingMatcher(normalizedQuery);
-    if (partialMatch != null) {
-      return partialMatch;
     }
 
     return null;

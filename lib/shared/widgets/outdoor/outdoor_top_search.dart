@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../data/search_suggestion.dart';
 import '../../../services/indoor_maps/indoor_floor_config.dart';
+import '../../../services/indoors_routing/core/indoor_route_plan_models.dart';
 import '../../../shared/widgets/indoor_floor_dropdown.dart';
 import '../../../shared/widgets/map_search_bar.dart';
 
@@ -32,6 +33,9 @@ class OutdoorTopSearch extends StatelessWidget {
   final String? currentBuildingCode;
   final LatLng? userLocation;
   final bool Function(String buildingCode) isConcordiaBuilding;
+  final IndoorTransitionMode? selectedTransitionMode;
+  final ValueChanged<IndoorTransitionMode?>? onTransitionModeChanged;
+  final bool wheelchairRoutingDefaultEnabled;
 
   const OutdoorTopSearch({
     super.key,
@@ -50,6 +54,9 @@ class OutdoorTopSearch extends StatelessWidget {
     required this.currentBuildingCode,
     required this.userLocation,
     required this.isConcordiaBuilding,
+    this.selectedTransitionMode,
+    this.onTransitionModeChanged,
+    this.wheelchairRoutingDefaultEnabled = false,
     required this.showIndoor,
     required this.floors,
     required this.selectedAssetPath,
@@ -87,6 +94,9 @@ class OutdoorTopSearch extends StatelessWidget {
             highContrastMode: highContrastMode,
             showRoomFields:
                 showIndoor && (selectedBuildingCode?.isNotEmpty ?? false),
+            selectedTransitionMode: selectedTransitionMode,
+            onTransitionModeChanged: onTransitionModeChanged,
+            wheelchairRoutingDefaultEnabled: wheelchairRoutingDefaultEnabled,
           ),
           if (showIndoor && floors.isNotEmpty) ...[
             const SizedBox(height: 10),

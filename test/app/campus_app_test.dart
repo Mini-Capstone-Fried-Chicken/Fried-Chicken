@@ -1,7 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:campus_app/app/campus_app.dart';
+import 'package:campus_app/app/app_shell.dart';
+import 'package:campus_app/features/auth/ui/login_page.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mockito/mockito.dart';
+
+class _MockUser extends Mock implements User {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +19,15 @@ void main() {
       largeTextModeEnabled: false,
       highContrastModeEnabled: false,
     );
+    CampusAppState.debugAuthStateChangesProvider = null;
+    CampusAppState.debugRestoreSettings = null;
+    CampusAppState.debugReloadSavedPlaces = null;
+  });
+
+  tearDown(() {
+    CampusAppState.debugAuthStateChangesProvider = null;
+    CampusAppState.debugRestoreSettings = null;
+    CampusAppState.debugReloadSavedPlaces = null;
   });
 
   // =========================================================================
@@ -232,5 +249,105 @@ void main() {
   test('AppSettingsController reset in setUp uses immutable state updates', () {
     expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
     expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
+  });
+
+  group('CampusApp - auth and builder behavior', () {
+    testWidgets('shows loading indicator while auth stream is waiting', (tester) async {
+      final authStream = StreamController<User?>.broadcast();
+      CampusAppState.debugAuthStateChangesProvider = () => authStream.stream;
+
+      await tester.pumpWidget(const CampusApp());
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await authStream.close();
+    });
+
+    testWidgets('shows SignInPage when auth stream emits null user', (tester) async {
+      CampusAppState.debugAuthStateChangesProvider = () => Stream<User?>.value(null);
+
+      await tester.pumpWidget(const CampusApp());
+      await tester.pump();
+
+      expect(find.byType(SignInPage), findsOneWidget);
+      expect(find.byType(AppShell), findsNothing);
+    });
+
+    testWidgets('shows AppShell when auth stream emits logged-in user', (tester) async {
+      final user = _MockUser();
+      CampusAppState.debugAuthStateChangesProvider = () => Stream<User?>.value(user);
+
+      await tester.pumpWidget(const CampusApp());
+      await tester.pump();
+
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(find.byType(SignInPage), findsNothing);
+      final shell = tester.widget<AppShell>(find.byType(AppShell));
+      expect(shell.isLoggedIn, isTrue);
+    });
+
+    testWidgets('builder applies large text multiplier from settings notifier', (tester) async {
+      CampusAppState.debugAuthStateChangesProvider = () => Stream<User?>.value(null);
+
+      AppSettingsController.notifier.value = const AppSettingsState(
+        largeTextModeEnabled: false,
+        highContrastModeEnabled: false,
+      );
+      await tester.pumpWidget(const CampusApp());
+      await tester.pump();
+
+      double maxScaleFromMediaQueries() {
+        final scales = tester
+            .widgetList<MediaQuery>(find.byType(MediaQuery))
+            .map((mq) => mq.data.textScaler.scale(1.0))
+            .toList();
+        scales.sort();
+        return scales.last;
+      }
+
+      final normalScale = maxScaleFromMediaQueries();
+
+      AppSettingsController.notifier.value = const AppSettingsState(
+        largeTextModeEnabled: true,
+        highContrastModeEnabled: false,
+      );
+      await tester.pump();
+
+      final largeScale = maxScaleFromMediaQueries();
+      expect(largeScale, greaterThan(normalScale));
+      expect(largeScale / normalScale, closeTo(1.4, 0.01));
+    });
+
+    testWidgets('auth listener triggers side effects and is cancelled on dispose', (tester) async {
+      final authStream = StreamController<User?>.broadcast();
+      var restoreCalls = 0;
+      var reloadCalls = 0;
+
+      CampusAppState.debugAuthStateChangesProvider = () => authStream.stream;
+      CampusAppState.debugRestoreSettings = ({bool force = false}) async {
+        expect(force, isTrue);
+        restoreCalls += 1;
+      };
+      CampusAppState.debugReloadSavedPlaces = () async {
+        reloadCalls += 1;
+      };
+
+      await tester.pumpWidget(const CampusApp());
+
+      authStream.add(null);
+      await tester.pump();
+      expect(restoreCalls, 1);
+      expect(reloadCalls, 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+
+      authStream.add(null);
+      await tester.pump();
+      expect(restoreCalls, 1);
+      expect(reloadCalls, 1);
+
+      await authStream.close();
+    });
   });
 }

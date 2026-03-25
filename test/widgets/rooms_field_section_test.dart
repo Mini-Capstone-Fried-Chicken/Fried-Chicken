@@ -2,47 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
 
-class FakeIndoorMapRepository implements IndoorMapRepository {
+class FakeIndoorMapRepository extends IndoorMapRepository {
   @override
   Future<bool> roomExists(String buildingCode, String room) async {
     return room == '101';
-  }
-
-  @override
-  Future<LatLng?> getRoomLocation(String building, String room) async => null;
-
-  @override
-  List<String> getAssetPathsForBuilding(String building) => [];
-
-  @override
-  Future<List<String>> getRoomCodesForBuilding(String building) async => [];
-
-  @override
-  Future<Map<String, dynamic>> loadGeoJsonAsset(String assetPath) async => {};
-
-  @override
-  LatLng calculatePolygonCenter(List<List<double>> coordinates) {
-    return LatLng(0, 0);
-  }
-
-  @override
-  List<List<double>>? extractPolygonCoordinates(Map<String, dynamic> feature) {
-    return [];
-  }
-
-  @override
-  List<String> extractRoomCodesFromGeoJson(Map<String, dynamic> geoJson) {
-    return [];
-  }
-
-  @override
-  LatLng? findRoomLocationInFeatures(
-    List<dynamic> features,
-    String searchCode,
-  ) {
-    return null;
   }
 }
 
@@ -52,16 +17,20 @@ void main() {
   late bool originValidCalled;
   late bool destinationValidCalled;
   late bool destinationSubmittedCalled;
+  IndoorTransitionMode? selectedMode;
 
   Widget buildTestWidget({
     bool originEnabled = true,
     bool destinationEnabled = true,
+    String originBuildingCode = 'ORIGIN',
+    String destinationBuildingCode = 'DEST',
+    bool wheelchairRoutingDefaultEnabled = false,
   }) {
     return MaterialApp(
       home: Scaffold(
         body: RoomFieldsSection(
-          originBuildingCode: 'ORIGIN',
-          destinationBuildingCode: 'DEST',
+          originBuildingCode: originBuildingCode,
+          destinationBuildingCode: destinationBuildingCode,
           originRoomController: originController,
           destinationRoomController: destinationController,
           originEnabled: originEnabled,
@@ -71,6 +40,9 @@ void main() {
           onDestinationRoomSubmitted: (_, __) =>
               destinationSubmittedCalled = true,
           indoorRepository: FakeIndoorMapRepository(),
+          selectedTransitionMode: selectedMode,
+          onTransitionModeChanged: (mode) => selectedMode = mode,
+          wheelchairRoutingDefaultEnabled: wheelchairRoutingDefaultEnabled,
         ),
       ),
     );
@@ -82,6 +54,7 @@ void main() {
     originValidCalled = false;
     destinationValidCalled = false;
     destinationSubmittedCalled = false;
+    selectedMode = null;
   });
 
   testWidgets('Invalid origin room clears input', (tester) async {
@@ -167,5 +140,91 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.check_circle), findsNWidgets(2));
+  });
+
+  testWidgets('shows floor transition selector for same-building routing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestWidget(originBuildingCode: 'H', destinationBuildingCode: 'h'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Switch floors by'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Elevator'), findsOneWidget);
+  });
+
+  testWidgets('selecting elevator notifies parent state', (tester) async {
+    await tester.pumpWidget(
+      buildTestWidget(originBuildingCode: 'H', destinationBuildingCode: 'H'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Elevator'));
+    await tester.pumpAndSettle();
+
+    expect(selectedMode, IndoorTransitionMode.elevator);
+  });
+
+  testWidgets('wheelchair routing disables stairs selection', (tester) async {
+    await tester.pumpWidget(
+      buildTestWidget(
+        originBuildingCode: 'H',
+        destinationBuildingCode: 'H',
+        wheelchairRoutingDefaultEnabled: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final stairsChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Stairs'),
+    );
+    final elevatorChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Elevator'),
+    );
+
+    expect(stairsChip.onSelected, isNull);
+    expect(elevatorChip.selected, isTrue);
+  });
+
+  testWidgets('wheelchair routing shows helper text and disables escalator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestWidget(
+        originBuildingCode: 'H',
+        destinationBuildingCode: 'H',
+        wheelchairRoutingDefaultEnabled: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final escalatorChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Escalator'),
+    );
+
+    expect(
+      find.text('Wheelchair routing defaults to elevators.'),
+      findsOneWidget,
+    );
+    expect(escalatorChip.onSelected, isNull);
+  });
+
+  testWidgets('enabled unselected transition chip remains tappable', (
+    tester,
+  ) async {
+    selectedMode = IndoorTransitionMode.stairs;
+
+    await tester.pumpWidget(
+      buildTestWidget(originBuildingCode: 'H', destinationBuildingCode: 'H'),
+    );
+    await tester.pumpAndSettle();
+
+    final elevatorChip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Elevator'),
+    );
+
+    expect(elevatorChip.selected, isFalse);
+    expect(elevatorChip.onSelected, isNotNull);
   });
 }
