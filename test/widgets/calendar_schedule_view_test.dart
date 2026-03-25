@@ -357,38 +357,6 @@ void main() {
       expect(receivedEvent, isNotNull);
       expect(receivedBuildingCode, isNotEmpty);
       expect(receivedRoomNumber, 'H-937');
-<<<<<<< fixing-calendar-permission
-    });
-    testWidgets('popup Save calls onSave callback', (tester) async {
-      GoogleCalendarEvent? receivedEvent;
-      String? receivedBuildingCode;
-      final saveEvent = popupEvent.copyWith(location: 'H-937');
-
-      await tester.pumpWidget(
-        makeTestableWidget(
-          CalendarScheduleView(
-            selectedCalendarLabel: 'SOEN 357',
-            events: [saveEvent],
-            onBack: () {},
-            onSave: (event, buildingCode) {
-              receivedEvent = event;
-              receivedBuildingCode = buildingCode;
-            },
-          ),
-        ),
-      );
-
-      final state = tester.state(find.byType(CalendarScheduleView)) as dynamic;
-      state.showEventPopup(saveEvent);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(receivedEvent, isNotNull);
-      expect(receivedEvent!.id, 'popup_1');
-      expect(receivedBuildingCode, 'HALL');
-=======
 
       // New behavior: Go to Room requests directions (like Go to Building),
       // and carries the room code for Explore to prefill.
@@ -400,7 +368,6 @@ void main() {
       );
       expect(requested.roomCode, receivedRoomNumber);
       expect(requested.roomCode!.toLowerCase(), isNot('all'));
->>>>>>> main
     });
     testWidgets('handleCalendarTap ignores non-appointment targets', (
       tester,
