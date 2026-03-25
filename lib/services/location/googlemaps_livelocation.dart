@@ -223,6 +223,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _poisLoaded = false;
   final Map<PoiCategory, BitmapDescriptor> _poiIcons = {};
   PoiPlace? _selectedPoi;
+  PlaceResult? _selectedPoiDetails;
+  LatLng? _selectedPoiCenter;
 
   StreamSubscription<Position>? _posSub;
 
@@ -426,6 +428,20 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (minDist > campusAutoSwitchRadius) return Campus.none;
 
     return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
+  }
+
+  String? _resolvedIndoorOriginBuildingCode() {
+    if (_showRoutePreview) {
+      return _routeOriginBuildingCode;
+    }
+    return _selectedBuildingPoly?.code ?? _currentBuildingCode;
+  }
+
+  String? _resolvedIndoorDestinationBuildingCode() {
+    if (_showRoutePreview) {
+      return _routeDestinationBuildingCode;
+    }
+    return _selectedBuildingPoly?.code;
   }
 
   Future<void> _onOriginRoomSubmitted(
@@ -879,6 +895,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedPoiCenter = null;
       _anchorOffset = null;
       _showRoutePreview = true;
+      _isPoiRoute = true;
       _routeOrigin = origin;
       _routeDestination = poi.location;
       _routeOriginText = currentLocationTag;
@@ -941,7 +958,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedPoiDetails = null;
       _selectedPoiCenter = null;
       _selectedSearchResult = null;
-      _selectedPoi = null;
       _anchorOffset = null;
       _routePolylines = {};
       _showRoutePreview = false;
@@ -1707,55 +1723,24 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           markerId: MarkerId('poi_${poi.placeId}'),
           position: poi.location,
           icon: icon,
+          onTap: () => unawaited(_onPoiTapped(poi)),
           zIndexInt: 0,
-          onTap: () => _onPoiTapped(poi),
         ),
       );
     }
   }
 
-  void _onPoiTapped(PoiPlace poi) {
-    setState(() {
-      _selectedPoi = poi;
-      _selectedBuildingPoly = null;
-      _selectedBuildingCenter = null;
-      _anchorOffset = null;
-    });
-  }
-
-  void _closePoiPopup() {
-    setState(() {
-      _selectedPoi = null;
-    });
-  }
-
-  Future<void> _getDirectionsToPoi() async {
-    final poi = _selectedPoi;
-    if (poi == null) return;
-
-    final origin = _currentLocation;
-    if (origin == null) {
-      print('[ERROR] Cannot get directions: Current location is null');
-      return;
+  String _poiCategoryLabel(PoiCategory category) {
+    switch (category) {
+      case PoiCategory.cafe:
+        return 'Cafe';
+      case PoiCategory.restaurant:
+        return 'Restaurant';
+      case PoiCategory.pharmacy:
+        return 'Pharmacy';
+      case PoiCategory.depanneur:
+        return 'Dépanneur';
     }
-
-    final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
-
-    setState(() {
-      _selectedPoi = null;
-      _selectedBuildingCenter = null;
-      _anchorOffset = null;
-      _showRoutePreview = true;
-      _isPoiRoute = true;
-      _routeOrigin = origin;
-      _routeDestination = poi.location;
-      _routeOriginText = currentLocationTag;
-      _routeDestinationText = poi.name;
-      _routeOriginBuildingCode = currentBuildingCode;
-      _routeDestinationBuildingCode = null;
-    });
-
-    await _fetchRoutesAndDurations();
   }
 
   /// Walking time + 4 next buses
@@ -1825,12 +1810,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               ),
             };
 
-          if (_mapController != null) {
-            final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
-            _mapController!.animateCamera(
-              CameraUpdate.newLatLngBounds(bounds, 100),
-            );
-          }
+            if (_mapController != null) {
+              final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
+              _mapController!.animateCamera(
+                CameraUpdate.newLatLngBounds(bounds, 100),
+              );
+            }
+          });
         } else {
           setState(() {
             _routePolylines = {};
@@ -2885,9 +2871,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 isPoiRoute: _isPoiRoute,
                 isConcordiaBuilding: (buildingCode) {
                   return buildingPolygons.any(
-                    (b) =>
-                        (b.code ?? '').toUpperCase() ==
-                        buildingCode.toUpperCase(),
+                    (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
                   );
                 },
               ),
@@ -2974,14 +2958,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               highContrastMode: _highContrastMode,
             ),
 
-          if (_selectedPoi != null && !_showRoutePreview)
-            OutdoorPoiPopup(
-              poi: _selectedPoi!,
-              onClose: _closePoiPopup,
-              onGetDirections: _getDirectionsToPoi,
-              highContrastMode: _highContrastMode,
-            ),
-
           if (!_showRoutePreview && !_isIndoorNavigationActive)
             if (selectedBuilding == null &&
                 _selectedPoi != null &&
@@ -3006,6 +2982,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                   ),
                 ),
               ),
+
+          if (_selectedPoi != null && !_showRoutePreview)
+            OutdoorPoiPopup(
+              poi: _selectedPoi!,
+              onClose: _closePopup,
+              onGetDirections: _getDirectionsToSelectedPoi,
+              highContrastMode: _highContrastMode,
+            ),
 
           if (!_showRoutePreview && !_isIndoorNavigationActive)
             OutdoorBottomControls(
