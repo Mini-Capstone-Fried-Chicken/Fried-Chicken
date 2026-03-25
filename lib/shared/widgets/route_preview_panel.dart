@@ -3,6 +3,7 @@ import '../../data/search_suggestion.dart';
 import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
 import '../../features/settings/app_settings.dart';
+import '../../services/location/shuttle_route_service.dart';
 
 enum RouteTravelMode { driving, walking, bicycling, transit, shuttle }
 
@@ -203,7 +204,9 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
         ? AppUiColors.highContrastPrimary
         : const Color(0xFF76263D);
     final headerText = widget.highContrastMode ? Colors.black : Colors.white;
-    final headerHint = widget.highContrastMode ? Colors.black54 : Colors.white70;
+    final headerHint = widget.highContrastMode
+        ? Colors.black54
+        : Colors.white70;
     return Center(
       child: SizedBox(
         width: 340,
@@ -254,9 +257,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'Starting location',
-                                  hintStyle: TextStyle(
-                                    color: headerHint,
-                                  ),
+                                  hintStyle: TextStyle(color: headerHint),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -297,11 +298,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.place,
-                              color: headerText,
-                              size: 18,
-                            ),
+                            Icon(Icons.place, color: headerText, size: 18),
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
@@ -314,9 +311,7 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'Choose destination',
-                                  hintStyle: TextStyle(
-                                    color: headerHint,
-                                  ),
+                                  hintStyle: TextStyle(color: headerHint),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -453,7 +448,6 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
   }
 }
 
-
 class RouteTravelModeBar extends StatelessWidget {
   final RouteTravelMode selectedTravelMode;
   final ValueChanged<RouteTravelMode> onTravelModeSelected;
@@ -468,12 +462,13 @@ class RouteTravelModeBar extends StatelessWidget {
   final bool isNavigating;
   final bool highContrastMode;
 
-
   final List<String> shuttleNextBuses;
 
-  final int? shuttleWalkingMinutes;
-
+  final int? shuttleWalkingToDestinationMinutes;
+  final int? shuttleWalkingFromDestinationMinutes;
   final String? shuttleNearestStop;
+  final int? shuttleTotalTripDuration;
+  final ShuttleRouteData? shuttleRouteData;
 
   final VoidCallback? onViewSchedule;
 
@@ -492,28 +487,29 @@ class RouteTravelModeBar extends StatelessWidget {
     required this.isNavigating,
     this.highContrastMode = false,
     this.shuttleNextBuses = const [],
-    this.shuttleWalkingMinutes,
+    this.shuttleWalkingFromDestinationMinutes,
+    this.shuttleWalkingToDestinationMinutes,
     this.shuttleNearestStop,
+    this.shuttleTotalTripDuration,
     this.onViewSchedule,
+    this.shuttleRouteData,
   });
 
   @override
   Widget build(BuildContext context) {
     final barBg = highContrastMode
         ? AppUiColors.highContrastPrimary
-      : const Color(0xFF76263D);
-    final selectedText = highContrastMode
-      ? Colors.black
-      : Colors.white;
-    final mutedText = highContrastMode
-      ? Colors.black54
-      : Colors.white70;
+        : const Color(0xFF76263D);
+    final selectedText = highContrastMode ? Colors.black : Colors.white;
+    final mutedText = highContrastMode ? Colors.black54 : Colors.white70;
     final buttonActive = highContrastMode
-      ? const Color(0xFF89D9C2)
-      : Colors.white;
+        ? const Color(0xFF89D9C2)
+        : Colors.white;
     final selectedLabel = selectedTravelMode.label;
     final selectedDuration = modeDurations[selectedTravelMode.apiValue];
-    final resolvedDuration = selectedDuration?.trim().isNotEmpty == true ? selectedDuration! : 'N/A';
+    final resolvedDuration = selectedDuration?.trim().isNotEmpty == true
+        ? selectedDuration!
+        : 'N/A';
     final durationLabel = isLoadingDurations ? '...' : resolvedDuration;
 
     final durationParts = _splitDuration(durationLabel);
@@ -573,14 +569,17 @@ class RouteTravelModeBar extends StatelessWidget {
               const SizedBox(width: 6),
 
               TextButton(
-                onPressed: (isNavigating ||
+                onPressed:
+                    (isNavigating ||
                         selectedTravelMode == RouteTravelMode.shuttle)
                     ? null
                     : onStart,
                 style: TextButton.styleFrom(
                   foregroundColor: selectedText,
                   backgroundColor: buttonActive.withValues(
-                    alpha: (isNavigating || selectedTravelMode == RouteTravelMode.shuttle)
+                    alpha:
+                        (isNavigating ||
+                            selectedTravelMode == RouteTravelMode.shuttle)
                         ? 0.20
                         : 0.40,
                   ),
@@ -672,7 +671,10 @@ class RouteTravelModeBar extends StatelessWidget {
           ),
 
           const SizedBox(height: 10),
-          Container(height: 1, color: highContrastMode ? Colors.black26 : Colors.white24),
+          Container(
+            height: 1,
+            color: highContrastMode ? Colors.black26 : Colors.white24,
+          ),
           const SizedBox(height: 10),
 
           Row(
@@ -695,10 +697,7 @@ class RouteTravelModeBar extends StatelessWidget {
                       opacity: durationParts.$2.isNotEmpty ? 1 : 0,
                       child: Text(
                         durationParts.$2.isNotEmpty ? durationParts.$2 : '--',
-                        style: TextStyle(
-                          color: mutedText,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: mutedText, fontSize: 12),
                       ),
                     ),
                   ],
@@ -712,7 +711,6 @@ class RouteTravelModeBar extends StatelessWidget {
       ),
     );
   }
-
 
   String _durationLabelFor(RouteTravelMode mode) {
     if (mode == RouteTravelMode.shuttle) {
@@ -736,11 +734,11 @@ class RouteTravelModeBar extends StatelessWidget {
     final foreground = selectedColor;
     final inactiveColor = highContrastMode ? Colors.black54 : Colors.white70;
     final selectedBg = highContrastMode
-      ? const Color(0xFF5EBFA7)
-      : Colors.white.withValues(alpha: 0.15);
+        ? const Color(0xFF5EBFA7)
+        : Colors.white.withValues(alpha: 0.15);
     final selectedBorder = highContrastMode
-      ? Colors.black26
-      : Colors.transparent;
+        ? Colors.black26
+        : Colors.transparent;
 
     return GestureDetector(
       onTap: () => onTravelModeSelected(mode),
@@ -802,7 +800,7 @@ class RouteTravelModeBar extends StatelessWidget {
     final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
 
     if (selectedTravelMode == RouteTravelMode.shuttle) {
-      return _buildShuttleDetails();
+      return _buildShuttleDetails(shuttleRouteData);
     }
 
     if (selectedTravelMode == RouteTravelMode.transit) {
@@ -867,7 +865,7 @@ class RouteTravelModeBar extends StatelessWidget {
     );
   }
 
-  Widget _buildShuttleDetails() {
+  Widget _buildShuttleDetails(ShuttleRouteData? routeData) {
     final primaryText = highContrastMode ? Colors.black : Colors.white;
     final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
     final tertiaryText = highContrastMode ? Colors.black45 : Colors.white60;
@@ -879,34 +877,94 @@ class RouteTravelModeBar extends StatelessWidget {
       );
     }
 
-    if (shuttleNextBuses.isEmpty) {
+    // Walking faster / no shuttle required
+    if (routeData == null) {
       return Text(
-        'No shuttle service at this time.',
-        style: TextStyle(color: secondaryText, fontSize: 12),
+        'No shuttle required — walking is faster',
+        style: TextStyle(
+          color: secondaryText,
+          fontSize: 12,
+          fontStyle: FontStyle.italic,
+        ),
       );
     }
+
+    final route = routeData;
+    final isNoService = !route.isInService;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (shuttleWalkingMinutes != null && shuttleWalkingMinutes! > 1)
+        //shuttle not in service
+        if (isNoService)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'No service — next buses scheduled are shown below',
+              style: TextStyle(
+                color: secondaryText,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        // Walking to shuttle
+        if (route.walkingToShuttleMinutes != null &&
+            route.walkingToShuttleMinutes! >= 1 &&
+            !isNoService)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
             child: Row(
               children: [
                 Icon(Icons.directions_walk, color: secondaryText, size: 13),
                 const SizedBox(width: 4),
-                Text(
-                  '${shuttleWalkingMinutes}min walk to '
-                  '${shuttleNearestStop ?? 'shuttle stop'}',
-                  style: TextStyle(color: secondaryText, fontSize: 11),
+                Expanded(
+                  child: Text(
+                    '${route.walkingToShuttleMinutes} min walk to ${route.nearestStop}',
+                    style: TextStyle(color: secondaryText, fontSize: 11),
+                  ),
                 ),
               ],
             ),
           ),
 
-        ...shuttleNextBuses.asMap().entries.map((entry) {
-          final isNext = entry.key == 0;
+        // Wait time for first bus
+        if (route.buses.isNotEmpty && !isNoService)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                Icon(Icons.schedule, color: tertiaryText, size: 13),
+                const SizedBox(width: 4),
+                Text(
+                  () {
+                    final busWaitMinutes =
+                        ShuttleRouteService.extractWaitMinutesFromStatusLabel(
+                          route.buses.first.statusLabel,
+                        );
+                    final actualWait =
+                        (busWaitMinutes - (route.walkingToShuttleMinutes ?? 0))
+                            .clamp(0, 999);
+                    return 'Wait: ${actualWait} min';
+                  }(),
+                  style: TextStyle(
+                    color: tertiaryText,
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Next buses — up to 4
+        ...route.buses.take(4).toList().asMap().entries.map((entry) {
+          final index = entry.key;
+          final bus = entry.value;
+          final isNext = index == 0;
+          final displayTime = ShuttleRouteService.extractTimeFromStatusLabel(
+            bus.statusLabel,
+          );
           return Padding(
             padding: const EdgeInsets.only(bottom: 3),
             child: Row(
@@ -916,15 +974,14 @@ class RouteTravelModeBar extends StatelessWidget {
                   size: 13,
                   color: isNext ? primaryText : tertiaryText,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  entry.value,
-                  style: TextStyle(
-                    color: isNext ? primaryText : secondaryText,
-                    fontSize: isNext ? 12 : 11,
-                    fontWeight: isNext
-                        ? FontWeight.w700
-                        : FontWeight.w400,
+                Expanded(
+                  child: Text(
+                    displayTime,
+                    style: TextStyle(
+                      color: isNext ? primaryText : secondaryText,
+                      fontSize: isNext ? 12 : 11,
+                      fontWeight: isNext ? FontWeight.w700 : FontWeight.w400,
+                    ),
                   ),
                 ),
               ],
@@ -932,6 +989,25 @@ class RouteTravelModeBar extends StatelessWidget {
           );
         }),
 
+        // Walking from shuttle
+        if (route.walkingFromShuttleMinutes != null &&
+            route.walkingFromShuttleMinutes! >= 1 &&
+            !isNoService)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              children: [
+                Icon(Icons.directions_walk, color: secondaryText, size: 13),
+                const SizedBox(width: 4),
+                Text(
+                  '${route.walkingFromShuttleMinutes} min walk from shuttle',
+                  style: TextStyle(color: secondaryText, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+
+        // View full schedule
         if (onViewSchedule != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),

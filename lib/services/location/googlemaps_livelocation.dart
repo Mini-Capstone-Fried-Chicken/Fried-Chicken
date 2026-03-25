@@ -35,6 +35,7 @@ import '../indoor_maps/indoor_map_controller.dart';
 import 'indoor_manual_navigation_controller.dart';
 import 'indoor_navigation_session.dart';
 import 'indoor_route_service.dart';
+import 'shuttle_route_service.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
@@ -209,10 +210,13 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   ];
 
   // Shuttle state
-  List<ShuttleDeparture> _shuttleNextBuses = [];
-  int? _shuttleWalkingMinutes;
+  List<String> _shuttleNextBuses = [];
+  int? _shuttleWalkingToDestinationMinutes;
+  int? _shuttleWalkingFromDestinationMinutes;
   String _shuttleNearestStop = 'SGW';
   BitmapDescriptor? _shuttleStopIcon;
+  int? _shuttleTotalTripDuration;
+  ShuttleRouteData? _shuttleRouteData;
 
   // POI state
   List<PoiPlace> _nearbyPois = [];
@@ -917,7 +921,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _shuttleNextBuses = [];
-      _shuttleWalkingMinutes = null;
+      _shuttleWalkingToDestinationMinutes = null;
+      _shuttleWalkingFromDestinationMinutes = null;
+      _shuttleTotalTripDuration = null;
       _originRoomMarker = null;
       _destinationRoomMarker = null;
       _isBuildingIndoorRoute = false;
@@ -1035,6 +1041,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDurations
           ..clear()
           ..addAll(durations);
+        _routeDurations['shuttle'] = '...';
         _routeDistances
           ..clear()
           ..addAll(distances);
@@ -1320,7 +1327,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _shuttleNextBuses = [];
-      _shuttleWalkingMinutes = null;
+      _shuttleWalkingToDestinationMinutes = null;
+      _shuttleWalkingFromDestinationMinutes = null;
+      _shuttleTotalTripDuration = null;
       _searchController.clear();
 
       //reset indoor map and building selection state
@@ -1684,101 +1693,251 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
-  /// Walking time + 4 next buses
+  /// Fetch shuttle info: walk, wait, shuttle, walk + next buses
   Future<void> _fetchShuttleInfo() async {
     final origin = _routeOrigin ?? _currentLocation;
+    final destinationLatLng = _routeDestination;
 
-    if (origin == null) {
-      setState(() {
-        _routeDurations['shuttle'] = '–';
-      });
+    if (origin == null || destinationLatLng == null) {
+      _setShuttleDuration('–');
+      return;
+    }
+
+    final originStop = ConcordiaShuttleService.nearestStop(origin);
+    final destinationStop = ConcordiaShuttleService.nearestStop(
+      destinationLatLng,
+    );
+
+    // Compute direct walking route
+    DirectionsRouteResult? directWalkRoute;
+    try {
+      directWalkRoute = await GoogleDirectionsService.instance.getRouteDetails(
+        origin: origin,
+        destination: destinationLatLng,
+        mode: 'walking',
+      );
+
+      // If same campus, show walking route only
+      if (originStop == destinationStop) {
+        _handleSameCampusWalk(directWalkRoute);
+        return;
+      }
+    } catch (e) {
+      print('[ERROR] Failed to compute direct walking route: $e');
+    }
+
+    try {
+      final nearestStop = originStop;
+      final stopLatLng = ConcordiaShuttleService.stopLocation(nearestStop);
+
+      // Compute walk to shuttle, walk from & shuttle route
+      final shuttleDestinationStop = nearestStop == 'SGW'
+          ? shuttleStopLoyola
+          : shuttleStopSGW;
+      final shuttleStart = nearestStop == 'SGW'
+          ? shuttleStopSGW
+          : shuttleStopLoyola;
+      final shuttleEnd = nearestStop == 'SGW'
+          ? shuttleStopLoyola
+          : shuttleStopSGW;
+
+      final results = await Future.wait([
+        GoogleDirectionsService.instance.getRouteDetails(
+          origin: origin,
+          destination: stopLatLng,
+          mode: 'walking',
+        ), // walkTo
+        GoogleDirectionsService.instance.getRouteDetails(
+          origin: shuttleDestinationStop,
+          destination: destinationLatLng,
+          mode: 'walking',
+        ), // walkFrom
+        GoogleDirectionsService.instance.getRouteDetails(
+          origin: shuttleStart,
+          destination: shuttleEnd,
+          mode: 'driving',
+        ), // shuttle
+      ]);
+
+      final walkToShuttleRoute = results[0];
+      final walkFromShuttleRoute = results[1];
+      final shuttleDrivingRoute = results[2];
+
+      // Fetch shuttle data
+      final routeData = await ShuttleRouteService.fetchShuttleRouteData(
+        nearestStop: nearestStop,
+        stopLatLng: stopLatLng,
+        walkToShuttleRoute: walkToShuttleRoute,
+        walkFromShuttleRoute: walkFromShuttleRoute,
+        shuttleDrivingRoute: shuttleDrivingRoute,
+        directWalkRoute: directWalkRoute,
+      );
+
+      // Walking faster than shuttle
+      if (routeData == null) {
+        if (directWalkRoute != null) _handleFasterWalking(directWalkRoute);
+        return;
+      }
+
+      //  Display shuttle route polylines
+      await _buildAndDisplayShuttlePolylines(
+        routeData: routeData,
+        nearestStop: nearestStop,
+      );
+
+      // Update shuttle UI
+      _updateShuttleUI(routeData);
+    } catch (e) {
+      print('[ERROR] Error fetching shuttle info: $e');
+      if (!mounted) return;
+      _setShuttleDuration('–');
+    }
+  }
+
+  // set shuttle duration text in UI
+  void _setShuttleDuration(String duration) {
+    setState(() {
+      _routeDurations['shuttle'] = duration;
+    });
+  }
+
+  // walking route only
+  void _handleWalkingOnlyRoute(
+    DirectionsRouteResult? walkRoute, {
+    String label = 'Walking',
+  }) {
+    setState(() {
+      _shuttleRouteData = null;
+      _shuttleNextBuses = [];
+      _shuttleWalkingToDestinationMinutes = null;
+      _shuttleWalkingFromDestinationMinutes = null;
+      _shuttleTotalTripDuration = null;
+
+      _routeDurations['shuttle'] = walkRoute?.durationText ?? label;
+
+      // Show walking polyline
+      _routePolylines = {
+        Polyline(
+          polylineId: const PolylineId('walking_route'),
+          points: walkRoute?.points ?? [],
+          color: _highContrastMode
+              ? AppUiColors.highContrastRoutePreview
+              : const Color(0xFF76263D),
+          width: 5,
+          patterns: [PatternItem.dot, PatternItem.gap(10)],
+        ),
+      };
+    });
+
+    // Animate camera to walking route
+    if (_mapController != null && (walkRoute?.points ?? []).isNotEmpty) {
+      final bounds = geo.calculateBounds(walkRoute!.points);
+      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+    }
+  }
+
+  void _handleSameCampusWalk(DirectionsRouteResult? route) =>
+      _handleWalkingOnlyRoute(route, label: 'Same campus');
+
+  void _handleFasterWalking(DirectionsRouteResult? route) =>
+      _handleWalkingOnlyRoute(route, label: 'Walking faster');
+
+  // build & display shuttle poyline
+
+  Future<void> _buildAndDisplayShuttlePolylines({
+    required ShuttleRouteData routeData,
+    required String nearestStop,
+  }) async {
+    if (_selectedTravelMode != RouteTravelMode.shuttle) return;
+
+    if (routeData.walkToShuttlePoints.isEmpty &&
+        routeData.shuttleRoutePoints.isEmpty) {
+      setState(() => _routePolylines = {});
       return;
     }
 
     setState(() {
-      _shuttleNextBuses = [];
-      _shuttleWalkingMinutes = null;
-    });
+      final polylines = <Polyline>{};
+      final opacity = routeData.isInService ? 1.0 : 0.4;
 
-    try {
-      final nearestStop = ConcordiaShuttleService.nearestStop(origin);
-      final stopLatLng = ConcordiaShuttleService.stopLocation(nearestStop);
-
-      int walkingSeconds = 0;
-      List<LatLng> walkPoints = [];
-
-      final walkRoute = await GoogleDirectionsService.instance.getRouteDetails(
-        origin: origin,
-        destination: stopLatLng,
-        mode: 'walking',
-      );
-
-      if (walkRoute != null) {
-        walkingSeconds = walkRoute.durationSeconds ?? 0;
-        walkPoints = walkRoute.points;
+      if (routeData.walkToShuttlePoints.isNotEmpty) {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('shuttle_walk'),
+            points: routeData.walkToShuttlePoints,
+            color: _highContrastMode
+                ? AppUiColors.highContrastRoutePreview
+                : const Color(0xFF76263D).withOpacity(opacity),
+            width: 5,
+            patterns: [PatternItem.dot, PatternItem.gap(10)],
+          ),
+        );
       }
 
-      final walkingMinutes = (walkingSeconds / 60).ceil();
-
-      final buses = ConcordiaShuttleService.getNextDepartures(
-        fromStop: nearestStop,
-        now: DateTime.now(),
-        count: 4,
-        walkingDuration: Duration(seconds: walkingSeconds),
-      );
-
-      String shuttleDurationLabel;
-      if (!ConcordiaShuttleService.isInService()) {
-        shuttleDurationLabel = 'No service';
-      } else if (buses.isNotEmpty) {
-        shuttleDurationLabel = buses.first.statusLabel;
-      } else {
-        shuttleDurationLabel = '–';
+      //shuttle route
+      if (routeData.shuttleRoutePoints.isNotEmpty) {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('shuttle_route'),
+            points: routeData.shuttleRoutePoints,
+            color: const Color(0xFF9C27B0).withOpacity(opacity),
+            width: 5,
+            geodesic: true,
+          ),
+        );
       }
 
-      if (_selectedTravelMode == RouteTravelMode.shuttle) {
-        if (walkPoints.isNotEmpty) {
-          setState(() {
-            _routePolylines = {
-              Polyline(
-                polylineId: const PolylineId('shuttle_walk'),
-                points: walkPoints,
-                color: _highContrastMode
-                    ? AppUiColors.highContrastRoutePreview
-                    : const Color(0xFF76263D),
-                width: 5,
-                patterns: [PatternItem.dot, PatternItem.gap(10)],
-              ),
-            };
+      // walk from shuttle to destination
+      if (routeData.walkFromShuttlePoints.isNotEmpty) {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('shuttle_walk_from'),
+            points: routeData.walkFromShuttlePoints,
+            color: _highContrastMode
+                ? AppUiColors.highContrastRoutePreview
+                : const Color(0xFF76263D).withOpacity(opacity),
+            width: 5,
+            patterns: [PatternItem.dot, PatternItem.gap(10)],
+          ),
+        );
+      }
 
-            if (_mapController != null) {
-              final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
-              _mapController!.animateCamera(
-                CameraUpdate.newLatLngBounds(bounds, 100),
-              );
-            }
-          });
-        } else {
-          setState(() {
-            _routePolylines = {};
-          });
+      _routePolylines = polylines;
+
+      if (_mapController != null) {
+        final allPoints = [
+          ...routeData.walkToShuttlePoints,
+          routeData.stopLatLng,
+          ...routeData.shuttleRoutePoints,
+          nearestStop == 'SGW' ? shuttleStopLoyola : shuttleStopSGW,
+          ...routeData.walkFromShuttlePoints,
+        ];
+
+        if (allPoints.isNotEmpty) {
+          final bounds = geo.calculateBounds(allPoints);
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 100),
+          );
         }
       }
+    });
+  }
 
-      if (!mounted) return;
-      setState(() {
-        _shuttleNearestStop = nearestStop;
-        _shuttleWalkingMinutes = walkingMinutes > 1 ? walkingMinutes : null;
-        _shuttleNextBuses = buses;
-        _routeDurations['shuttle'] = shuttleDurationLabel;
-      });
-    } catch (e) {
-      print('Error fetching shuttle info: $e');
-      if (!mounted) return;
-      setState(() {
-        _routeDurations['shuttle'] = '–';
-      });
-    }
+  //update shuttle info in route details UI
+  void _updateShuttleUI(ShuttleRouteData routeData) {
+    if (!mounted) return;
+    setState(() {
+      _shuttleNearestStop = routeData.nearestStop;
+      _shuttleNextBuses = routeData.buses.map((b) => b.statusLabel).toList();
+      _routeDurations['shuttle'] = routeData.isInService
+          ? routeData.shuttleDurationLabel
+          : 'No service';
+      _shuttleWalkingToDestinationMinutes = routeData.walkingToShuttleMinutes;
+      _shuttleWalkingFromDestinationMinutes =
+          routeData.walkingFromShuttleMinutes;
+      _shuttleTotalTripDuration = routeData.totalTripDuration;
+      _shuttleRouteData = routeData;
+    });
   }
 
   /// Open full day schedule
@@ -2827,12 +2986,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     transitDetails: _buildTransitDetailItems(),
                     modeDistances: _routeDistances,
                     modeArrivalTimes: _routeArrivalTimes,
-                    shuttleNextBuses: _shuttleNextBuses
-                        .map((b) => b.statusLabel)
-                        .toList(),
-                    shuttleWalkingMinutes: _shuttleWalkingMinutes,
+                    shuttleNextBuses: _shuttleNextBuses,
+                    shuttleWalkingFromDestinationMinutes:
+                        _shuttleWalkingFromDestinationMinutes,
+                    shuttleWalkingToDestinationMinutes:
+                        _shuttleWalkingToDestinationMinutes,
                     shuttleNearestStop: _shuttleNearestStop,
                     onViewSchedule: _showShuttleScheduleModal,
+                    shuttleRouteData: _shuttleRouteData,
                   ),
                 ),
               ),
