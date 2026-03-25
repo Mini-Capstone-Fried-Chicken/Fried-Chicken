@@ -32,6 +32,7 @@ import '../google_directions_service.dart';
 import '../google_places_service.dart';
 import '../indoor_maps/indoor_floor_config.dart';
 import '../indoor_maps/indoor_map_controller.dart';
+import '../indoors_routing/core/indoor_route_plan_models.dart';
 import 'indoor_manual_navigation_controller.dart';
 import 'indoor_navigation_session.dart';
 import 'indoor_route_service.dart';
@@ -154,6 +155,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
+  Set<Marker> _amenityMarkers = {};
 
   Set<Polyline> _routePolylines = {};
 
@@ -237,6 +239,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   LatLng? _lastCameraTarget;
   bool _highContrastMode = false;
+  bool _wheelchairRoutingDefaultEnabled = false;
+  IndoorTransitionMode? _preferredIndoorTransitionMode;
 
   void _onSavedDirectionsRequested() {
     final place = SavedDirectionsController.notifier.value;
@@ -314,10 +318,20 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _onAppSettingsChanged() {
-    final enabled = AppSettingsController.state.highContrastModeEnabled;
-    if (!mounted || enabled == _highContrastMode) return;
+    final settings = AppSettingsController.state;
+    final highContrastEnabled = settings.highContrastModeEnabled;
+    final wheelchairRoutingEnabled = settings.wheelchairRoutingDefaultEnabled;
+    if (!mounted ||
+        (highContrastEnabled == _highContrastMode &&
+            wheelchairRoutingEnabled == _wheelchairRoutingDefaultEnabled)) {
+      return;
+    }
     setState(() {
-      _highContrastMode = enabled;
+      _highContrastMode = highContrastEnabled;
+      _wheelchairRoutingDefaultEnabled = wheelchairRoutingEnabled;
+      if (_wheelchairRoutingDefaultEnabled) {
+        _preferredIndoorTransitionMode = IndoorTransitionMode.elevator;
+      }
     });
   }
 
@@ -387,6 +401,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorPolygons = {};
     _indoorGeoJson = null;
     _roomLabelMarkers = {};
+    _amenityMarkers = {};
     _originRoomMarker = null;
     _destinationRoomMarker = null;
     _isBuildingIndoorRoute = false;
@@ -470,13 +485,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       buildingCode: normalizedOriginBuildingCode,
       originRoomCode: originRoomCode,
       destinationRoomCode: destinationRoomCode,
+      preferredTransitionMode: _effectiveIndoorTransitionMode,
     );
 
     if (session == null) {
       if (!mounted) return;
+      final preferredMode = _preferredIndoorTransitionModeLabel();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not build an indoor route for those rooms.'),
+        SnackBar(
+          content: Text(
+            preferredMode == null
+                ? 'Select stairs, elevator, or escalator before starting a multi-floor route.'
+                : 'Could not build an indoor route using $preferredMode.',
+          ),
         ),
       );
       return;
@@ -544,6 +565,35 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorNavigationController.nextStep();
   }
 
+  void _onIndoorTransitionModeChanged(IndoorTransitionMode? mode) {
+    if (_wheelchairRoutingDefaultEnabled &&
+        mode != IndoorTransitionMode.elevator) {
+      return;
+    }
+
+    if (_preferredIndoorTransitionMode == mode) {
+      return;
+    }
+
+    setState(() {
+      _preferredIndoorTransitionMode = mode;
+    });
+  }
+
+  String? _preferredIndoorTransitionModeLabel() {
+    return switch (_effectiveIndoorTransitionMode) {
+      IndoorTransitionMode.stairs => 'stairs',
+      IndoorTransitionMode.elevator => 'elevators',
+      IndoorTransitionMode.escalator => 'escalators',
+      null => null,
+    };
+  }
+
+  IndoorTransitionMode? get _effectiveIndoorTransitionMode =>
+      _wheelchairRoutingDefaultEnabled
+      ? IndoorTransitionMode.elevator
+      : _preferredIndoorTransitionMode;
+
   void _openIndoorSteps() {
     final session = _activeIndoorSession;
     if (session == null) {
@@ -603,6 +653,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorPolygons = result.polygons;
         _indoorGeoJson = result.geoJson;
         _roomLabelMarkers = result.labels;
+        _amenityMarkers = result.amenityIcons;
         if (_isIndoorNavigationActive) {
           _routePolylines =
               _activeIndoorSession?.polylinesByFloorAsset[assetPath] ?? {};
@@ -930,6 +981,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _destinationRoomMarker = null;
       _routeOriginBuildingCode = null;
       _routeDestinationBuildingCode = null;
+      _preferredIndoorTransitionMode = null;
       _originRoomController.clear();
       _destinationRoomController.clear();
     });
@@ -1331,6 +1383,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedPoiCenter = null;
       _anchorOffset = null;
       _destinationRoomMarker = null;
+      _preferredIndoorTransitionMode = null;
       _originRoomController.clear();
       _destinationRoomController.clear();
       _routeOriginBuildingCode = null;
@@ -2223,6 +2276,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         widget.debugIndoorMapController ?? IndoorMapController();
 
     _highContrastMode = AppSettingsController.state.highContrastModeEnabled;
+    _wheelchairRoutingDefaultEnabled =
+        AppSettingsController.state.wheelchairRoutingDefaultEnabled;
+    if (_wheelchairRoutingDefaultEnabled) {
+      _preferredIndoorTransitionMode = IndoorTransitionMode.elevator;
+    }
     AppSettingsController.notifier.addListener(_onAppSettingsChanged);
     _indoorNavigationController.addListener(_onIndoorNavigationChanged);
     SavedDirectionsController.notifier.addListener(_onSavedDirectionsRequested);
@@ -2508,6 +2566,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
 
     if (_showIndoor) {
+      markers.addAll(_amenityMarkers);
       if (_originRoomMarker != null) {
         markers.add(_originRoomMarker!);
       }
@@ -2797,6 +2856,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                 destinationRoomController: _destinationRoomController,
                 onOriginRoomSubmitted: _onOriginRoomSubmitted,
                 onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+                selectedTransitionMode: _preferredIndoorTransitionMode,
+                onTransitionModeChanged: _onIndoorTransitionModeChanged,
+                wheelchairRoutingDefaultEnabled:
+                    _wheelchairRoutingDefaultEnabled,
                 originBuildingCode: _routeOriginBuildingCode,
                 destinationBuildingCode: _routeDestinationBuildingCode,
                 isConcordiaBuilding: (buildingCode) {
@@ -2853,6 +2916,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
               destinationRoomController: _destinationRoomController,
               onOriginRoomSubmitted: _onOriginRoomSubmitted,
               onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+              selectedTransitionMode: _preferredIndoorTransitionMode,
+              onTransitionModeChanged: _onIndoorTransitionModeChanged,
+              wheelchairRoutingDefaultEnabled: _wheelchairRoutingDefaultEnabled,
               selectedBuildingCode: _selectedBuildingPoly?.code,
               currentBuildingCode: _currentBuildingCode,
               userLocation: _currentLocation,
@@ -2897,6 +2963,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     title: _selectedPoiDetails?.name ?? _selectedPoi!.name,
                     description: _poiDescription(_selectedPoi!),
                     accessibility: false,
+                    poiCategory: _selectedPoi!.category,
                     facilities: _poiFacilities(),
                     onMore: () => unawaited(_openSelectedPoiLink()),
                     onClose: _closePopup,
