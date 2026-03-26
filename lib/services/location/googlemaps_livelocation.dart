@@ -1752,7 +1752,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final destinationLatLng = _routeDestination;
 
     if (origin == null || destinationLatLng == null) {
-      _setShuttleDuration('–');
+      setState(() => _routeDurations['shuttle'] = '–');
       return;
     }
 
@@ -1772,7 +1772,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
       // If same campus, show walking route only
       if (originStop == destinationStop) {
-        _handleSameCampusWalk(directWalkRoute);
+        _handleWalkingRoute(directWalkRoute);
         return;
       }
     } catch (e) {
@@ -1828,7 +1828,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
       // Walking faster than shuttle
       if (routeData == null) {
-        if (directWalkRoute != null) _handleFasterWalking(directWalkRoute);
+        if (directWalkRoute != null) _handleWalkingRoute(directWalkRoute);
         return;
       }
 
@@ -1843,15 +1843,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     } catch (e) {
       print('[ERROR] Error fetching shuttle info: $e');
       if (!mounted) return;
-      _setShuttleDuration('–');
+      setState(() => _routeDurations['shuttle'] = '–');
     }
-  }
-
-  // set shuttle duration text in UI
-  void _setShuttleDuration(String duration) {
-    setState(() {
-      _routeDurations['shuttle'] = duration;
-    });
   }
 
   // walking route only
@@ -1889,14 +1882,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
-  void _handleSameCampusWalk(DirectionsRouteResult? route) =>
-      _handleWalkingOnlyRoute(route, label: 'Same campus');
+  void _handleWalkingRoute(DirectionsRouteResult? route) {
+    _handleWalkingOnlyRoute(route, label: 'walking');
+  }
 
-  void _handleFasterWalking(DirectionsRouteResult? route) =>
-      _handleWalkingOnlyRoute(route, label: 'Walking faster');
 
   // build & display shuttle poyline
-
   Future<void> _buildAndDisplayShuttlePolylines({
     required ShuttleRouteData routeData,
     required String nearestStop,
@@ -1934,12 +1925,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       );
     }
 
-    final defaultColor = const Color(
-      0xFF76263D,
-    ).withAlpha((opacity * 255).round());
-    final shuttleColor = const Color(
-      0xFF9C27B0,
-    ).withAlpha((opacity * 255).round());
+    final defaultColor = const Color(0xFF76263D,).withAlpha((opacity * 255).round());
+    final shuttleColor = const Color(0xFF9C27B0,).withAlpha((opacity * 255).round());
     const highContrastColor = AppUiColors.highContrastRoutePreview;
 
     addPolyline(
