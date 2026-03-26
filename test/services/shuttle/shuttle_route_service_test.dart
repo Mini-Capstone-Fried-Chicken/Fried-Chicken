@@ -58,8 +58,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: fastWalk,
-        testBuses: [mockDeparture],
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: true,
+        ),
       );
 
       expect(result, isNull);
@@ -73,8 +75,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: directWalkRoute,
-        testBuses: [mockDeparture],
-        forceInService: false,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: false,
+        ),
       );
       expect(result, isNotNull);
       expect(result!.isInService, isFalse);
@@ -148,8 +152,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute, // 2 min
         shuttleDrivingRoute: shuttleDrivingRoute, // 20 min
         directWalkRoute: slowerWalk, // 35 min
-        testBuses: [mockDeparture], // 'in 10 min'
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: true,
+        ),
       );
 
       expect(result, isNotNull);
@@ -174,8 +180,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: slowerWalk,
-        testBuses: [mockDeparture], // 'in 10 min'
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: true,
+        ),
       );
       expect(result, isNotNull);
       expect(result!.shuttleDurationLabel, '30min');
@@ -201,8 +209,10 @@ void main() {
         walkFromShuttleRoute: longWalkFrom,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: slowerWalk,
-        testBuses: [mockDeparture],
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: true,
+        ),
       );
       expect(result, isNotNull);
       expect(result!.shuttleDurationLabel, '58min');
@@ -228,8 +238,10 @@ void main() {
         walkFromShuttleRoute: longWalk,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: slowerWalk,
-        testBuses: [mockDeparture],
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: true,
+        ),
       );
       expect(result, isNotNull);
       // totalTripDuration = 7 + 3 + 18 + 45 = 73 min = 1h 13m
@@ -254,8 +266,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute, // 2 min
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: slowerWalk,
-        testBuses: [shortWait], // 'in 5 min'
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [shortWait],
+          forceInService: true,
+        ),
       );
 
       expect(result, isNotNull);
@@ -277,8 +291,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: directWalkRoute,
-        testBuses: [veryShortWait], // 'in 2 min'
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [veryShortWait],
+          forceInService: true,
+        ),
       );
 
       expect(result, isNotNull);
@@ -301,8 +317,10 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute, // 2 min
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: veryFastWalk, // 15 min
-        testBuses: [mockDeparture], // 'in 10 min'
-        forceInService: true,
+        options: ShuttleRouteOptions(
+          testBuses: [mockDeparture],
+          forceInService: true,
+        ),
       );
       expect(result, isNull);
     });
@@ -323,8 +341,10 @@ void main() {
           walkFromShuttleRoute: walkFromShuttleRoute,
           shuttleDrivingRoute: shuttleDrivingRoute,
           directWalkRoute: equalWalk, // Equal duration
-          testBuses: [mockDeparture],
-          forceInService: true,
+          options: ShuttleRouteOptions(
+            testBuses: [mockDeparture],
+            forceInService: true,
+          ),
         );
         expect(result, isNull);
       },
@@ -338,8 +358,7 @@ void main() {
         walkFromShuttleRoute: walkFromShuttleRoute,
         shuttleDrivingRoute: shuttleDrivingRoute,
         directWalkRoute: directWalkRoute,
-        testBuses: [],
-        forceInService: true,
+        options: ShuttleRouteOptions(testBuses: [], forceInService: true),
       );
       expect(result, isNotNull);
       expect(result!.isInService, isTrue);

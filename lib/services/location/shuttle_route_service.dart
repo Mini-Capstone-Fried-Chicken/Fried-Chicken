@@ -33,6 +33,13 @@ class ShuttleRouteData {
   });
 }
 
+class ShuttleRouteOptions {
+  final List<ShuttleDeparture>? testBuses;
+  final bool? forceInService;
+
+  ShuttleRouteOptions({this.testBuses, this.forceInService});
+}
+
 class ShuttleRouteService {
   /// Fetch shuttle route info using precomputed walking/driving routes
   /// Returns null if walking is faster than shuttle
@@ -43,21 +50,19 @@ class ShuttleRouteService {
     required DirectionsRouteResult? walkFromShuttleRoute,
     required DirectionsRouteResult? shuttleDrivingRoute,
     required DirectionsRouteResult? directWalkRoute,
-    List<ShuttleDeparture>? testBuses, // optional for testing
-    bool? forceInService, // optional for testing
+    ShuttleRouteOptions? options, // optional
   }) async {
-    final isInService = forceInService ?? ConcordiaShuttleService.isInService();
-
+    final isInService =
+        options?.forceInService ?? ConcordiaShuttleService.isInService();
     final walkingToMinutes = (walkToShuttleRoute?.durationSeconds ?? 0) ~/ 60;
     final walkingFromMinutes =
         (walkFromShuttleRoute?.durationSeconds ?? 0) ~/ 60;
-
     final walkToPoints = walkToShuttleRoute?.points ?? [];
     final walkFromPoints = walkFromShuttleRoute?.points ?? [];
 
     // next departures
     final buses =
-        testBuses ??
+        options?.testBuses ??
         ConcordiaShuttleService.getNextDepartures(
           fromStop: nearestStop,
           now: DateTime.now(),
