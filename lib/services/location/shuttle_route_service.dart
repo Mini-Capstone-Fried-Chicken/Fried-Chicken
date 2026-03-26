@@ -2,7 +2,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/concordia_shuttle_service.dart';
 import '../../services/google_directions_service.dart';
 
-/// Data class representing shuttle trip info
+// Data class representing shuttle trip info
 class ShuttleRouteData {
   final String nearestStop;
   final LatLng stopLatLng;
@@ -33,7 +33,6 @@ class ShuttleRouteData {
   });
 }
 
-/// Service class that calculates shuttle trip info using precomputed routes
 class ShuttleRouteService {
   /// Fetch shuttle route info using precomputed walking/driving routes
   /// Returns null if walking is faster than shuttle
@@ -44,26 +43,29 @@ class ShuttleRouteService {
     required DirectionsRouteResult? walkFromShuttleRoute,
     required DirectionsRouteResult? shuttleDrivingRoute,
     required DirectionsRouteResult? directWalkRoute,
+    List<ShuttleDeparture>? testBuses, // optional for testing
+    bool? forceInService, // optional for testing
   }) async {
-    final isInService = ConcordiaShuttleService.isInService();
+    final isInService = forceInService ?? ConcordiaShuttleService.isInService();
 
-    // Extract walking durations and points
     final walkingToMinutes = (walkToShuttleRoute?.durationSeconds ?? 0) ~/ 60;
-    final walkToPoints = walkToShuttleRoute?.points ?? [];
-
     final walkingFromMinutes =
         (walkFromShuttleRoute?.durationSeconds ?? 0) ~/ 60;
+
+    final walkToPoints = walkToShuttleRoute?.points ?? [];
     final walkFromPoints = walkFromShuttleRoute?.points ?? [];
 
-    // Get next shuttle departures
-    final buses = ConcordiaShuttleService.getNextDepartures(
-      fromStop: nearestStop,
-      now: DateTime.now(),
-      count: 4,
-      walkingDuration: Duration(minutes: walkingToMinutes),
-    );
+    // next departures
+    final buses =
+        testBuses ??
+        ConcordiaShuttleService.getNextDepartures(
+          fromStop: nearestStop,
+          now: DateTime.now(),
+          count: 4,
+          walkingDuration: Duration(minutes: walkingToMinutes),
+        );
 
-    // Calculate total trip duration
+    // Default duration label & total trip
     String shuttleDurationLabel = 'No service';
     int? totalTripDuration;
 
@@ -73,18 +75,17 @@ class ShuttleRouteService {
             buses.first.statusLabel,
           );
 
-      const shuttleRide = 18; // average shuttle ride duration
+      const shuttleRide = 18;
       final waitMinutes = (busWaitMinutes - walkingToMinutes).clamp(0, 999);
+
       totalTripDuration =
           waitMinutes + walkingToMinutes + shuttleRide + walkingFromMinutes;
 
-      // Compare with direct walking route
+      // If direct walk is faster, return null
       if (directWalkRoute != null) {
         final directWalkMinutes = ((directWalkRoute.durationSeconds ?? 0) / 60)
             .ceil();
-        if (directWalkMinutes <= totalTripDuration) {
-          return null; // walking is faster
-        }
+        if (directWalkMinutes <= totalTripDuration) return null;
       }
 
       shuttleDurationLabel = totalTripDuration > 60
@@ -92,7 +93,6 @@ class ShuttleRouteService {
           : '${totalTripDuration}min';
     }
 
-    // Extract shuttle driving points
     final shuttleRoutePoints = shuttleDrivingRoute?.points ?? [];
 
     return ShuttleRouteData(
@@ -110,7 +110,7 @@ class ShuttleRouteService {
     );
   }
 
-  /// Parse "in X min" from shuttle status label
+  /// "in X min" from shuttle status label
   static int extractWaitMinutesFromStatusLabel(String statusLabel) {
     final match = RegExp(
       r'in (\d+) min',
@@ -139,7 +139,7 @@ class ShuttleRouteService {
       final waitMinutes = int.tryParse(match.group(1)!) ?? 0;
       final now = DateTime.now();
 
-      // Ensure totalMinutes is always positive, wraps around 24 hours
+      // totalMinutes always positive, wraps around 24 hours
       int totalMinutes =
           ((now.hour * 60 + now.minute + waitMinutes) % (24 * 60) + (24 * 60)) %
           (24 * 60);

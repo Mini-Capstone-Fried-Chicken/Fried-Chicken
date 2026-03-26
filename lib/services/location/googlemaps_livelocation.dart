@@ -1940,7 +1940,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final shuttleColor = const Color(
       0xFF9C27B0,
     ).withAlpha((opacity * 255).round());
-    final highContrastColor = AppUiColors.highContrastRoutePreview;
+    const highContrastColor = AppUiColors.highContrastRoutePreview;
 
     addPolyline(
       'shuttle_walk',
