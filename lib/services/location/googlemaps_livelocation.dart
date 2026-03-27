@@ -107,6 +107,9 @@ class OutdoorMapPage extends StatefulWidget {
 
   @visibleForTesting
   final IndoorMapController? debugIndoorMapController;
+  @visibleForTesting
+  final Future<BitmapDescriptor> Function(String text)?
+  debugBuildingLabelIconFactory;
 
   const OutdoorMapPage({
     super.key,
@@ -118,6 +121,7 @@ class OutdoorMapPage extends StatefulWidget {
     this.debugLinkOverride,
     this.debugIndoorRouteService,
     this.debugIndoorMapController,
+    this.debugBuildingLabelIconFactory,
     required this.isLoggedIn,
   });
 
@@ -2312,17 +2316,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _lastCameraTarget = widget.initialCampus == Campus.loyola
         ? concordiaLoyola
         : concordiaSGW;
-
     _createBlueDotIcon();
-    _createShuttleStopIcon();
-    _bootstrapLocationState();
+
+    if (!widget.debugDisableLocation) {
+      _createShuttleStopIcon();
+      _bootstrapLocationState();
+      _initPois();
+    }
 
     _searchController.addListener(_onSearchChanged);
-
-    // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
-    // Initialise POI icons and fetch nearby places
-    _initPois();
 
     _onSavedDirectionsRequested();
   }
@@ -3153,7 +3156,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final icons = <String, BitmapDescriptor>{};
 
     for (final building in buildingPolygons) {
-      icons[building.code] = await createBuildingLabelIcon(building.code);
+      icons[building.code] = await resolveBuildingLabelIcon(building.code);
     }
 
     if (!mounted) return;
@@ -3275,6 +3278,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         .replaceAll('Pavilion', '')
         .trim()
         .toUpperCase();
+  }
+
+  Future<BitmapDescriptor> resolveBuildingLabelIcon(String text) {
+    final factory = widget.debugBuildingLabelIconFactory;
+    if (factory != null) {
+      return factory(text);
+    }
+    return createBuildingLabelIcon(text);
   }
 }
 

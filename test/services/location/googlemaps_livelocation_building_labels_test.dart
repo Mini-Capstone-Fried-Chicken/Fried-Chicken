@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
@@ -8,6 +9,7 @@ import 'package:campus_app/data/building_polygons.dart';
 Future<dynamic> pumpPageAndGetState(
   WidgetTester tester, {
   Campus initialCampus = Campus.sgw,
+  Future<BitmapDescriptor> Function(String text)? debugBuildingLabelIconFactory,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -16,12 +18,17 @@ Future<dynamic> pumpPageAndGetState(
         isLoggedIn: false,
         debugDisableMap: true,
         debugDisableLocation: true,
+        debugBuildingLabelIconFactory: debugBuildingLabelIconFactory,
       ),
     ),
   );
 
   await tester.pump();
   return tester.state(find.byType(OutdoorMapPage));
+}
+
+Future<BitmapDescriptor> fakeBuildingLabelIcon(String text) async {
+  return BitmapDescriptor.defaultMarker;
 }
 
 BuildingPolygon get hallBuilding {
@@ -106,5 +113,39 @@ void main() {
         expect(state.shouldShowBuildingLabel(sgwBuilding), isFalse);
       },
     );
+
+    testWidgets('createBuildingLabelIcon builds an icon', (tester) async {
+      final dynamic state = await pumpPageAndGetState(tester);
+
+      final BitmapDescriptor? icon = await tester.runAsync<BitmapDescriptor?>(
+        () async {
+          return await state.createBuildingLabelIcon('LB');
+        },
+      );
+
+      expect(icon, isNotNull);
+    });
+
+    testWidgets('initBuildingLabelIcons prepares icons without hanging', (
+      tester,
+    ) async {
+      final dynamic state = await pumpPageAndGetState(
+        tester,
+        debugBuildingLabelIconFactory: fakeBuildingLabelIcon,
+      );
+
+      await tester.runAsync(() async {
+        await state.initBuildingLabelIcons();
+      });
+
+      final markers = <Marker>{};
+      state.addBuildingLabelMarkers(markers);
+
+      expect(markers, isNotEmpty);
+      expect(
+        markers.every((m) => m.markerId.value.startsWith('building_label_')),
+        isTrue,
+      );
+    });
   });
 }
