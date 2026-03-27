@@ -1848,9 +1848,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   // walking route only
-  void _handleWalkingOnlyRoute(
+  void _handleWalkingRoute(
     DirectionsRouteResult? walkRoute, {
-    String label = 'Walking',
+    String label = 'walking',
   }) {
     setState(() {
       _shuttleRouteData = null;
@@ -1881,11 +1881,6 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
     }
   }
-
-  void _handleWalkingRoute(DirectionsRouteResult? route) {
-    _handleWalkingOnlyRoute(route, label: 'walking');
-  }
-
 
   // build & display shuttle poyline
   Future<void> _buildAndDisplayShuttlePolylines({
