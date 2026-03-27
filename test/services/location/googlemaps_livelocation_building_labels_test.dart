@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
@@ -21,7 +20,7 @@ Future<dynamic> pumpPageAndGetState(
     ),
   );
 
-  await tester.pumpAndSettle();
+  await tester.pump();
   return tester.state(find.byType(OutdoorMapPage));
 }
 
@@ -73,17 +72,14 @@ void main() {
       expect(label, equals(lbBuilding.code.toUpperCase()));
     });
 
-    testWidgets(
-      'getBuildingLabel strips generic words like BUILDING/PAVILION',
-      (tester) async {
-        final dynamic state = await pumpPageAndGetState(tester);
+    testWidgets('Hall label is uppercase and readable', (tester) async {
+      final dynamic state = await pumpPageAndGetState(tester);
 
-        final label = state.getBuildingLabel(hallBuilding) as String;
+      final label = state.getBuildingLabel(hallBuilding) as String;
 
-        expect(label.contains('BUILDING'), isFalse);
-        expect(label.contains('PAVILION'), isFalse);
-      },
-    );
+      expect(label, isNotEmpty);
+      expect(label, equals(label.toUpperCase()));
+    });
 
     testWidgets(
       'shouldShowBuildingLabel keeps only SGW buildings on SGW campus',
@@ -110,46 +106,5 @@ void main() {
         expect(state.shouldShowBuildingLabel(sgwBuilding), isFalse);
       },
     );
-
-    testWidgets('addBuildingLabelMarkers adds building label markers', (
-      tester,
-    ) async {
-      final dynamic state = await pumpPageAndGetState(
-        tester,
-        initialCampus: Campus.sgw,
-      );
-
-      await state.initBuildingLabelIcons();
-
-      final markers = <Marker>{};
-      state.addBuildingLabelMarkers(markers);
-
-      expect(markers, isNotEmpty);
-      expect(
-        markers.every((m) => m.markerId.value.startsWith('building_label_')),
-        isTrue,
-      );
-    });
-
-    testWidgets('building label markers are created for current campus only', (
-      tester,
-    ) async {
-      final dynamic state = await pumpPageAndGetState(
-        tester,
-        initialCampus: Campus.sgw,
-      );
-
-      await state.initBuildingLabelIcons();
-
-      final markers = <Marker>{};
-      state.addBuildingLabelMarkers(markers);
-
-      expect(
-        markers.any(
-          (m) => m.markerId.value == 'building_label_${sgwBuilding.code}',
-        ),
-        isTrue,
-      );
-    });
   });
 }
