@@ -3170,10 +3170,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<BitmapDescriptor> createBuildingLabelIcon(String text) async {
-    const double horizontalPadding = 22;
-    const double verticalPadding = 12;
-    const double borderRadius = 18;
-    const double fontSize = 24;
+    const double horizontalPadding = 10;
+    const double verticalPadding = 6;
+    const double borderRadius = 12;
+    const double fontSize = 14;
 
     final backgroundColor = _highContrastMode
         ? const Color(0xFFB8FFF1)
@@ -3211,7 +3211,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final strokePaint = Paint()
       ..color = borderColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = 2;
 
     canvas.drawRRect(rect, fillPaint);
     canvas.drawRRect(rect, strokePaint);
