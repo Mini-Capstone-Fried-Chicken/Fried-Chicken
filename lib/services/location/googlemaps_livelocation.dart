@@ -3231,7 +3231,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
-    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }
 
   bool shouldShowBuildingLabel(BuildingPolygon building) {
@@ -3264,7 +3264,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           position: building.center,
           icon: icon,
           anchor: const Offset(0.5, 0.5),
-          zIndex: 50,
+          zIndexInt: 50,
           consumeTapEvents: true,
           onTap: () => _onBuildingTapped(building),
         ),
