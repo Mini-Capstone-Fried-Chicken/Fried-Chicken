@@ -50,60 +50,75 @@ void main() {
       expect(enriched.category, 'restaurant');
     });
 
-    test('forces concordia building category when id matches building code', () async {
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        basePlace(id: 'HALL', name: 'Hall Building'),
-        metadataResolver: ({required query, required location}) async {
-          return PlaceResult(
-            placeId: 'p2',
-            name: 'Hall Building',
-            location: const LatLng(45.497, -73.579),
-            primaryType: 'restaurant',
-            types: const <String>['restaurant'],
-            weekdayDescriptions: weekHours(),
-          );
-        },
-      );
+    test(
+      'forces concordia building category when id matches building code',
+      () async {
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          basePlace(id: 'HALL', name: 'Hall Building'),
+          metadataResolver: ({required query, required location}) async {
+            return PlaceResult(
+              placeId: 'p2',
+              name: 'Hall Building',
+              location: const LatLng(45.497, -73.579),
+              primaryType: 'restaurant',
+              types: const <String>['restaurant'],
+              weekdayDescriptions: weekHours(),
+            );
+          },
+        );
 
-      expect(enriched.category, 'concordia building');
-    });
+        expect(enriched.category, 'concordia building');
+      },
+    );
 
-    test('forces concordia building category when metadata is unavailable', () async {
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        basePlace(id: 'MB', name: 'JSMB Building'),
-        metadataResolver: ({required query, required location}) async => null,
-      );
+    test(
+      'forces concordia building category when metadata is unavailable',
+      () async {
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          basePlace(id: 'MB', name: 'JSMB Building'),
+          metadataResolver: ({required query, required location}) async => null,
+        );
 
-      expect(enriched.category, 'concordia building');
-    });
+        expect(enriched.category, 'concordia building');
+      },
+    );
 
-    test('forces concordia building category when name matches known list', () async {
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        basePlace(id: 'external', name: 'Hall Building'),
-        metadataResolver: ({required query, required location}) async => null,
-      );
+    test(
+      'forces concordia building category when name matches known list',
+      () async {
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          basePlace(id: 'external', name: 'Hall Building'),
+          metadataResolver: ({required query, required location}) async => null,
+        );
 
-      expect(enriched.category, 'concordia building');
-    });
+        expect(enriched.category, 'concordia building');
+      },
+    );
 
-    test('updates opening hours from current weekday descriptions when present', () async {
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        basePlace(),
-        metadataResolver: ({required query, required location}) async {
-          return PlaceResult(
-            placeId: 'p3',
-            name: 'Coffee Place',
-            location: const LatLng(45.497, -73.579),
-            primaryType: 'cafe',
-            types: const <String>['food'],
-            weekdayDescriptions: weekHours(),
-          );
-        },
-      );
+    test(
+      'updates opening hours from current weekday descriptions when present',
+      () async {
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          basePlace(),
+          metadataResolver: ({required query, required location}) async {
+            return PlaceResult(
+              placeId: 'p3',
+              name: 'Coffee Place',
+              location: const LatLng(45.497, -73.579),
+              primaryType: 'cafe',
+              types: const <String>['food'],
+              weekdayDescriptions: weekHours(),
+            );
+          },
+        );
 
-      expect(enriched.openingHoursToday.startsWith('Open today:'), isTrue);
-      expect(enriched.openingHoursToday, isNot('Open today: Hours unavailable'));
-    });
+        expect(enriched.openingHoursToday.startsWith('Open today:'), isTrue);
+        expect(
+          enriched.openingHoursToday,
+          isNot('Open today: Hours unavailable'),
+        );
+      },
+    );
 
     test('normalizes cafe and bar subtype categories', () async {
       final cafe = await SavedPlaceMetadataService.enrichFromGoogle(
@@ -156,42 +171,50 @@ void main() {
       expect(enriched.category, 'restaurant');
     });
 
-    test('maps school/university categories to concordia building label', () async {
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        basePlace(),
-        metadataResolver: ({required query, required location}) async {
-          return PlaceResult(
-            placeId: 'p5',
-            name: 'Campus',
-            location: const LatLng(45.497, -73.579),
-            primaryType: 'university',
-            types: const <String>[],
-            weekdayDescriptions: const <String>[],
-          );
-        },
-      );
+    test(
+      'maps school/university categories to concordia building label',
+      () async {
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          basePlace(),
+          metadataResolver: ({required query, required location}) async {
+            return PlaceResult(
+              placeId: 'p5',
+              name: 'Campus',
+              location: const LatLng(45.497, -73.579),
+              primaryType: 'university',
+              types: const <String>[],
+              weekdayDescriptions: const <String>[],
+            );
+          },
+        );
 
-      expect(enriched.category, 'concordia building');
-    });
+        expect(enriched.category, 'concordia building');
+      },
+    );
 
-    test('keeps original opening hours when current day row does not match', () async {
-      const originalHours = 'Open today: Hours unavailable';
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        basePlace().copyWith(openingHoursToday: originalHours),
-        metadataResolver: ({required query, required location}) async {
-          return PlaceResult(
-            placeId: 'p6',
-            name: 'No Match Place',
-            location: const LatLng(45.497, -73.579),
-            primaryType: 'restaurant',
-            types: const <String>[],
-            weekdayDescriptions: const <String>['Funday: 9:00 AM - 5:00 PM'],
-          );
-        },
-      );
+    test(
+      'keeps original opening hours when current day row does not match',
+      () async {
+        const originalHours = 'Open today: Hours unavailable';
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          basePlace().copyWith(
+            const SavedPlaceChanges(openingHoursToday: originalHours),
+          ),
+          metadataResolver: ({required query, required location}) async {
+            return PlaceResult(
+              placeId: 'p6',
+              name: 'No Match Place',
+              location: const LatLng(45.497, -73.579),
+              primaryType: 'restaurant',
+              types: const <String>[],
+              weekdayDescriptions: const <String>['Funday: 9:00 AM - 5:00 PM'],
+            );
+          },
+        );
 
-      expect(enriched.openingHoursToday, originalHours);
-    });
+        expect(enriched.openingHoursToday, originalHours);
+      },
+    );
 
     test('supports opening-hours rows without colon separator', () async {
       final dayNames = const <String>[
@@ -222,17 +245,20 @@ void main() {
       expect(enriched.openingHoursToday, startsWith('Open today: '));
     });
 
-    test('keeps original values when resolver throws for non-concordia place', () async {
-      final original = basePlace();
-      final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
-        original,
-        metadataResolver: ({required query, required location}) {
-          throw Exception('network failure');
-        },
-      );
+    test(
+      'keeps original values when resolver throws for non-concordia place',
+      () async {
+        final original = basePlace();
+        final enriched = await SavedPlaceMetadataService.enrichFromGoogle(
+          original,
+          metadataResolver: ({required query, required location}) {
+            throw Exception('network failure');
+          },
+        );
 
-      expect(enriched.category, original.category);
-      expect(enriched.openingHoursToday, original.openingHoursToday);
-    });
+        expect(enriched.category, original.category);
+        expect(enriched.openingHoursToday, original.openingHoursToday);
+      },
+    );
   });
 }

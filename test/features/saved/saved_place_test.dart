@@ -15,8 +15,7 @@ void main() {
       );
 
       final updated = original.copyWith(
-        name: 'Updated',
-        category: 'cafe',
+        const SavedPlaceChanges(name: 'Updated', category: 'cafe'),
       );
 
       expect(updated.id, original.id);
