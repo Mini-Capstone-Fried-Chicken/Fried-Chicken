@@ -1556,7 +1556,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2213,29 +2213,29 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
       if (isSelected) {
         strokeColor = _highContrastMode
-            ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.95)
-            : selectedBlue.withOpacity(0.95);
+            ? AppUiColors.highContrastBuildingHighlight.withValues(alpha: 0.95)
+            : selectedBlue.withValues(alpha: 0.95);
         fillColor = _highContrastMode
-            ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.32)
-            : selectedBlue.withOpacity(0.25);
+            ? AppUiColors.highContrastBuildingHighlight.withValues(alpha: 0.32)
+            : selectedBlue.withValues(alpha: 0.25);
         strokeWidth = 3;
         zIndex = 3;
       } else if (isCurrent) {
         strokeColor = _highContrastMode
-            ? highContrastCurrent.withOpacity(0.9)
-            : Colors.blue.withOpacity(0.8);
+            ? highContrastCurrent.withValues(alpha: 0.9)
+            : Colors.blue.withValues(alpha: 0.8);
         fillColor = _highContrastMode
-            ? highContrastCurrent.withOpacity(0.28)
-            : Colors.blue.withOpacity(0.25);
+            ? highContrastCurrent.withValues(alpha: 0.28)
+            : Colors.blue.withValues(alpha: 0.25);
         strokeWidth = 3;
         zIndex = 2;
       } else {
         strokeColor = _highContrastMode
-            ? highContrastBuildingBase.withOpacity(0.8)
-            : burgundy.withOpacity(0.55);
+            ? highContrastBuildingBase.withValues(alpha: 0.8)
+            : burgundy.withValues(alpha: 0.55);
         fillColor = _highContrastMode
-            ? highContrastBuildingBase.withOpacity(0.22)
-            : burgundy.withOpacity(0.22);
+            ? highContrastBuildingBase.withValues(alpha: 0.22)
+            : burgundy.withValues(alpha: 0.22);
         strokeWidth = 2;
         zIndex = 1;
       }
@@ -2619,8 +2619,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
         radius: 20,
-        fillColor: Colors.blue.withOpacity(0.1),
-        strokeColor: Colors.blue.withOpacity(0.3),
+        fillColor: Colors.blue.withValues(alpha: 0.1),
+        strokeColor: Colors.blue.withValues(alpha: 0.3),
         strokeWidth: 1,
       ),
     );
@@ -3312,10 +3312,10 @@ class _ShuttleScheduleSheet extends StatelessWidget {
     final mutedText = highContrastMode ? Colors.black45 : Colors.black45;
     final nextHighlight = highContrastMode
         ? const Color(0xFF5EBFA7)
-        : accent.withOpacity(0.08);
+        : accent.withValues(alpha: 0.08);
     final nextBorder = highContrastMode
         ? Colors.black26
-        : accent.withOpacity(0.3);
+        : accent.withValues(alpha: 0.3);
     final nextBadgeBg = highContrastMode ? Colors.black : accent;
     final nextBadgeText = highContrastMode
         ? AppUiColors.highContrastPrimary
@@ -3343,7 +3343,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                 height: 4,
                 width: 44,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -3521,8 +3521,8 @@ class _StopChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
