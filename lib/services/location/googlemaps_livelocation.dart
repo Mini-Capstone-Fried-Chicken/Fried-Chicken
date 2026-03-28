@@ -187,6 +187,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
   String? _routeOriginBuildingCode;
   String? _routeDestinationBuildingCode;
+  bool _isOriginPoi = false;
+  bool _isDestinationPoi = false;
 
   final Map<String, List<NavigationStep>> _routeStepsByMode = {};
   // --- Navigation camera follow state ---
@@ -307,6 +309,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDestinationText = place.name;
         _routeOriginBuildingCode = currentBuildingCode;
         _routeDestinationBuildingCode = selectedBuilding?.code;
+        _isOriginPoi = false;
+        _isDestinationPoi = false;
 
         // Prefill destination room only when explicitly provided (Calendar Go to Room).
         final requestedRoom = (place.roomCode ?? '').trim();
@@ -918,6 +922,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeDestinationText = poi.name;
       _routeOriginBuildingCode = currentBuildingCode;
       _routeDestinationBuildingCode = null;
+      _isOriginPoi = false;
+      _isDestinationPoi = true;
     });
 
     await _fetchRoutesAndDurations();
@@ -1045,6 +1051,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
       _routeOriginBuildingCode = currentBuildingCode;
       _routeDestinationBuildingCode = _selectedBuildingPoly?.code;
+      _isOriginPoi = false;
+      _isDestinationPoi = false;
       print(
         '[DEBUG] Route building codes: origin=$_routeOriginBuildingCode, destination=$_routeDestinationBuildingCode',
       );
@@ -1652,11 +1660,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final tempOriginLatLng = _routeOrigin;
       final tempDestination = _routeDestinationText;
       final tempDestinationLatLng = _routeDestination;
+      final tempIsOriginPoi = _isOriginPoi;
+      final tempIsDestinationPoi = _isDestinationPoi;
+      final tempOriginBuildingCode = _routeOriginBuildingCode;
+      final tempDestinationBuildingCode = _routeDestinationBuildingCode;
 
       _routeOriginText = tempDestination;
       _routeOrigin = tempDestinationLatLng;
       _routeDestinationText = tempOrigin;
       _routeDestination = tempOriginLatLng;
+      _isOriginPoi = tempIsDestinationPoi;
+      _isDestinationPoi = tempIsOriginPoi;
+      _routeOriginBuildingCode = tempDestinationBuildingCode;
+      _routeDestinationBuildingCode = tempOriginBuildingCode;
 
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
@@ -2131,6 +2147,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeOriginText = displayText;
         _routeOriginSuggestions = [];
         _routeOriginBuildingCode = buildingCode;
+        _isOriginPoi = false;
         _originRoomController.clear();
       });
       print('[DEBUG] Calling _fetchRoute with new origin: $newOrigin');
@@ -2175,6 +2192,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDestinationText = displayText;
         _routeDestinationSuggestions = [];
         _routeDestinationBuildingCode = buildingCode;
+        _isDestinationPoi = false;
         _destinationRoomController.clear();
       });
       await _fetchRoutesAndDurations();
@@ -2309,6 +2327,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeOriginText = currentLocationTag;
       _routeDestinationText = place.name;
       _selectedSearchResult = place;
+      _isOriginPoi = false;
+      _isDestinationPoi = false;
     });
 
     print(
@@ -3037,6 +3057,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                     _wheelchairRoutingDefaultEnabled,
                 originBuildingCode: _routeOriginBuildingCode,
                 destinationBuildingCode: _routeDestinationBuildingCode,
+                isOriginPoi: _isOriginPoi,
+                isDestinationPoi: _isDestinationPoi,
                 isConcordiaBuilding: (buildingCode) {
                   return buildingPolygons.any(
                     (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
