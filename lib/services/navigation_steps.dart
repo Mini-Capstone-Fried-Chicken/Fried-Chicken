@@ -274,16 +274,19 @@ class _StepTile extends StatelessWidget {
     const burgundy = Color(0xFF76263D);
 
     final icon = _iconFor(step);
-    final iconBg = highContrastMode
-        ? Colors.black.withValues(alpha: 0.08)
-        : step.travelMode == 'transit'
-        ? Colors.black.withValues(alpha: 0.06)
-        : burgundy.withValues(alpha: 0.12);
-    final iconColor = highContrastMode
-        ? Colors.black
-        : step.travelMode == 'transit'
-        ? Colors.black87
-        : burgundy;
+    late final Color iconBg;
+    late final Color iconColor;
+
+    if (highContrastMode) {
+      iconBg = Colors.black.withValues(alpha: 0.08);
+      iconColor = Colors.black;
+    } else if (step.travelMode == 'transit') {
+      iconBg = Colors.black.withValues(alpha: 0.06);
+      iconColor = Colors.black87;
+    } else {
+      iconBg = burgundy.withValues(alpha: 0.12);
+      iconColor = burgundy;
+    }
     final tileBackground = highContrastMode
         ? const Color(0xFF6CCEB5)
         : Colors.white;

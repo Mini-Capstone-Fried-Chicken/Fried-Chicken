@@ -119,14 +119,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
+                    const Center(
                       child: SizedBox(
                         width: 140,
                         height: 140,
-                        child: const FittedBox(
-                          fit: BoxFit.contain,
-                          child: AppLogo(),
-                        ),
+                        child: FittedBox(fit: BoxFit.contain, child: AppLogo()),
                       ),
                     ),
                     const SizedBox(height: 10),

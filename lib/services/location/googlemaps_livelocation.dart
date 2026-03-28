@@ -2206,40 +2206,39 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final isCurrent = _currentBuildingPoly?.code == b.code;
       final isSelected = _selectedBuildingPoly?.code == b.code;
 
-      final strokeColor = isSelected
-          ? (_highContrastMode
-                ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.95)
-                : selectedBlue.withOpacity(0.95))
-          : isCurrent
-          ? (_highContrastMode
-                ? highContrastCurrent.withOpacity(0.9)
-                : Colors.blue.withOpacity(0.8))
-          : (_highContrastMode
-                ? highContrastBuildingBase.withOpacity(0.8)
-                : burgundy.withOpacity(0.55));
+      late final Color strokeColor;
+      late final Color fillColor;
+      late final int strokeWidth;
+      late final int zIndex;
 
-      final fillColor = isSelected
-          ? (_highContrastMode
-                ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.32)
-                : selectedBlue.withOpacity(0.25))
-          : isCurrent
-          ? (_highContrastMode
-                ? highContrastCurrent.withOpacity(0.28)
-                : Colors.blue.withOpacity(0.25))
-          : (_highContrastMode
-                ? highContrastBuildingBase.withOpacity(0.22)
-                : burgundy.withOpacity(0.22));
-
-      final strokeWidth = isSelected
-          ? 3
-          : isCurrent
-          ? 3
-          : 2;
-      final zIndex = isSelected
-          ? 3
-          : isCurrent
-          ? 2
-          : 1;
+      if (isSelected) {
+        strokeColor = _highContrastMode
+            ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.95)
+            : selectedBlue.withOpacity(0.95);
+        fillColor = _highContrastMode
+            ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.32)
+            : selectedBlue.withOpacity(0.25);
+        strokeWidth = 3;
+        zIndex = 3;
+      } else if (isCurrent) {
+        strokeColor = _highContrastMode
+            ? highContrastCurrent.withOpacity(0.9)
+            : Colors.blue.withOpacity(0.8);
+        fillColor = _highContrastMode
+            ? highContrastCurrent.withOpacity(0.28)
+            : Colors.blue.withOpacity(0.25);
+        strokeWidth = 3;
+        zIndex = 2;
+      } else {
+        strokeColor = _highContrastMode
+            ? highContrastBuildingBase.withOpacity(0.8)
+            : burgundy.withOpacity(0.55);
+        fillColor = _highContrastMode
+            ? highContrastBuildingBase.withOpacity(0.22)
+            : burgundy.withOpacity(0.22);
+        strokeWidth = 2;
+        zIndex = 1;
+      }
 
       polys.add(
         Polygon(
@@ -2758,12 +2757,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final Campus labelCampus = _selectedCampus != Campus.none
         ? _selectedCampus
         : _currentCampus;
+    String campusLabel = '';
+    if (labelCampus == Campus.sgw) {
+      campusLabel = 'SGW';
+    } else if (labelCampus == Campus.loyola) {
+      campusLabel = 'Loyola';
+    }
 
-    final String campusLabel = labelCampus == Campus.sgw
-        ? 'SGW'
-        : labelCampus == Campus.loyola
-        ? 'Loyola'
-        : '';
+    String? indoorMapStyle;
+    if (_highContrastMode) {
+      indoorMapStyle = _highContrastMapStyle;
+    } else if (_showIndoor) {
+      indoorMapStyle = _indoorMapStyle;
+    }
 
     final selectedBuilding =
         widget.debugSelectedBuilding ?? _selectedBuildingPoly;
@@ -2779,11 +2785,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             OutdoorMapView(
               initialTarget: initialTarget,
               showIndoorStyle: _highContrastMode || _showIndoor,
-              indoorMapStyle: _highContrastMode
-                  ? _highContrastMapStyle
-                  : _showIndoor
-                  ? _indoorMapStyle
-                  : null,
+              indoorMapStyle: indoorMapStyle,
               onMapCreated: (c) => _mapController = c,
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
@@ -3430,6 +3432,20 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                         !isPast &&
                         (index == 0 || times[index - 1].isBefore(now));
 
+                    late final Color busIconColor;
+                    late final Color busTimeColor;
+
+                    if (isPast) {
+                      busIconColor = Colors.black26;
+                      busTimeColor = Colors.black26;
+                    } else if (isNext) {
+                      busIconColor = titleColor;
+                      busTimeColor = titleColor;
+                    } else {
+                      busIconColor = secondaryText;
+                      busTimeColor = primaryText;
+                    }
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(
@@ -3446,11 +3462,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                           Icon(
                             Icons.directions_bus_filled,
                             size: 16,
-                            color: isPast
-                                ? Colors.black26
-                                : isNext
-                                ? titleColor
-                                : secondaryText,
+                            color: busIconColor,
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -3460,11 +3472,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                               fontWeight: isNext
                                   ? FontWeight.w700
                                   : FontWeight.w400,
-                              color: isPast
-                                  ? Colors.black26
-                                  : isNext
-                                  ? titleColor
-                                  : primaryText,
+                              color: busTimeColor,
                             ),
                           ),
                           if (isNext) ...[
