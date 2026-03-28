@@ -50,6 +50,19 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final secondaryText = isHighContrast
         ? const Color(0xFF89D9C2)
         : const Color(0xFF8B1E3F);
+    final emptyStateTextColor = isHighContrast
+        ? Colors.white70
+        : Colors.black54;
+
+    final calendarBackgroundColor = isHighContrast
+        ? const Color(0xFF0F0F0F)
+        : Colors.white;
+
+    final calendarCellBorderColor = isHighContrast
+        ? const Color(0x3389D9C2)
+        : const Color(0x1A000000);
+
+    final timeTextColor = isHighContrast ? Colors.white : Colors.black54;
 
     final dataSource = GoogleCalendarDataSource(widget.events);
 
@@ -122,10 +135,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
               ? Center(
                   child: Text(
                     'No events found in this calendar.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isHighContrast ? Colors.white70 : Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 15, color: emptyStateTextColor),
                   ),
                 )
               : SfCalendar(
@@ -135,9 +145,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                   backgroundColor: isHighContrast
                       ? const Color(0xFF0F0F0F)
                       : Colors.white,
-                  cellBorderColor: isHighContrast
-                      ? const Color(0x3389D9C2)
-                      : const Color(0x1A000000),
+                  cellBorderColor: calendarCellBorderColor,
                   initialDisplayDate: initialDate,
                   firstDayOfWeek: 1,
                   todayHighlightColor: isHighContrast
@@ -165,9 +173,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                     ),
                   ),
                   viewHeaderStyle: ViewHeaderStyle(
-                    backgroundColor: isHighContrast
-                        ? const Color(0xFF89D9C2)
-                        : Colors.white,
+                    backgroundColor: calendarBackgroundColor,
                     dayTextStyle: TextStyle(
                       color: isHighContrast ? Colors.black54 : Colors.black54,
                     ),
@@ -185,10 +191,10 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                     endHour: 22,
                     timeIntervalHeight: 60,
                     timeTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.white : Colors.black54,
+                      color: timeTextColor,
                       fontSize: 12,
                     ),
-                    minimumAppointmentDuration: Duration(minutes: 45),
+                    minimumAppointmentDuration: const Duration(minutes: 45),
                   ),
                   onTap: handleCalendarTap,
                 ),

@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
 
+class GoogleCalendarEventCalendarUpdate {
+  final String? calendarId;
+  final String? calendarName;
+  final Color? color;
+
+  const GoogleCalendarEventCalendarUpdate({
+    this.calendarId,
+    this.calendarName,
+    this.color,
+  });
+}
+
 class GoogleCalendarEvent {
   final String id;
   final String title;
@@ -31,9 +43,7 @@ class GoogleCalendarEvent {
     DateTime? end,
     String? location,
     String? description,
-    String? calendarId,
-    String? calendarName,
-    Color? color,
+    GoogleCalendarEventCalendarUpdate? calendarInfo,
   }) {
     return GoogleCalendarEvent(
       id: id ?? this.id,
@@ -42,9 +52,9 @@ class GoogleCalendarEvent {
       end: end ?? this.end,
       location: location ?? this.location,
       description: description ?? this.description,
-      calendarId: calendarId ?? this.calendarId,
-      calendarName: calendarName ?? this.calendarName,
-      color: color ?? this.color,
+      calendarId: calendarInfo?.calendarId ?? calendarId,
+      calendarName: calendarInfo?.calendarName ?? calendarName,
+      color: calendarInfo?.color ?? color,
     );
   }
 }

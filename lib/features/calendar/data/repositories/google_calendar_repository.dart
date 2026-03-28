@@ -12,8 +12,8 @@ class GoogleCalendarRepository {
   GoogleCalendarRepository({
     GoogleCalendarAuthService? authService,
     GoogleCalendarApiService? apiService,
-  })  : authService = authService ?? GoogleCalendarAuthService.instance,
-        apiService = apiService ?? GoogleCalendarApiService();
+  }) : authService = authService ?? GoogleCalendarAuthService.instance,
+       apiService = apiService ?? GoogleCalendarApiService();
 
   static final GoogleCalendarRepository instance = GoogleCalendarRepository();
 
@@ -93,9 +93,11 @@ class GoogleCalendarRepository {
         final enriched = events
             .map(
               (event) => event.copyWith(
-                calendarId: calendar.id,
-                calendarName: calendar.name,
-                color: color,
+                calendarInfo: GoogleCalendarEventCalendarUpdate(
+                  calendarId: calendar.id,
+                  calendarName: calendar.name,
+                  color: color,
+                ),
               ),
             )
             .toList();
@@ -123,15 +125,11 @@ class GoogleCalendarRepository {
   }
 
   void updateSelectedCalendars(List<String> ids) {
-    _session = _session.copyWith(
-      selectedCalendarIds: ids,
-    );
+    _session = _session.copyWith(selectedCalendarIds: ids);
   }
 
   void goToSelection() {
-    _session = _session.copyWith(
-      step: CalendarConnectionStep.selectCalendar,
-    );
+    _session = _session.copyWith(step: CalendarConnectionStep.selectCalendar);
   }
 
   Future<void> disconnect() async {
@@ -161,7 +159,9 @@ class GoogleCalendarRepository {
 
     if (_session.selectedCalendarIds.isNotEmpty) {
       final selectedCalendars = calendars
-          .where((calendar) => _session.selectedCalendarIds.contains(calendar.id))
+          .where(
+            (calendar) => _session.selectedCalendarIds.contains(calendar.id),
+          )
           .toList();
 
       if (selectedCalendars.isNotEmpty) {

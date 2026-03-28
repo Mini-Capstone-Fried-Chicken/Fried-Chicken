@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/utils/geo.dart' as geo;
@@ -107,6 +108,9 @@ class OutdoorMapPage extends StatefulWidget {
 
   @visibleForTesting
   final IndoorMapController? debugIndoorMapController;
+  @visibleForTesting
+  final Future<BitmapDescriptor> Function(String text)?
+  debugBuildingLabelIconFactory;
 
   const OutdoorMapPage({
     super.key,
@@ -118,6 +122,7 @@ class OutdoorMapPage extends StatefulWidget {
     this.debugLinkOverride,
     this.debugIndoorRouteService,
     this.debugIndoorMapController,
+    this.debugBuildingLabelIconFactory,
     required this.isLoggedIn,
   });
 
@@ -126,6 +131,8 @@ class OutdoorMapPage extends StatefulWidget {
 }
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
+  final Map<String, BitmapDescriptor> _buildingLabelIcons = {};
+  bool _buildingLabelIconsReady = false;
   late final IndoorRouteService _indoorRouteService;
   final IndoorManualNavigationController _indoorNavigationController =
       IndoorManualNavigationController();
@@ -325,11 +332,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final settings = AppSettingsController.state;
     final highContrastEnabled = settings.highContrastModeEnabled;
     final wheelchairRoutingEnabled = settings.wheelchairRoutingDefaultEnabled;
+
+    final highContrastChanged = highContrastEnabled != _highContrastMode;
+
     if (!mounted ||
-        (highContrastEnabled == _highContrastMode &&
+        (!highContrastChanged &&
             wheelchairRoutingEnabled == _wheelchairRoutingDefaultEnabled)) {
       return;
     }
+
     setState(() {
       _highContrastMode = highContrastEnabled;
       _wheelchairRoutingDefaultEnabled = wheelchairRoutingEnabled;
@@ -337,6 +348,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _preferredIndoorTransitionMode = IndoorTransitionMode.elevator;
       }
     });
+
+    if (highContrastChanged) {
+      unawaited(initBuildingLabelIcons());
+    }
   }
 
   bool get _isIndoorNavigationActive => _indoorNavigationController.isActive;
@@ -2437,6 +2452,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (_wheelchairRoutingDefaultEnabled) {
       _preferredIndoorTransitionMode = IndoorTransitionMode.elevator;
     }
+
+    unawaited(initBuildingLabelIcons());
+
     AppSettingsController.notifier.addListener(_onAppSettingsChanged);
     _indoorNavigationController.addListener(_onIndoorNavigationChanged);
     SavedDirectionsController.notifier.addListener(_onSavedDirectionsRequested);
@@ -2454,17 +2472,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _lastCameraTarget = widget.initialCampus == Campus.loyola
         ? concordiaLoyola
         : concordiaSGW;
-
     _createBlueDotIcon();
-    _createShuttleStopIcon();
-    _bootstrapLocationState();
+
+    if (!widget.debugDisableLocation) {
+      _createShuttleStopIcon();
+      _bootstrapLocationState();
+      _initPois();
+    }
 
     _searchController.addListener(_onSearchChanged);
-    // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
-
-    // Initialise POI icons and fetch nearby places
-    _initPois();
 
     _onSavedDirectionsRequested();
   }
@@ -2680,8 +2697,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       );
     }
 
+    addBuildingLabelMarkers(markers);
     _addPoiMarkers(markers);
-
     // Shuttle stop markers
     final shuttleIcon = _shuttleStopIcon;
     if (shuttleIcon != null) {
@@ -3291,6 +3308,142 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _originRoomController.dispose();
     _destinationRoomController.dispose();
     super.dispose();
+  }
+
+  Future<void> initBuildingLabelIcons() async {
+    final icons = <String, BitmapDescriptor>{};
+
+    for (final building in buildingPolygons) {
+      icons[building.code] = await resolveBuildingLabelIcon(building.code);
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _buildingLabelIcons
+        ..clear()
+        ..addAll(icons);
+      _buildingLabelIconsReady = true;
+    });
+  }
+
+  Future<BitmapDescriptor> createBuildingLabelIcon(String text) async {
+    const double horizontalPadding = 10;
+    const double verticalPadding = 6;
+    const double borderRadius = 12;
+    const double fontSize = 14;
+
+    final backgroundColor = _highContrastMode
+        ? const Color(0xFFB8FFF1)
+        : const Color(0xFF76263D);
+
+    final borderColor = _highContrastMode ? Colors.black : Colors.white;
+
+    final textColor = _highContrastMode ? Colors.black : Colors.white;
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final width = textPainter.width + (horizontalPadding * 2);
+    final height = textPainter.height + (verticalPadding * 2);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, width, height),
+      const Radius.circular(borderRadius),
+    );
+
+    final fillPaint = Paint()..color = backgroundColor;
+    final strokePaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    canvas.drawRRect(rect, fillPaint);
+    canvas.drawRRect(rect, strokePaint);
+
+    textPainter.paint(
+      canvas,
+      Offset(
+        (width - textPainter.width) / 2,
+        (height - textPainter.height) / 2,
+      ),
+    );
+
+    final image = await recorder.endRecording().toImage(
+      width.ceil(),
+      height.ceil(),
+    );
+
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
+  }
+
+  bool shouldShowBuildingLabel(BuildingPolygon building) {
+    final buildingCampus = detectCampus(building.center);
+
+    if (_selectedCampus != Campus.none) {
+      return buildingCampus == _selectedCampus;
+    }
+
+    if (_currentCampus != Campus.none) {
+      return buildingCampus == _currentCampus;
+    }
+
+    return true;
+  }
+
+  void addBuildingLabelMarkers(Set<Marker> markers) {
+    if (!_buildingLabelIconsReady) return;
+    if (_showIndoor || _showRoutePreview || _isIndoorNavigationActive) return;
+
+    for (final building in buildingPolygons) {
+      if (!shouldShowBuildingLabel(building)) continue;
+
+      final icon = _buildingLabelIcons[building.code];
+      if (icon == null) continue;
+
+      markers.add(
+        Marker(
+          markerId: MarkerId('building_label_${building.code}'),
+          position: building.center,
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: 50,
+          consumeTapEvents: true,
+          onTap: () => _onBuildingTapped(building),
+        ),
+      );
+    }
+  }
+
+  String getBuildingLabel(BuildingPolygon building) {
+    return (buildingInfoByCode[building.code]?.name ?? building.name)
+        .replaceAll('Building', '')
+        .replaceAll('Pavilion', '')
+        .trim()
+        .toUpperCase();
+  }
+
+  Future<BitmapDescriptor> resolveBuildingLabelIcon(String text) {
+    final factory = widget.debugBuildingLabelIconFactory;
+    if (factory != null) {
+      return factory(text);
+    }
+    return createBuildingLabelIcon(text);
   }
 }
 
