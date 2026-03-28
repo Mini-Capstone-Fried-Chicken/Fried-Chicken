@@ -319,6 +319,19 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     itemCount: widget.suggestions!.length,
                     itemBuilder: (context, index) {
                       final suggestion = widget.suggestions![index];
+                      Widget? suggestionSubtitle;
+                      if (suggestion.subtitle != null) {
+                        final subtitleColor = suggestion.isConcordiaBuilding
+                            ? AppUiColors.primary(
+                                highContrastEnabled: widget.highContrastMode,
+                              ).withOpacity(0.7)
+                            : Colors.grey[600];
+
+                        suggestionSubtitle = Text(
+                          suggestion.subtitle!,
+                          style: TextStyle(fontSize: 12, color: subtitleColor),
+                        );
+                      }
 
                       return ListTile(
                         leading: Icon(
@@ -333,20 +346,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                           size: 20,
                         ),
                         title: Text(suggestion.name),
-                        subtitle: suggestion.subtitle != null
-                            ? Text(
-                                suggestion.subtitle!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: suggestion.isConcordiaBuilding
-                                      ? AppUiColors.primary(
-                                          highContrastEnabled:
-                                              widget.highContrastMode,
-                                        ).withOpacity(0.7)
-                                      : Colors.grey[600],
-                                ),
-                              )
-                            : null,
+                        subtitle: suggestionSubtitle,
                         trailing: IconButton(
                           tooltip: _isSuggestionSaved(suggestion)
                               ? 'Remove from saved'

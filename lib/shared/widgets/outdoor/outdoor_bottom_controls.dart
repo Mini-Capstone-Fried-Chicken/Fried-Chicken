@@ -25,11 +25,15 @@ class OutdoorBottomControls extends StatelessWidget {
     final bgColor = highContrastMode ? const Color(0xFF002620) : null;
     final fgColor = highContrastMode ? const Color(0xFF89D9C2) : null;
 
-    final campusLabel = currentCampus == Campus.sgw
-      ? 'SGW Campus'
-      : currentCampus == Campus.loyola
-          ? 'Loyola Campus'
-          : 'Off Campus';
+    String campusLabel;
+    if (currentCampus == Campus.sgw) {
+      campusLabel = 'SGW Campus';
+    } else if (currentCampus == Campus.loyola) {
+      campusLabel = 'Loyola Campus';
+    } else {
+      campusLabel = 'Off Campus';
+    }
+
     return Positioned(
       bottom: 70,
       left: 20,

@@ -367,16 +367,20 @@ class _RoomFieldsSectionState extends State<RoomFieldsSection> {
     const unselectedBackground = Color(0xFFF4D6DE);
     const unselectedForeground = Color(0xFF76263D);
     const disabledBackground = Color(0xFFE9D9DE);
-    final labelColor = selected
-        ? selectedForeground
-        : onSelected == null
-        ? unselectedForeground.withValues(alpha: 0.45)
-        : unselectedForeground;
-    final borderColor = selected
-        ? selectedForeground
-        : onSelected == null
-        ? unselectedForeground.withValues(alpha: 0.2)
-        : unselectedForeground.withValues(alpha: 0.7);
+
+    late final Color labelColor;
+    late final Color borderColor;
+
+    if (selected) {
+      labelColor = selectedForeground;
+      borderColor = selectedForeground;
+    } else if (onSelected == null) {
+      labelColor = unselectedForeground.withValues(alpha: 0.45);
+      borderColor = unselectedForeground.withValues(alpha: 0.2);
+    } else {
+      labelColor = unselectedForeground;
+      borderColor = unselectedForeground.withValues(alpha: 0.7);
+    }
 
     return ChoiceChip(
       label: Text(label),

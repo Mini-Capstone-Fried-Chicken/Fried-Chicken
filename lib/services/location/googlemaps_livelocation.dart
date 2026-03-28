@@ -1565,7 +1565,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2362,40 +2362,39 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final isCurrent = _currentBuildingPoly?.code == b.code;
       final isSelected = _selectedBuildingPoly?.code == b.code;
 
-      final strokeColor = isSelected
-          ? (_highContrastMode
-                ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.95)
-                : selectedBlue.withOpacity(0.95))
-          : isCurrent
-          ? (_highContrastMode
-                ? highContrastCurrent.withOpacity(0.9)
-                : Colors.blue.withOpacity(0.8))
-          : (_highContrastMode
-                ? highContrastBuildingBase.withOpacity(0.8)
-                : burgundy.withOpacity(0.55));
+      late final Color strokeColor;
+      late final Color fillColor;
+      late final int strokeWidth;
+      late final int zIndex;
 
-      final fillColor = isSelected
-          ? (_highContrastMode
-                ? AppUiColors.highContrastBuildingHighlight.withOpacity(0.32)
-                : selectedBlue.withOpacity(0.25))
-          : isCurrent
-          ? (_highContrastMode
-                ? highContrastCurrent.withOpacity(0.28)
-                : Colors.blue.withOpacity(0.25))
-          : (_highContrastMode
-                ? highContrastBuildingBase.withOpacity(0.22)
-                : burgundy.withOpacity(0.22));
-
-      final strokeWidth = isSelected
-          ? 3
-          : isCurrent
-          ? 3
-          : 2;
-      final zIndex = isSelected
-          ? 3
-          : isCurrent
-          ? 2
-          : 1;
+      if (isSelected) {
+        strokeColor = _highContrastMode
+            ? AppUiColors.highContrastBuildingHighlight.withValues(alpha: 0.95)
+            : selectedBlue.withValues(alpha: 0.95);
+        fillColor = _highContrastMode
+            ? AppUiColors.highContrastBuildingHighlight.withValues(alpha: 0.32)
+            : selectedBlue.withValues(alpha: 0.25);
+        strokeWidth = 3;
+        zIndex = 3;
+      } else if (isCurrent) {
+        strokeColor = _highContrastMode
+            ? highContrastCurrent.withValues(alpha: 0.9)
+            : Colors.blue.withValues(alpha: 0.8);
+        fillColor = _highContrastMode
+            ? highContrastCurrent.withValues(alpha: 0.28)
+            : Colors.blue.withValues(alpha: 0.25);
+        strokeWidth = 3;
+        zIndex = 2;
+      } else {
+        strokeColor = _highContrastMode
+            ? highContrastBuildingBase.withValues(alpha: 0.8)
+            : burgundy.withValues(alpha: 0.55);
+        fillColor = _highContrastMode
+            ? highContrastBuildingBase.withValues(alpha: 0.22)
+            : burgundy.withValues(alpha: 0.22);
+        strokeWidth = 2;
+        zIndex = 1;
+      }
 
       polys.add(
         Polygon(
@@ -2776,8 +2775,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
         radius: 20,
-        fillColor: Colors.blue.withOpacity(0.1),
-        strokeColor: Colors.blue.withOpacity(0.3),
+        fillColor: Colors.blue.withValues(alpha: 0.1),
+        strokeColor: Colors.blue.withValues(alpha: 0.3),
         strokeWidth: 1,
       ),
     );
@@ -2914,12 +2913,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final Campus labelCampus = _selectedCampus != Campus.none
         ? _selectedCampus
         : _currentCampus;
+    String campusLabel = '';
+    if (labelCampus == Campus.sgw) {
+      campusLabel = 'SGW';
+    } else if (labelCampus == Campus.loyola) {
+      campusLabel = 'Loyola';
+    }
 
-    final String campusLabel = labelCampus == Campus.sgw
-        ? 'SGW'
-        : labelCampus == Campus.loyola
-        ? 'Loyola'
-        : '';
+    String? indoorMapStyle;
+    if (_highContrastMode) {
+      indoorMapStyle = _highContrastMapStyle;
+    } else if (_showIndoor) {
+      indoorMapStyle = _indoorMapStyle;
+    }
 
     final selectedBuilding =
         widget.debugSelectedBuilding ?? _selectedBuildingPoly;
@@ -2935,11 +2941,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
             OutdoorMapView(
               initialTarget: initialTarget,
               showIndoorStyle: _highContrastMode || _showIndoor,
-              indoorMapStyle: _highContrastMode
-                  ? _highContrastMapStyle
-                  : _showIndoor
-                  ? _indoorMapStyle
-                  : null,
+              indoorMapStyle: indoorMapStyle,
               onMapCreated: (c) => _mapController = c,
               onCameraMove: (pos) {
                 _lastCameraTarget = pos.target;
@@ -3468,10 +3470,10 @@ class _ShuttleScheduleSheet extends StatelessWidget {
     final mutedText = highContrastMode ? Colors.black45 : Colors.black45;
     final nextHighlight = highContrastMode
         ? const Color(0xFF5EBFA7)
-        : accent.withOpacity(0.08);
+        : accent.withValues(alpha: 0.08);
     final nextBorder = highContrastMode
         ? Colors.black26
-        : accent.withOpacity(0.3);
+        : accent.withValues(alpha: 0.3);
     final nextBadgeBg = highContrastMode ? Colors.black : accent;
     final nextBadgeText = highContrastMode
         ? AppUiColors.highContrastPrimary
@@ -3499,7 +3501,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                 height: 4,
                 width: 44,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -3588,6 +3590,20 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                         !isPast &&
                         (index == 0 || times[index - 1].isBefore(now));
 
+                    late final Color busIconColor;
+                    late final Color busTimeColor;
+
+                    if (isPast) {
+                      busIconColor = Colors.black26;
+                      busTimeColor = Colors.black26;
+                    } else if (isNext) {
+                      busIconColor = titleColor;
+                      busTimeColor = titleColor;
+                    } else {
+                      busIconColor = secondaryText;
+                      busTimeColor = primaryText;
+                    }
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(
@@ -3604,11 +3620,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                           Icon(
                             Icons.directions_bus_filled,
                             size: 16,
-                            color: isPast
-                                ? Colors.black26
-                                : isNext
-                                ? titleColor
-                                : secondaryText,
+                            color: busIconColor,
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -3618,11 +3630,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                               fontWeight: isNext
                                   ? FontWeight.w700
                                   : FontWeight.w400,
-                              color: isPast
-                                  ? Colors.black26
-                                  : isNext
-                                  ? titleColor
-                                  : primaryText,
+                              color: busTimeColor,
                             ),
                           ),
                           if (isNext) ...[
@@ -3671,8 +3679,8 @@ class _StopChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
