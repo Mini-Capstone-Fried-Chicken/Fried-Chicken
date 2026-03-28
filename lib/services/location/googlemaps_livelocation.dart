@@ -34,6 +34,7 @@ import '../google_places_service.dart';
 import '../indoor_maps/indoor_floor_config.dart';
 import '../indoor_maps/indoor_map_controller.dart';
 import '../indoors_routing/core/indoor_route_plan_models.dart';
+import '../indoors_routing/core/indoor_routing_models.dart';
 import 'indoor_manual_navigation_controller.dart';
 import 'indoor_navigation_session.dart';
 import 'indoor_route_service.dart';
@@ -205,6 +206,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _isNavigating = false;
   String? _navModeKey;
   int _navStepIndex = 0;
+  IndoorResolvedRoom? _pendingDestinationIndoorRoom;
+  bool _autoHandoffToIndoorPending = false;
+  IndoorResolvedRoom? _pendingOriginIndoorRoom;
+  bool _isOriginIndoorHandoffPhase = false;
+  bool _isCompletingOriginIndoorPhase = false;
   bool _isLoadingRouteData = false;
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
@@ -364,6 +370,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   void _onIndoorNavigationChanged() {
     _syncIndoorNavigationUi();
+    _maybeAutoCompleteOriginIndoorPhase();
+  }
+
+  void _maybeAutoCompleteOriginIndoorPhase() {
+    if (!_isOriginIndoorHandoffPhase) return;
+    if (_isCompletingOriginIndoorPhase) return;
+    if (!_isIndoorNavigationActive) return;
+    if (_indoorNavigationController.canGoNext) return;
+
+    _isCompletingOriginIndoorPhase = true;
+    unawaited(
+      _completeOriginIndoorPhaseAndStartOutdoor().whenComplete(() {
+        _isCompletingOriginIndoorPhase = false;
+      }),
+    );
   }
 
   Future<void> _syncIndoorNavigationUi() async {
@@ -426,6 +447,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _isBuildingIndoorRoute = false;
   }
 
+  void _clearPendingDestinationIndoorHandoff() {
+    _pendingDestinationIndoorRoom = null;
+    _autoHandoffToIndoorPending = false;
+  }
+
   Campus _campusFromPoint(LatLng p) {
     final dSgw = Geolocator.distanceBetween(
       p.latitude,
@@ -449,16 +475,60 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   String? _resolvedIndoorOriginBuildingCode() {
     if (_showRoutePreview) {
-      return _routeOriginBuildingCode;
+      return _resolveBuildingCode(
+        explicitCode: _routeOriginBuildingCode,
+        fallbackText: _routeOriginText,
+      );
     }
-    return _selectedBuildingPoly?.code ?? _currentBuildingCode;
+    return _resolveBuildingCode(
+      explicitCode: _selectedBuildingPoly?.code ?? _currentBuildingCode,
+    );
   }
 
   String? _resolvedIndoorDestinationBuildingCode() {
     if (_showRoutePreview) {
-      return _routeDestinationBuildingCode;
+      return _resolveBuildingCode(
+        explicitCode: _routeDestinationBuildingCode,
+        fallbackText: _routeDestinationText,
+      );
     }
-    return _selectedBuildingPoly?.code;
+    return _resolveBuildingCode(explicitCode: _selectedBuildingPoly?.code);
+  }
+
+  String? _resolveBuildingCode({String? explicitCode, String? fallbackText}) {
+    final normalizedExplicit = explicitCode?.trim();
+    if (normalizedExplicit != null && normalizedExplicit.isNotEmpty) {
+      final explicitMatch = BuildingSearchService.searchBuilding(
+        normalizedExplicit,
+      );
+      return explicitMatch?.code ?? normalizedExplicit.toUpperCase();
+    }
+
+    final normalizedText = fallbackText?.trim();
+    if (normalizedText == null || normalizedText.isEmpty) {
+      return null;
+    }
+
+    final directMatch = BuildingSearchService.searchBuilding(normalizedText);
+    if (directMatch != null) {
+      return directMatch.code;
+    }
+
+    final roomLabelIndex = normalizedText.indexOf('(Room');
+    final candidateText = roomLabelIndex > 0
+        ? normalizedText.substring(0, roomLabelIndex).trim()
+        : normalizedText;
+
+    final fallbackMatch = BuildingSearchService.searchBuilding(candidateText);
+    return fallbackMatch?.code;
+  }
+
+  String _buildingWithRoomLabel(String buildingCode, String roomCode) {
+    final building = BuildingSearchService.searchBuilding(buildingCode);
+    final buildingLabel = building == null
+        ? buildingCode.toUpperCase()
+        : '${building.name} - ${building.code}';
+    return '$buildingLabel (Room ${roomCode.toUpperCase()})';
   }
 
   Future<void> _onOriginRoomSubmitted(
@@ -489,13 +559,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         .trim();
 
     if (normalizedOriginBuildingCode != normalizedDestinationBuildingCode) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Indoor routing is currently supported only between rooms in the same building.',
-          ),
-        ),
+      await _prepareCrossBuildingRouteFromRooms(
+        originBuildingCode: normalizedOriginBuildingCode,
+        destinationBuildingCode: normalizedDestinationBuildingCode,
+        originRoomCode: originRoomCode,
+        destinationRoomCode: destinationRoomCode,
       );
       return;
     }
@@ -525,6 +593,76 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     await _activateIndoorNavigation(session);
   }
 
+  Future<void> _prepareCrossBuildingRouteFromRooms({
+    required String originBuildingCode,
+    required String destinationBuildingCode,
+    required String originRoomCode,
+    required String destinationRoomCode,
+  }) async {
+    final originRoom = await _indoorRouteService.indoorRepository.resolveRoom(
+      originBuildingCode,
+      originRoomCode,
+    );
+    final destinationRoom = await _indoorRouteService.indoorRepository
+        .resolveRoom(destinationBuildingCode, destinationRoomCode);
+
+    if (originRoom == null || destinationRoom == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not resolve one or both rooms. Please check the room numbers and try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Detect whether origin room is on a non-default floor so we can show
+    // origin-building indoor navigation before the outdoor leg.
+    final originFloors = _indoorController.floorsForBuilding(
+      originBuildingCode,
+    );
+    final isOriginOnNonDefaultFloor =
+        originFloors.isNotEmpty &&
+        originRoom.floorAssetPath != originFloors.first.assetPath;
+
+    if (!mounted) return;
+    setState(() {
+      _showRoutePreview = true;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _routeOrigin = originRoom.center;
+      _routeDestination = destinationRoom.center;
+      _routeOriginBuildingCode = originBuildingCode;
+      _routeDestinationBuildingCode = destinationBuildingCode;
+      _routeOriginText = _buildingWithRoomLabel(
+        originBuildingCode,
+        originRoomCode,
+      );
+      _routeDestinationText = _buildingWithRoomLabel(
+        destinationBuildingCode,
+        destinationRoomCode,
+      );
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+      _pendingDestinationIndoorRoom = destinationRoom;
+      _autoHandoffToIndoorPending = true;
+      _pendingOriginIndoorRoom = isOriginOnNonDefaultFloor ? originRoom : null;
+    });
+
+    unawaited(_fetchRoutesAndDurations());
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Cross-building classroom route ready. Tap Start to begin navigation.',
+        ),
+      ),
+    );
+  }
+
   Future<void> _activateIndoorNavigation(
     IndoorNavigationSession session,
   ) async {
@@ -547,6 +685,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     final center = geo.polygonCenter(building.points);
 
+    final preserveOutdoorRouteState = _isOriginIndoorHandoffPhase;
+
     if (!mounted) return;
     setState(() {
       _selectedBuildingPoly = building;
@@ -559,13 +699,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeDestinationSuggestions = [];
       _routePolylines = {};
       _isLoadingRouteData = false;
-      _selectedTravelMode = RouteTravelMode.walking;
-      _routeDurations.clear();
-      _routeDistances.clear();
-      _routeArrivalTimes.clear();
-      _routePointsByMode.clear();
-      _routeSegmentsByMode.clear();
-      _routeStepsByMode.clear();
+      if (!preserveOutdoorRouteState) {
+        _selectedTravelMode = RouteTravelMode.walking;
+        _routeDurations.clear();
+        _routeDistances.clear();
+        _routeArrivalTimes.clear();
+        _routePointsByMode.clear();
+        _routeSegmentsByMode.clear();
+        _routeStepsByMode.clear();
+      }
     });
 
     _indoorNavigationController.start(session);
@@ -573,7 +715,27 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _stopIndoorNavigation() {
+    if (_isOriginIndoorHandoffPhase) {
+      if (_isCompletingOriginIndoorPhase) return;
+      _isCompletingOriginIndoorPhase = true;
+      unawaited(
+        _completeOriginIndoorPhaseAndStartOutdoor().whenComplete(() {
+          _isCompletingOriginIndoorPhase = false;
+        }),
+      );
+      return;
+    }
+
     _indoorNavigationController.stop();
+    // If stopping during origin-building indoor phase, cancel the whole
+    // cross-building navigation so outdoor and destination indoor also end.
+    if (_isOriginIndoorHandoffPhase) {
+      setState(() {
+        _isOriginIndoorHandoffPhase = false;
+        _pendingOriginIndoorRoom = null;
+      });
+      _clearPendingDestinationIndoorHandoff();
+    }
   }
 
   void _goToPreviousIndoorStep() {
@@ -581,6 +743,18 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _goToNextIndoorStep() {
+    // When in origin-building phase and already at the last step, pressing
+    // Next transitions the user to outdoor navigation.
+    if (_isOriginIndoorHandoffPhase && !_indoorNavigationController.canGoNext) {
+      if (_isCompletingOriginIndoorPhase) return;
+      _isCompletingOriginIndoorPhase = true;
+      unawaited(
+        _completeOriginIndoorPhaseAndStartOutdoor().whenComplete(() {
+          _isCompletingOriginIndoorPhase = false;
+        }),
+      );
+      return;
+    }
     _indoorNavigationController.nextStep();
   }
 
@@ -597,6 +771,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _preferredIndoorTransitionMode = mode;
     });
+
+    if (_effectiveIndoorTransitionMode != null) {
+      unawaited(_maybeStartIndoorNavigationFromRooms());
+    }
   }
 
   String? _preferredIndoorTransitionModeLabel() {
@@ -1283,6 +1461,18 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
     });
 
+    // If origin room is on a non-default floor, show origin-building indoor
+    // navigation first before the outdoor leg begins.
+    if (_pendingOriginIndoorRoom != null) {
+      unawaited(_maybeAutoSwitchToOriginIndoorMap());
+      return;
+    }
+
+    if (_autoHandoffToIndoorPending && steps.isEmpty) {
+      unawaited(_maybeAutoSwitchToDestinationIndoorMap());
+      return;
+    }
+
     if (_currentLocation != null && _mapController != null) {
       try {
         final currentPos = _currentLocation!;
@@ -1307,7 +1497,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _navModeKey = null;
       _navStepIndex = 0;
       _navigationFollowUser = false;
+      _isOriginIndoorHandoffPhase = false;
+      _pendingOriginIndoorRoom = null;
     });
+    _clearPendingDestinationIndoorHandoff();
     if (_mapController != null && _currentLocation != null) {
       try {
         final cam = CameraPosition(
@@ -1376,7 +1569,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
 
     if (d <= 20) {
-      setState(() => _navStepIndex += 1);
+      final nextIndex = _navStepIndex + 1;
+      final reachedFinalStep = nextIndex >= steps.length - 1;
+      setState(() => _navStepIndex = nextIndex);
+      if (reachedFinalStep) {
+        unawaited(_maybeAutoSwitchToDestinationIndoorMap());
+      }
     }
   }
 
@@ -1413,6 +1611,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeOriginBuildingCode = null;
       _routeDestinationBuildingCode = null;
     });
+    _clearPendingDestinationIndoorHandoff();
   }
 
   String? _formatArrivalTime(int? durationSeconds) {
@@ -1935,8 +2134,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       );
     }
 
-    final defaultColor = const Color(0xFF76263D,).withAlpha((opacity * 255).round());
-    final shuttleColor = const Color(0xFF9C27B0,).withAlpha((opacity * 255).round());
+    final defaultColor = const Color(
+      0xFF76263D,
+    ).withAlpha((opacity * 255).round());
+    final shuttleColor = const Color(
+      0xFF9C27B0,
+    ).withAlpha((opacity * 255).round());
     const highContrastColor = AppUiColors.highContrastRoutePreview;
 
     addPolyline(
@@ -2831,12 +3034,453 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return steps[_navStepIndex];
   }
 
+  bool get _canGoToPreviousNavStep {
+    final key = _navModeKey;
+    if (key == null) return false;
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return false;
+    return _navStepIndex > 0;
+  }
+
+  bool get _canGoToNextNavStep {
+    final key = _navModeKey;
+    if (key == null) return false;
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return false;
+    return _navStepIndex < steps.length - 1;
+  }
+
+  String? get _navProgressLabel {
+    final key = _navModeKey;
+    if (key == null) return null;
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return null;
+    return '${_navStepIndex + 1}/${steps.length}';
+  }
+
+  void _goToPreviousNavStep() {
+    if (!_canGoToPreviousNavStep) {
+      return;
+    }
+    setState(() {
+      _navStepIndex -= 1;
+    });
+  }
+
+  void _goToNextNavStep() {
+    if (!_canGoToNextNavStep) {
+      return;
+    }
+    final key = _navModeKey;
+    if (key == null) {
+      return;
+    }
+    final steps = _routeStepsByMode[key] ?? const [];
+    final nextIndex = _navStepIndex + 1;
+    final reachedFinalStep = steps.isNotEmpty && nextIndex >= steps.length - 1;
+    setState(() {
+      _navStepIndex = nextIndex;
+    });
+    if (reachedFinalStep) {
+      unawaited(_maybeAutoSwitchToDestinationIndoorMap());
+    }
+  }
+
+  /// Switches to indoor navigation for the origin building when the origin
+  /// room is on a non-default floor (e.g., MB S2). The user navigates from
+  /// their origin room to the nearest transition (stair/elevator/escalator)
+  /// on the entry floor, then proceeds outdoors.
+  Future<void> _maybeAutoSwitchToOriginIndoorMap() async {
+    final originRoom = _pendingOriginIndoorRoom;
+    if (originRoom == null) return;
+
+    final building = _findBuildingByCode(originRoom.buildingCode);
+    final floors = _indoorController.floorsForBuilding(originRoom.buildingCode);
+
+    if (!mounted) return;
+    if (building == null || floors.isEmpty) {
+      // Can't show origin building indoor — skip straight to outdoor nav.
+      setState(() {
+        _pendingOriginIndoorRoom = null;
+      });
+      return;
+    }
+
+    final entryFloor = floors.first;
+
+    // Find the exit transition room on the entry floor closest to the origin room.
+    final exitRoomCode = await _resolveEntryRoomForIndoorHandoff(
+      buildingCode: originRoom.buildingCode,
+      entryFloorAssetPath: entryFloor.assetPath,
+      transitionMode: _effectiveIndoorTransitionMode,
+      destinationCenter: originRoom.center,
+    );
+
+    if (!mounted) return;
+    if (exitRoomCode == null || exitRoomCode.trim().isEmpty) {
+      setState(() {
+        _pendingOriginIndoorRoom = null;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Unable to find exit route from origin building. Starting outdoor navigation.',
+            ),
+          ),
+        );
+        // Resume outdoor navigation.
+        setState(() {
+          _isNavigating = true;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _isNavigating = false;
+      _navigationFollowUser = false;
+      _showRoutePreview = false;
+
+      _selectedBuildingPoly = building;
+      _selectedBuildingCenter = geo.polygonCenter(building.points);
+      _anchorOffset = null;
+      _cameraMoving = false;
+      _currentBuildingCode = building.code;
+
+      _indoorFloors = floors;
+      _originRoomController.text = originRoom.roomCode;
+      _destinationRoomController.text = exitRoomCode;
+      _originRoomMarker = null;
+      _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
+
+      _isOriginIndoorHandoffPhase = true;
+      _pendingOriginIndoorRoom = null;
+    });
+
+    // Start on the origin room's floor so the user sees their starting point.
+    await _loadIndoorFloor(originRoom.floorAssetPath);
+
+    if (!mounted) return;
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: originRoom.center,
+          zoom: 19,
+          tilt: _defaultTilt,
+          bearing: _defaultBearing,
+        ),
+      ),
+    );
+
+    final originFloorOption = IndoorFloorConfig.optionForAssetPath(
+      originRoom.buildingCode,
+      originRoom.floorAssetPath,
+    );
+    final needsFloorSwitch =
+        originFloorOption != null &&
+        originFloorOption.assetPath != entryFloor.assetPath;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          needsFloorSwitch
+              ? 'Navigate from ${originRoom.roomCode} to the ${_preferredIndoorTransitionModeLabel() ?? 'exit'} on floor ${entryFloor.label}, then continue outdoors.'
+              : 'Navigate to the building exit, then continue outdoors.',
+        ),
+      ),
+    );
+
+    await _maybeStartIndoorNavigationFromRooms();
+  }
+
+  /// Called when the user finishes the origin-building indoor phase and is
+  /// ready to begin (or bypass) the outdoor leg toward the destination.
+  Future<void> _completeOriginIndoorPhaseAndStartOutdoor() async {
+    if (!_isOriginIndoorHandoffPhase) {
+      return;
+    }
+
+    _indoorNavigationController.stop();
+
+    if (!mounted) return;
+
+    final key = _navModeKey;
+    final steps = key != null ? (_routeStepsByMode[key] ?? const []) : const [];
+
+    setState(() {
+      _isOriginIndoorHandoffPhase = false;
+      _isNavigating = true;
+      _navStepIndex = 0;
+      _navigationFollowUser = true;
+      _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+      // Clear indoor display state.
+      _showIndoor = false;
+      _indoorFloors = const [];
+      _selectedIndoorFloorAsset = null;
+      _indoorPolygons = {};
+      _indoorGeoJson = null;
+      _roomLabelMarkers = {};
+      _amenityMarkers = {};
+      _originRoomMarker = null;
+      _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
+    });
+
+    _applySelectedModeRoute(animateCamera: false);
+
+    // If there is no outdoor leg at all, skip straight to
+    // destination building indoor navigation if a handoff is pending.
+    if (_autoHandoffToIndoorPending && steps.isEmpty) {
+      await _maybeAutoSwitchToDestinationIndoorMap();
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Now navigate outdoors to the destination building.'),
+      ),
+    );
+
+    if (_currentLocation != null && _mapController != null) {
+      try {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: _currentLocation!,
+              zoom: _navZoom,
+              tilt: _navTilt,
+              bearing: 0.0,
+            ),
+          ),
+        );
+      } catch (e) {
+        // ignore camera animation failures
+      }
+    }
+  }
+
+  Future<void> _maybeAutoSwitchToDestinationIndoorMap() async {
+    if (!_autoHandoffToIndoorPending) {
+      return;
+    }
+
+    final destinationRoom = _pendingDestinationIndoorRoom;
+    if (destinationRoom == null) {
+      _clearPendingDestinationIndoorHandoff();
+      return;
+    }
+
+    final building = _findBuildingByCode(destinationRoom.buildingCode);
+    final floors = _indoorController.floorsForBuilding(
+      destinationRoom.buildingCode,
+    );
+
+    if (!mounted) return;
+    if (building == null || floors.isEmpty) {
+      _clearPendingDestinationIndoorHandoff();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Indoor maps are not available for the destination building.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isNavigating = false;
+      _navModeKey = null;
+      _navStepIndex = 0;
+      _navigationFollowUser = false;
+
+      _showRoutePreview = false;
+      _routePolylines = {};
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+      _routeDurations.clear();
+      _routeDistances.clear();
+      _routeArrivalTimes.clear();
+      _routePointsByMode.clear();
+      _routeSegmentsByMode.clear();
+      _routeStepsByMode.clear();
+
+      _selectedBuildingPoly = building;
+      _selectedBuildingCenter = geo.polygonCenter(building.points);
+      _anchorOffset = null;
+      _cameraMoving = false;
+      _currentBuildingCode = building.code;
+
+      _indoorFloors = floors;
+      _originRoomController.clear();
+      _destinationRoomController.text = destinationRoom.roomCode;
+      _originRoomMarker = null;
+      _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
+    });
+
+    final destinationFloorOption = IndoorFloorConfig.optionForAssetPath(
+      destinationRoom.buildingCode,
+      destinationRoom.floorAssetPath,
+    );
+    final entryFloorOption = floors.first;
+    final targetAsset = entryFloorOption.assetPath;
+
+    final entryRoomCode = await _resolveEntryRoomForIndoorHandoff(
+      buildingCode: destinationRoom.buildingCode,
+      entryFloorAssetPath: targetAsset,
+      transitionMode: _effectiveIndoorTransitionMode,
+      destinationCenter: destinationRoom.center,
+    );
+
+    if (entryRoomCode == null || entryRoomCode.trim().isEmpty) {
+      _clearPendingDestinationIndoorHandoff();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to start indoor navigation automatically from the destination building entry floor.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _originRoomController.text = entryRoomCode;
+    });
+
+    await _loadIndoorFloor(targetAsset);
+
+    _clearPendingDestinationIndoorHandoff();
+
+    if (!mounted) return;
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: destinationRoom.center,
+          zoom: 19,
+          tilt: _defaultTilt,
+          bearing: _defaultBearing,
+        ),
+      ),
+    );
+    final destinationFloorLabel =
+        destinationFloorOption?.label ?? destinationRoom.floorLabel;
+    final needsFloorSwitch =
+        destinationFloorLabel.trim().toUpperCase() !=
+        entryFloorOption.label.trim().toUpperCase();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          needsFloorSwitch
+              ? 'Indoor navigation started from floor ${entryFloorOption.label}. Follow the ${_effectiveIndoorTransitionMode == null ? 'selected' : _preferredIndoorTransitionModeLabel() ?? 'selected'} transition to floor $destinationFloorLabel for room ${destinationRoom.roomCode}.'
+              : 'Indoor navigation started on floor ${entryFloorOption.label}. Continue to room ${destinationRoom.roomCode}.',
+        ),
+      ),
+    );
+
+    await _maybeStartIndoorNavigationFromRooms();
+  }
+
+  String? _transitionTypeForMode(IndoorTransitionMode? mode) {
+    return switch (mode) {
+      IndoorTransitionMode.stairs => 'stairs',
+      IndoorTransitionMode.elevator => 'elevator',
+      IndoorTransitionMode.escalator => 'escalator',
+      null => null,
+    };
+  }
+
+  Future<String?> _resolveEntryRoomForIndoorHandoff({
+    required String buildingCode,
+    required String entryFloorAssetPath,
+    required IndoorTransitionMode? transitionMode,
+    required LatLng destinationCenter,
+  }) async {
+    final floorGeoJson = await _indoorRouteService.indoorRepository
+        .loadGeoJsonAsset(entryFloorAssetPath);
+
+    final nodes = _indoorRouteService.sameFloorRouter
+        .buildNodesFromFloorGeoJson(floorGeoJson);
+
+    final roomNodes = nodes
+        .where((node) => node.nodeType == IndoorRoutingNodeType.room)
+        .toList(growable: false);
+    if (roomNodes.isEmpty) {
+      return null;
+    }
+
+    final preferredTransitionType = _transitionTypeForMode(transitionMode);
+    final transitionNodes = nodes
+        .where((node) => node.isTransition)
+        .where(
+          (node) =>
+              preferredTransitionType == null ||
+              node.transitionType == preferredTransitionType,
+        )
+        .toList(growable: false);
+
+    IndoorRoutingNode? anchorTransition;
+    if (transitionNodes.isNotEmpty) {
+      anchorTransition = transitionNodes.reduce((best, candidate) {
+        final bestDistance = Geolocator.distanceBetween(
+          best.center.latitude,
+          best.center.longitude,
+          destinationCenter.latitude,
+          destinationCenter.longitude,
+        );
+        final candidateDistance = Geolocator.distanceBetween(
+          candidate.center.latitude,
+          candidate.center.longitude,
+          destinationCenter.latitude,
+          destinationCenter.longitude,
+        );
+        return candidateDistance < bestDistance ? candidate : best;
+      });
+    }
+
+    final anchorPoint = anchorTransition?.center ?? destinationCenter;
+    final entryRoom = roomNodes.reduce((best, candidate) {
+      final bestDistance = Geolocator.distanceBetween(
+        best.center.latitude,
+        best.center.longitude,
+        anchorPoint.latitude,
+        anchorPoint.longitude,
+      );
+      final candidateDistance = Geolocator.distanceBetween(
+        candidate.center.latitude,
+        candidate.center.longitude,
+        anchorPoint.latitude,
+        anchorPoint.longitude,
+      );
+      return candidateDistance < bestDistance ? candidate : best;
+    });
+
+    final roomCode = entryRoom.roomCode;
+    if (roomCode == null || roomCode.trim().isEmpty) {
+      return null;
+    }
+
+    final exists = await _indoorRouteService.indoorRepository.roomExists(
+      buildingCode,
+      roomCode,
+    );
+    if (!exists) {
+      return null;
+    }
+
+    return roomCode;
+  }
+
   void _switchCampus(Campus newCampus) {
     if (_isIndoorNavigationActive) {
       _indoorNavigationController.stop();
     }
-    LatLng targetLocation;
 
+    LatLng targetLocation;
     switch (newCampus) {
       case Campus.sgw:
         targetLocation = concordiaSGW;
@@ -2987,7 +3631,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                   onPrevious: _goToPreviousIndoorStep,
                   onNext: _goToNextIndoorStep,
                   canGoPrevious: _indoorNavigationController.canGoPrevious,
-                  canGoNext: _indoorNavigationController.canGoNext,
+                  canGoNext:
+                      _indoorNavigationController.canGoNext ||
+                      _isOriginIndoorHandoffPhase,
                   progressLabel:
                       '${_indoorNavigationController.currentStepIndex + 1}/${_indoorNavigationController.steps.length}',
                 ),
@@ -3006,6 +3652,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
                   highContrastMode: _highContrastMode,
                   onStop: _stopNavigation,
                   onShowSteps: _openStepsForSelectedMode,
+                  onPrevious: _goToPreviousNavStep,
+                  onNext: _goToNextNavStep,
+                  canGoPrevious: _canGoToPreviousNavStep,
+                  canGoNext: _canGoToNextNavStep,
+                  progressLabel: _navProgressLabel,
                 ),
               ),
             ),

@@ -20,6 +20,7 @@ import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/google_directions_service.dart';
 import 'package:campus_app/services/indoor_maps/indoor_floor_config.dart';
 import 'package:campus_app/services/indoor_maps/indoor_map_controller.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
 import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/services/location/indoor_navigation_session.dart';
@@ -349,8 +350,10 @@ IndoorNavigationSession _fakeHallIndoorSession() {
 class _FakeIndoorRouteService extends IndoorRouteService {
   final IndoorNavigationSession? session;
   IndoorTransitionMode? lastPreferredTransitionMode;
+  int buildIndoorNavigationSessionCallCount = 0;
 
-  _FakeIndoorRouteService(this.session);
+  _FakeIndoorRouteService(this.session, {IndoorMapRepository? indoorRepository})
+    : super(indoorRepository: indoorRepository);
 
   @override
   Future<IndoorNavigationSession?> buildIndoorNavigationSession({
@@ -359,6 +362,7 @@ class _FakeIndoorRouteService extends IndoorRouteService {
     required String destinationRoomCode,
     IndoorTransitionMode? preferredTransitionMode,
   }) async {
+    buildIndoorNavigationSessionCallCount += 1;
     lastPreferredTransitionMode = preferredTransitionMode;
     return session;
   }
