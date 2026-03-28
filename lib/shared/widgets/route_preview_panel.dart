@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/search_suggestion.dart';
 import '../../features/settings/app_settings.dart';
+import '../../services/location/shuttle_route_service.dart';
 import '../../services/indoor_maps/indoor_map_repository.dart';
 import '../../services/indoors_routing/core/indoor_route_plan_models.dart';
 
@@ -477,9 +478,11 @@ class RouteTravelModeBar extends StatelessWidget {
 
   final List<String> shuttleNextBuses;
 
-  final int? shuttleWalkingMinutes;
-
+  final int? shuttleWalkingToDestinationMinutes;
+  final int? shuttleWalkingFromDestinationMinutes;
   final String? shuttleNearestStop;
+  final int? shuttleTotalTripDuration;
+  final ShuttleRouteData? shuttleRouteData;
 
   final VoidCallback? onViewSchedule;
 
@@ -498,9 +501,12 @@ class RouteTravelModeBar extends StatelessWidget {
     required this.isNavigating,
     this.highContrastMode = false,
     this.shuttleNextBuses = const [],
-    this.shuttleWalkingMinutes,
+    this.shuttleWalkingFromDestinationMinutes,
+    this.shuttleWalkingToDestinationMinutes,
     this.shuttleNearestStop,
+    this.shuttleTotalTripDuration,
     this.onViewSchedule,
+    this.shuttleRouteData,
   });
 
   @override
@@ -808,7 +814,7 @@ class RouteTravelModeBar extends StatelessWidget {
     final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
 
     if (selectedTravelMode == RouteTravelMode.shuttle) {
-      return _buildShuttleDetails();
+      return _buildShuttleDetails(shuttleRouteData);
     }
 
     if (selectedTravelMode == RouteTravelMode.transit) {
@@ -873,88 +879,254 @@ class RouteTravelModeBar extends StatelessWidget {
     );
   }
 
-  Widget _buildShuttleDetails() {
-    final primaryText = highContrastMode ? Colors.black : Colors.white;
-    final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
-    final tertiaryText = highContrastMode ? Colors.black45 : Colors.white60;
+  Widget _buildShuttleDetails(ShuttleRouteData? routeData) {
+    final colors = _ShuttleColors(highContrastMode);
 
     if (isLoadingDurations) {
-      return Text(
-        'Loading shuttle times…',
-        style: TextStyle(color: secondaryText, fontSize: 12),
-      );
+      return _buildLoadingState(colors);
     }
 
-    if (shuttleNextBuses.isEmpty) {
-      return Text(
-        'No shuttle service at this time.',
-        style: TextStyle(color: secondaryText, fontSize: 12),
-      );
+    if (routeData == null) {
+      return _buildNoShuttleRequired(colors);
     }
+
+    final children = <Widget>[];
+    final isNoService = !routeData.isInService;
+
+    _addNoServiceLabel(children, isNoService, colors);
+    _addWalkToShuttle(children, routeData, isNoService, colors);
+    _addWaitTime(children, routeData, isNoService, colors);
+    _addBusList(children, routeData, isNoService, colors);
+    _addWalkFromShuttle(children, routeData, isNoService, colors);
+    _addViewScheduleLink(children, colors);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (shuttleWalkingMinutes != null && shuttleWalkingMinutes! > 1)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                Icon(Icons.directions_walk, color: secondaryText, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  '${shuttleWalkingMinutes}min walk to '
-                  '${shuttleNearestStop ?? 'shuttle stop'}',
-                  style: TextStyle(color: secondaryText, fontSize: 11),
-                ),
-              ],
+      children: children,
+    );
+  }
+
+  Widget _buildLoadingState(_ShuttleColors colors) {
+    return Text(
+      'Loading shuttle times…',
+      style: TextStyle(color: colors.secondary, fontSize: 12),
+    );
+  }
+
+  Widget _buildNoShuttleRequired(_ShuttleColors colors) {
+    return Text(
+      'No shuttle required — walking is faster',
+      style: TextStyle(
+        color: colors.secondary,
+        fontSize: 12,
+        fontStyle: FontStyle.italic,
+      ),
+    );
+  }
+
+  void _addNoServiceLabel(
+    List<Widget> children,
+    bool isNoService,
+    _ShuttleColors colors,
+  ) {
+    if (!isNoService) return;
+
+    children.add(
+      Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          'No service — next buses scheduled are shown below',
+          style: TextStyle(
+            color: colors.secondary,
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addWalkToShuttle(
+    List<Widget> children,
+    ShuttleRouteData route,
+    bool isNoService,
+    _ShuttleColors colors,
+  ) {
+    if (isNoService || (route.walkingToShuttleMinutes ?? 0) < 1) return;
+
+    children.add(
+      _buildDetailRow(
+        icon: Icons.directions_walk,
+        text:
+            '${route.walkingToShuttleMinutes} min walk to ${route.nearestStop}',
+        color: colors.secondary,
+      ),
+    );
+  }
+
+  void _addWaitTime(
+    List<Widget> children,
+    ShuttleRouteData route,
+    bool isNoService,
+    _ShuttleColors colors,
+  ) {
+    if (isNoService || route.buses.isEmpty) return;
+
+    final busWaitMinutes =
+        ShuttleRouteService.extractWaitMinutesFromStatusLabel(
+          route.buses.first.statusLabel,
+        );
+    final actualWait = (busWaitMinutes - (route.walkingToShuttleMinutes ?? 0))
+        .clamp(0, 999);
+
+    children.add(
+      _buildDetailRow(
+        icon: Icons.schedule,
+        text: 'Wait: $actualWait min',
+        color: colors.tertiary,
+      ),
+    );
+  }
+
+  void _addBusList(
+    List<Widget> children,
+    ShuttleRouteData route,
+    bool isNoService,
+    _ShuttleColors colors,
+  ) {
+    if (route.buses.isEmpty) return;
+
+    for (int i = 0; i < route.buses.length; i++) {
+      final bus = route.buses[i];
+      final isNext = i == 0;
+      final displayTime = ShuttleRouteService.extractTimeFromStatusLabel(
+        bus.statusLabel,
+      );
+
+      Color color;
+      if (isNoService) {
+        color = colors.tertiary;
+      } else if (isNext) {
+        color = colors.primary;
+      } else {
+        color = colors.secondary;
+      }
+      double fontSize;
+      if (isNext) {
+        fontSize = 12.0;
+      } else {
+        fontSize = 11.0;
+      }
+      FontWeight fontWeight;
+      if (isNext) {
+        fontWeight = FontWeight.w700;
+      } else {
+        fontWeight = FontWeight.w400;
+      }
+
+      children.add(
+        _buildDetailRow(
+          icon: Icons.directions_bus_filled,
+          text: displayTime,
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+        ),
+      );
+    }
+  }
+
+  void _addWalkFromShuttle(
+    List<Widget> children,
+    ShuttleRouteData route,
+    bool isNoService,
+    _ShuttleColors colors,
+  ) {
+    if (isNoService || (route.walkingFromShuttleMinutes ?? 0) < 1) return;
+
+    children.add(
+      Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Row(
+          children: [
+            Icon(Icons.directions_walk, color: colors.secondary, size: 13),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                '${route.walkingFromShuttleMinutes} min walk from shuttle',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.secondary, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addViewScheduleLink(List<Widget> children, _ShuttleColors colors) {
+    if (onViewSchedule == null) return;
+
+    children.add(
+      Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: GestureDetector(
+          onTap: onViewSchedule,
+          child: Text(
+            'View full schedule →',
+            style: TextStyle(
+              color: colors.tertiary,
+              fontSize: 11,
+              decoration: TextDecoration.underline,
+              decorationColor: colors.tertiary,
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-        ...shuttleNextBuses.asMap().entries.map((entry) {
-          final isNext = entry.key == 0;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 3),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.directions_bus_filled,
-                  size: 13,
-                  color: isNext ? primaryText : tertiaryText,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  entry.value,
-                  style: TextStyle(
-                    color: isNext ? primaryText : secondaryText,
-                    fontSize: isNext ? 12 : 11,
-                    fontWeight: isNext ? FontWeight.w700 : FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-
-        if (onViewSchedule != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: GestureDetector(
-              onTap: onViewSchedule,
-              child: Text(
-                'View full schedule →',
-                style: TextStyle(
-                  color: tertiaryText,
-                  fontSize: 11,
-                  decoration: TextDecoration.underline,
-                  decorationColor: tertiaryText,
-                ),
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String text,
+    required Color color,
+    double fontSize = 11,
+    FontWeight fontWeight = FontWeight.w400,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: fontSize,
+                fontWeight: fontWeight,
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
+}
+
+class _ShuttleColors {
+  final Color primary;
+  final Color secondary;
+  final Color tertiary;
+
+  _ShuttleColors(bool highContrastMode)
+    : primary = highContrastMode ? Colors.black : Colors.white,
+      secondary = highContrastMode ? Colors.black54 : Colors.white70,
+      tertiary = highContrastMode ? Colors.black45 : Colors.white60;
 }
 
 class TransitDetailItem {
