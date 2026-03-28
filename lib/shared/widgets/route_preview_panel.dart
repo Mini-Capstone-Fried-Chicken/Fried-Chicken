@@ -55,6 +55,8 @@ class RoutePreviewPanel extends StatefulWidget {
   final String? currentBuildingCode;
   final String? destinationBuildingCode;
   final Function(String buildingCode)? isConcordiaBuilding;
+  final bool isOriginPoi;
+  final bool isDestinationPoi;
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
   final Function(String buildingCode, String roomCode)? onStartValid;
@@ -92,6 +94,8 @@ class RoutePreviewPanel extends StatefulWidget {
     this.onOriginRoomSubmitted,
     this.indoorRepository,
     this.highContrastMode = false,
+    this.isOriginPoi = false,
+    this.isDestinationPoi = false,
     this.selectedTransitionMode,
     this.onTransitionModeChanged,
     this.wheelchairRoutingDefaultEnabled = false,
@@ -338,8 +342,9 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                           ],
                         ),
                       ),
-                      if (_isOriginConcordiaBuilding ||
-                          _isDestinationConcordiaBuilding)
+                      if ((_isOriginConcordiaBuilding ||
+                              _isDestinationConcordiaBuilding) &&
+                          !(widget.isOriginPoi && widget.isDestinationPoi))
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -352,8 +357,12 @@ class _RoutePreviewPanelState extends State<RoutePreviewPanel> {
                             originRoomController: widget.originRoomController,
                             destinationRoomController:
                                 widget.destinationRoomController,
-                            originEnabled: _isOriginConcordiaBuilding,
-                            destinationEnabled: _isDestinationConcordiaBuilding,
+                            originEnabled:
+                                _isOriginConcordiaBuilding &&
+                                !widget.isOriginPoi,
+                            destinationEnabled:
+                                _isDestinationConcordiaBuilding &&
+                                !widget.isDestinationPoi,
                             onOriginValid: widget.onStartValid,
                             onDestinationValid: widget.onDestinationValid,
                             onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
