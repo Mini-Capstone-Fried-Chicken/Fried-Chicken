@@ -34,7 +34,6 @@ void main() {
             roomNumber: 'H-937',
             onGoToBuilding: () {},
             onGoToRoom: () {},
-            onSave: () {},
             onClose: () {},
           ),
         ),
@@ -44,7 +43,7 @@ void main() {
       expect(find.text('HALL-H-937'), findsOneWidget);
       expect(find.text('Go to Building'), findsOneWidget);
       expect(find.text('Go to Room'), findsOneWidget);
-      expect(find.text('Save'), findsOneWidget);
+      expect(find.text('Save'), findsNothing);
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
@@ -59,7 +58,6 @@ void main() {
             roomNumber: 'H-937',
             onGoToBuilding: () {},
             onGoToRoom: () {},
-            onSave: () {},
             onClose: () {
               closed = true;
             },
@@ -73,10 +71,9 @@ void main() {
       expect(closed, isTrue);
     });
 
-    testWidgets('calls building, room, and save callbacks', (tester) async {
+    testWidgets('calls building and room callbacks', (tester) async {
       var buildingTapped = false;
       var roomTapped = false;
-      var saveTapped = false;
 
       await tester.pumpWidget(
         wrap(
@@ -90,9 +87,6 @@ void main() {
             onGoToRoom: () {
               roomTapped = true;
             },
-            onSave: () {
-              saveTapped = true;
-            },
             onClose: () {},
           ),
         ),
@@ -102,12 +96,9 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Go to Room'));
       await tester.pump();
-      await tester.tap(find.text('Save'));
-      await tester.pump();
 
       expect(buildingTapped, isTrue);
       expect(roomTapped, isTrue);
-      expect(saveTapped, isTrue);
     });
 
     testWidgets(
@@ -121,7 +112,6 @@ void main() {
               roomNumber: '',
               onGoToBuilding: () {},
               onGoToRoom: () {},
-              onSave: () {},
               onClose: () {},
             ),
           ),
@@ -133,9 +123,9 @@ void main() {
             .widgetList<ElevatedButton>(find.byType(ElevatedButton))
             .toList();
 
+        expect(buttons, hasLength(2));
         expect(buttons[0].onPressed, isNull);
         expect(buttons[1].onPressed, isNull);
-        expect(buttons[2].onPressed, isNull);
       },
     );
 
@@ -150,7 +140,6 @@ void main() {
               roomNumber: '',
               onGoToBuilding: () {},
               onGoToRoom: () {},
-              onSave: () {},
               onClose: () {},
             ),
           ),
@@ -162,9 +151,9 @@ void main() {
             .widgetList<ElevatedButton>(find.byType(ElevatedButton))
             .toList();
 
+        expect(buttons, hasLength(2));
         expect(buttons[0].onPressed, isNotNull);
         expect(buttons[1].onPressed, isNull);
-        expect(buttons[2].onPressed, isNotNull);
       },
     );
 
@@ -179,7 +168,6 @@ void main() {
             roomNumber: 'H-937',
             onGoToBuilding: () {},
             onGoToRoom: () {},
-            onSave: () {},
             onClose: () {},
           ),
         ),

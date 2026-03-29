@@ -60,6 +60,7 @@ class CalendarSelectionView extends StatelessWidget {
         ? const Color(0xFF89D9C2)
         : const Color(0xFFE9D8DE);
     final textColor = highContrastMode ? Colors.black : Colors.black87;
+
     return Container(
       key: const Key(successBannerKey),
       width: double.infinity,
@@ -93,6 +94,7 @@ class CalendarSelectionView extends StatelessWidget {
   Widget _buildHeader() {
     final primaryText = highContrastMode ? Colors.white : Colors.black87;
     final secondaryText = highContrastMode ? Colors.white70 : Colors.black54;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -139,15 +141,31 @@ class CalendarSelectionView extends StatelessWidget {
   }
 
   Widget _buildCalendarTile(GoogleCalendarInfo calendar, bool isSelected) {
-    final tileBg = isSelected
-        ? (highContrastMode ? const Color(0xFF89D9C2) : const Color(0xFFE9D8DE))
-        : (highContrastMode ? const Color(0xFF111111) : Colors.grey.shade100);
-    final border = isSelected
-        ? (highContrastMode ? const Color(0xFF89D9C2) : const Color(0xFF7F1D3A))
-        : (highContrastMode ? const Color(0x3389D9C2) : Colors.grey.shade300);
-    final textColor = highContrastMode
-        ? (isSelected ? Colors.black : Colors.white)
-        : Colors.black87;
+    late final Color tileBg;
+    late final Color border;
+    late final Color textColor;
+
+    if (highContrastMode) {
+      if (isSelected) {
+        tileBg = const Color(0xFF89D9C2);
+        border = const Color(0xFF89D9C2);
+        textColor = Colors.black;
+      } else {
+        tileBg = const Color(0xFF111111);
+        border = const Color(0x3389D9C2);
+        textColor = Colors.white;
+      }
+    } else {
+      if (isSelected) {
+        tileBg = const Color(0xFFE9D8DE);
+        border = const Color(0xFF7F1D3A);
+      } else {
+        tileBg = Colors.grey.shade100;
+        border = Colors.grey.shade300;
+      }
+      textColor = Colors.black87;
+    }
+
     final checkColor = highContrastMode
         ? Colors.black
         : const Color(0xFF7F1D3A);
@@ -185,6 +203,7 @@ class CalendarSelectionView extends StatelessWidget {
     final fg = highContrastMode
         ? const Color(0xFF89D9C2)
         : const Color(0xFF7F1D3A);
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -210,6 +229,7 @@ class CalendarSelectionView extends StatelessWidget {
         : const Color(0xFF7F1D3A);
     final fg = highContrastMode ? Colors.black : Colors.white;
     final disabledBg = highContrastMode ? Colors.white24 : Colors.grey.shade300;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(

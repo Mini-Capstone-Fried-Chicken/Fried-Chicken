@@ -6,6 +6,7 @@ import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:campus_app/features/saved/saved_place.dart';
 import 'package:campus_app/features/saved/saved_place_metadata_service.dart';
 import 'package:campus_app/features/saved/saved_places_controller.dart';
+import 'package:campus_app/services/nearby_poi_service.dart';
 
 class BuildingInfoPopup extends StatefulWidget {
   final String title;
@@ -19,6 +20,7 @@ class BuildingInfoPopup extends StatefulWidget {
   final VoidCallback onGetDirections;
   final bool highContrastMode;
   final SavedPlace? savedPlace;
+  final PoiCategory? poiCategory;
 
   const BuildingInfoPopup({
     super.key,
@@ -33,6 +35,7 @@ class BuildingInfoPopup extends StatefulWidget {
     required this.onGetDirections,
     this.highContrastMode = false,
     this.savedPlace,
+    this.poiCategory,
   });
 
   @override
@@ -44,6 +47,18 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
 
   OverlayEntry? _labelEntry;
   Timer? _labelTimer;
+  Widget poiCategoryTopIcon(PoiCategory category) {
+    switch (category) {
+      case PoiCategory.cafe:
+        return _topIcon(icon: Icons.local_cafe, tooltip: 'Coffee');
+      case PoiCategory.restaurant:
+        return _topIcon(icon: Icons.restaurant, tooltip: 'Restaurant');
+      case PoiCategory.pharmacy:
+        return _topIcon(icon: Icons.local_pharmacy, tooltip: 'Pharmacy');
+      case PoiCategory.depanneur:
+        return _topIcon(icon: Icons.storefront, tooltip: 'Dépanneur');
+    }
+  }
 
   TooltipTriggerMode? get _triggerMode {
     final isTouch =
@@ -151,8 +166,8 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     final overlay = Overlay.of(context);
 
     final chipBackground = widget.highContrastMode
-      ? AppUiColors.highContrastPrimary.withValues(alpha: 0.95)
-      : Colors.white.withValues(alpha: 0.92);
+        ? AppUiColors.highContrastPrimary.withValues(alpha: 0.95)
+        : Colors.white.withValues(alpha: 0.92);
     final chipText = widget.highContrastMode ? Colors.black : Colors.black87;
 
     _labelEntry = OverlayEntry(
@@ -273,11 +288,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.highContrastMode
-      ? Colors.black
-      : const Color(0xFF76263D);
+        ? Colors.black
+        : const Color(0xFF76263D);
     final popupBackground = widget.highContrastMode
-      ? AppUiColors.highContrastPrimary
-      : Colors.white;
+        ? AppUiColors.highContrastPrimary
+        : Colors.white;
     final primaryText = Colors.black;
     final secondaryText = Colors.black54;
 
@@ -286,6 +301,11 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     if (widget.accessibility) {
       topIcons.add(_topIcon(icon: Icons.accessible, tooltip: 'Accessible'));
     }
+
+    if (widget.poiCategory != null) {
+      topIcons.add(poiCategoryTopIcon(widget.poiCategory!));
+    }
+
     if (_hasFacility([
       'washroom',
       'washrooms',
@@ -295,12 +315,17 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     ])) {
       topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
     }
-    if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
-      topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
+
+    // facility-based coffee/restaurant icons only for non-POI popups (concordia buildings)
+    if (widget.poiCategory == null) {
+      if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
+        topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
+      }
+      if (_hasFacility(['restaurant', 'restaurants', 'food'])) {
+        topIcons.add(_topIcon(icon: Icons.restaurant, tooltip: 'Restaurants'));
+      }
     }
-    if (_hasFacility(['restaurant', 'restaurants', 'food'])) {
-      topIcons.add(_topIcon(icon: Icons.restaurant, tooltip: 'Restaurants'));
-    }
+
     if (_hasFacility(['zen den', 'zen', 'yoga', 'meditation'])) {
       topIcons.add(_topIcon(icon: Icons.self_improvement, tooltip: 'Zen Den'));
     }
@@ -353,7 +378,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
                             children: topIcons,
                           ),
                         ),
-                  ),
+                ),
                 Tooltip(
                   message: 'Close',
                   triggerMode: _triggerMode,

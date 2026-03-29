@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:campus_app/shared/widgets/route_preview_panel.dart';
+import 'package:campus_app/services/location/shuttle_route_service.dart';
+import 'package:campus_app/services/concordia_shuttle_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() {
   // ---------------------------------------------------------------------------
@@ -31,11 +34,13 @@ void main() {
     });
 
     test('all modes have distinct apiValues', () {
-      final values =
-          RouteTravelMode.values.map((m) => m.apiValue).toList();
+      final values = RouteTravelMode.values.map((m) => m.apiValue).toList();
       final unique = values.toSet();
-      expect(unique.length, equals(values.length),
-          reason: 'Each mode must have a unique apiValue');
+      expect(
+        unique.length,
+        equals(values.length),
+        reason: 'Each mode must have a unique apiValue',
+      );
     });
   });
 
@@ -65,8 +70,11 @@ void main() {
 
     test('all modes have non-empty labels', () {
       for (final mode in RouteTravelMode.values) {
-        expect(mode.label.isNotEmpty, isTrue,
-            reason: '${mode.name} label must not be empty');
+        expect(
+          mode.label.isNotEmpty,
+          isTrue,
+          reason: '${mode.name} label must not be empty',
+        );
       }
     });
 
@@ -84,38 +92,73 @@ void main() {
       List<String> shuttleNextBuses = const [],
       int? shuttleWalkingMinutes,
       String? shuttleNearestStop,
+      ShuttleRouteData? shuttleRouteData,
       VoidCallback? onViewSchedule,
     }) {
       return MaterialApp(
         home: Scaffold(
           body: Center(
-            child: RouteTravelModeBar(
-              selectedTravelMode: selected,
-              onTravelModeSelected: (_) {},
-              modeDurations: const {
-                'driving': '10 min',
-                'walking': '25 min',
-                'bicycling': '15 min',
-                'transit': '20 min',
-                'shuttle': 'In 8 min',
-              },
-              isLoadingDurations: false,
-              onClose: () {},
-              transitDetails: const [],
-              modeDistances: const {},
-              modeArrivalTimes: const {},
-              onShowSteps: () {},
-              onStart: () {},
-              isNavigating: false,
-              shuttleNextBuses: shuttleNextBuses,
-              shuttleWalkingMinutes: shuttleWalkingMinutes,
-              shuttleNearestStop: shuttleNearestStop,
-              onViewSchedule: onViewSchedule,
+            child: SizedBox(
+              width: 400,
+              child: RouteTravelModeBar(
+                selectedTravelMode: selected,
+                onTravelModeSelected: (_) {},
+                modeDurations: const {
+                  'driving': '10 min',
+                  'walking': '25 min',
+                  'bicycling': '15 min',
+                  'transit': '20 min',
+                  'shuttle': '20 min',
+                },
+                isLoadingDurations: false,
+                onClose: () {},
+                transitDetails: const [],
+                modeDistances: const {},
+                modeArrivalTimes: const {},
+                onShowSteps: () {},
+                onStart: () {},
+                isNavigating: false,
+                shuttleNextBuses: shuttleNextBuses,
+                shuttleWalkingToDestinationMinutes: shuttleWalkingMinutes,
+                shuttleNearestStop: shuttleNearestStop,
+                shuttleRouteData: shuttleRouteData,
+                onViewSchedule: onViewSchedule,
+              ),
             ),
           ),
         ),
       );
     }
+
+    late ShuttleRouteData mockShuttleRouteData;
+
+    setUp(() {
+      final now = DateTime.now();
+      mockShuttleRouteData = ShuttleRouteData(
+        nearestStop: 'SGW',
+        stopLatLng: const LatLng(0, 0),
+        walkToShuttlePoints: [],
+        walkFromShuttlePoints: [],
+        shuttleRoutePoints: [],
+        walkingToShuttleMinutes: 2,
+        walkingFromShuttleMinutes: 3,
+        shuttleDurationLabel: '20 min',
+        totalTripDuration: 20,
+        isInService: true,
+        buses: [
+          ShuttleDeparture(
+            time: now.add(Duration(minutes: 10)),
+            fromStop: 'SGW',
+            toStop: 'Loyola',
+          ),
+          ShuttleDeparture(
+            time: now.add(Duration(minutes: 30)),
+            fromStop: 'SGW',
+            toStop: 'Loyola',
+          ),
+        ],
+      );
+    });
 
     testWidgets('renders the Shuttle mode button', (tester) async {
       // Mode buttons show the duration label under the icon, not the mode name.
@@ -136,8 +179,9 @@ void main() {
       expect(find.byIcon(Icons.directions_bus_filled), findsOneWidget);
     });
 
-    testWidgets('tapping Shuttle calls onTravelModeSelected with shuttle',
-        (tester) async {
+    testWidgets('tapping Shuttle calls onTravelModeSelected with shuttle', (
+      tester,
+    ) async {
       RouteTravelMode? selected;
       await tester.pumpWidget(
         MaterialApp(
@@ -168,22 +212,26 @@ void main() {
       expect(selected, equals(RouteTravelMode.shuttle));
     });
 
-    testWidgets('shows "Schedule" button text when shuttle mode is selected',
-        (tester) async {
+    testWidgets('shows "Schedule" button text when shuttle mode is selected', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildBar(selected: RouteTravelMode.shuttle));
       await tester.pump();
       expect(find.text('Schedule'), findsOneWidget);
     });
 
-    testWidgets('shows "Steps" button text when a non-shuttle mode is selected',
-        (tester) async {
-      await tester.pumpWidget(buildBar(selected: RouteTravelMode.driving));
-      await tester.pump();
-      expect(find.text('Steps'), findsOneWidget);
-    });
+    testWidgets(
+      'shows "Steps" button text when a non-shuttle mode is selected',
+      (tester) async {
+        await tester.pumpWidget(buildBar(selected: RouteTravelMode.driving));
+        await tester.pump();
+        expect(find.text('Steps'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Start button is disabled when shuttle mode is active',
-        (tester) async {
+    testWidgets('Start button is disabled when shuttle mode is active', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildBar(selected: RouteTravelMode.shuttle));
       await tester.pump();
 
@@ -193,147 +241,158 @@ void main() {
       );
       expect(startButtons, isNotEmpty);
       final startBtn = startButtons.first;
-      expect(startBtn.onPressed, isNull,
-          reason: 'Start should be disabled for shuttle mode');
+      expect(
+        startBtn.onPressed,
+        isNull,
+        reason: 'Start should be disabled for shuttle mode',
+      );
     });
 
     testWidgets(
-        'Start button is enabled when a regular mode is selected (not navigating)',
-        (tester) async {
-      bool startCalled = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: RouteTravelModeBar(
-                selectedTravelMode: RouteTravelMode.walking,
-                onTravelModeSelected: (_) {},
-                modeDurations: const {'walking': '10 min'},
-                isLoadingDurations: false,
-                onClose: () {},
-                transitDetails: const [],
-                modeDistances: const {},
-                modeArrivalTimes: const {},
-                onShowSteps: () {},
-                onStart: () => startCalled = true,
-                isNavigating: false,
+      'Start button is enabled when a regular mode is selected (not navigating)',
+      (tester) async {
+        bool startCalled = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: RouteTravelModeBar(
+                  selectedTravelMode: RouteTravelMode.walking,
+                  onTravelModeSelected: (_) {},
+                  modeDurations: const {'walking': '10 min'},
+                  isLoadingDurations: false,
+                  onClose: () {},
+                  transitDetails: const [],
+                  modeDistances: const {},
+                  modeArrivalTimes: const {},
+                  onShowSteps: () {},
+                  onStart: () => startCalled = true,
+                  isNavigating: false,
+                ),
               ),
             ),
           ),
+        );
+
+        await tester.tap(find.text('Start'));
+        await tester.pump();
+        expect(startCalled, isTrue);
+      },
+    );
+
+    testWidgets('shows walking time notice when shuttleWalkingMinutes is set', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildBar(
+          selected: RouteTravelMode.shuttle,
+          shuttleRouteData: mockShuttleRouteData,
+          shuttleWalkingMinutes: mockShuttleRouteData.walkingToShuttleMinutes,
+          shuttleNearestStop: 'SGW',
         ),
       );
-
-      await tester.tap(find.text('Start'));
-      await tester.pump();
-      expect(startCalled, isTrue);
-    });
-
-    testWidgets('displays next bus times when shuttle is selected',
-        (tester) async {
-      await tester.pumpWidget(buildBar(
-        selected: RouteTravelMode.shuttle,
-        shuttleNextBuses: ['In 5 min', 'In 35 min', 'In 65 min', 'In 95 min'],
-      ));
       await tester.pump();
 
-      expect(find.text('In 5 min'), findsOneWidget);
-      expect(find.text('In 35 min'), findsOneWidget);
-      expect(find.text('In 65 min'), findsOneWidget);
-      expect(find.text('In 95 min'), findsOneWidget);
+      expect(find.textContaining('2 min walk'), findsOneWidget);
     });
+    testWidgets(
+      'does not show walking time notice when shuttleWalkingMinutes is null',
+      (tester) async {
+        await tester.pumpWidget(
+          buildBar(
+            selected: RouteTravelMode.shuttle,
+            shuttleNextBuses: ['In 10 min'],
+            shuttleWalkingMinutes: null,
+          ),
+        );
+        await tester.pump();
 
-    testWidgets('shows walking time notice when shuttleWalkingMinutes is set',
-        (tester) async {
-      await tester.pumpWidget(buildBar(
-        selected: RouteTravelMode.shuttle,
-        shuttleNextBuses: ['In 10 min'],
-        shuttleWalkingMinutes: 6,
-        shuttleNearestStop: 'SGW',
-      ));
-      await tester.pump();
-
-      expect(find.textContaining('6min walk'), findsOneWidget);
-    });
+        expect(find.textContaining('walk to'), findsNothing);
+      },
+    );
 
     testWidgets(
-        'does not show walking time notice when shuttleWalkingMinutes is null',
-        (tester) async {
-      await tester.pumpWidget(buildBar(
-        selected: RouteTravelMode.shuttle,
-        shuttleNextBuses: ['In 10 min'],
-        shuttleWalkingMinutes: null,
-      ));
-      await tester.pump();
+      'shows "No shuttle service" message when shuttleNextBuses is empty and not loading',
+      (tester) async {
+        await tester.pumpWidget(
+          buildBar(
+            selected: RouteTravelMode.shuttle,
+            shuttleNextBuses: const [],
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.textContaining(
+            RegExp(r'no shuttle required', caseSensitive: false),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
-      expect(find.textContaining('walk to'), findsNothing);
-    });
-
-    testWidgets(
-        'shows "No shuttle service" message when shuttleNextBuses is empty and not loading',
-        (tester) async {
-      await tester.pumpWidget(buildBar(
-        selected: RouteTravelMode.shuttle,
-        shuttleNextBuses: const [],
-      ));
-      await tester.pump();
-
-      expect(find.text('No shuttle service at this time.'), findsOneWidget);
-    });
-
-    testWidgets('onViewSchedule is called when "View full schedule" is tapped',
-        (tester) async {
+    testWidgets('onViewSchedule is called when "Schedule" is tapped', (
+      tester,
+    ) async {
       bool scheduleTapped = false;
 
-      await tester.pumpWidget(buildBar(
-        selected: RouteTravelMode.shuttle,
-        shuttleNextBuses: ['In 5 min'],
-        onViewSchedule: () => scheduleTapped = true,
-      ));
+      await tester.pumpWidget(
+        buildBar(
+          selected: RouteTravelMode.shuttle,
+          shuttleNextBuses: ['In 5 min'],
+          shuttleRouteData: mockShuttleRouteData,
+          onViewSchedule: () => scheduleTapped = true,
+        ),
+      );
       await tester.pump();
 
-      await tester.tap(find.textContaining('View full schedule'));
+      // Look for the button by the text that is actually rendered
+      final scheduleButton = find.widgetWithText(TextButton, 'Schedule');
+      expect(scheduleButton, findsOneWidget);
+
+      await tester.tap(scheduleButton);
       await tester.pump();
 
       expect(scheduleTapped, isTrue);
     });
-
     testWidgets(
-        'Schedule button triggers onViewSchedule when shuttle mode is active',
-        (tester) async {
-      bool scheduleTapped = false;
+      'Schedule button triggers onViewSchedule when shuttle mode is active',
+      (tester) async {
+        bool scheduleTapped = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: RouteTravelModeBar(
-                selectedTravelMode: RouteTravelMode.shuttle,
-                onTravelModeSelected: (_) {},
-                modeDurations: const {'shuttle': 'In 8 min'},
-                isLoadingDurations: false,
-                onClose: () {},
-                transitDetails: const [],
-                modeDistances: const {},
-                modeArrivalTimes: const {},
-                onShowSteps: () {},
-                onStart: () {},
-                isNavigating: false,
-                shuttleNextBuses: const ['In 8 min'],
-                onViewSchedule: () => scheduleTapped = true,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: RouteTravelModeBar(
+                  selectedTravelMode: RouteTravelMode.shuttle,
+                  onTravelModeSelected: (_) {},
+                  modeDurations: const {'shuttle': 'In 8 min'},
+                  isLoadingDurations: false,
+                  onClose: () {},
+                  transitDetails: const [],
+                  modeDistances: const {},
+                  modeArrivalTimes: const {},
+                  onShowSteps: () {},
+                  onStart: () {},
+                  isNavigating: false,
+                  shuttleNextBuses: const ['In 8 min'],
+                  onViewSchedule: () => scheduleTapped = true,
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Schedule'));
-      await tester.pump();
+        await tester.tap(find.text('Schedule'));
+        await tester.pump();
 
-      expect(scheduleTapped, isTrue);
-    });
+        expect(scheduleTapped, isTrue);
+      },
+    );
 
-    testWidgets('shows loading text when isLoadingDurations is true',
-        (tester) async {
+    testWidgets('shows loading text when isLoadingDurations is true', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -360,8 +419,9 @@ void main() {
       expect(find.text('Loading shuttle times…'), findsOneWidget);
     });
 
-    testWidgets('shuttle mode label reads "Shuttle" in the header row',
-        (tester) async {
+    testWidgets('shuttle mode label reads "Shuttle" in the header row', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildBar(selected: RouteTravelMode.shuttle));
       await tester.pump();
 
@@ -370,15 +430,53 @@ void main() {
     });
 
     testWidgets('walking time includes the nearest stop name', (tester) async {
-      await tester.pumpWidget(buildBar(
-        selected: RouteTravelMode.shuttle,
-        shuttleNextBuses: ['In 10 min'],
-        shuttleWalkingMinutes: 5,
-        shuttleNearestStop: 'Loyola',
-      ));
+      await tester.pumpWidget(
+        buildBar(
+          selected: RouteTravelMode.shuttle,
+          shuttleRouteData: mockShuttleRouteData,
+          shuttleNextBuses: ['In 2 min'],
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.textContaining(mockShuttleRouteData.nearestStop),
+        findsWidgets,
+      );
+      expect(
+        find.textContaining(
+          '${mockShuttleRouteData.walkingToShuttleMinutes} min walk',
+        ),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('does not show walking time if shuttle is not in service', (
+      tester,
+    ) async {
+      final outOfServiceData = ShuttleRouteData(
+        nearestStop: 'SGW',
+        stopLatLng: const LatLng(0, 0),
+        walkToShuttlePoints: [],
+        walkFromShuttlePoints: [],
+        shuttleRoutePoints: [],
+        walkingToShuttleMinutes: 2,
+        walkingFromShuttleMinutes: 3,
+        shuttleDurationLabel: 'N/A',
+        totalTripDuration: null,
+        isInService: false,
+        buses: [],
+      );
+
+      await tester.pumpWidget(
+        buildBar(
+          selected: RouteTravelMode.shuttle,
+          shuttleRouteData: outOfServiceData,
+        ),
+      );
       await tester.pump();
 
-      expect(find.textContaining('Loyola'), findsWidgets);
+      expect(find.textContaining('walk to'), findsNothing);
+      expect(find.textContaining('walk from'), findsNothing);
     });
   });
 }

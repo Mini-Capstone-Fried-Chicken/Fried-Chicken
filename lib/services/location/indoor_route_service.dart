@@ -64,6 +64,7 @@ class IndoorRouteService {
     required String buildingCode,
     required String originRoomCode,
     required String destinationRoomCode,
+    IndoorTransitionMode? preferredTransitionMode,
   }) async {
     final originRoom = await indoorRepository.resolveRoom(
       buildingCode,
@@ -78,9 +79,15 @@ class IndoorRouteService {
       return null;
     }
 
+    if (originRoom.floorAssetPath != destinationRoom.floorAssetPath &&
+        preferredTransitionMode == null) {
+      return null;
+    }
+
     final routePlan = multiFloorRouter.buildRoute(
       originRoom: originRoom,
       destinationRoom: destinationRoom,
+      preferredTransitionMode: preferredTransitionMode,
     );
     if (routePlan == null) {
       return null;

@@ -6,7 +6,6 @@ const LatLng shuttleStopSGW = LatLng(45.497194, -73.578452);
 /// Loyola shuttle stop — main entrance of the Loyola campus
 const LatLng shuttleStopLoyola = LatLng(45.458052, -73.639134);
 
-
 class ShuttleDeparture {
   final DateTime time;
   final String fromStop; // 'SGW' or 'Loyola'
@@ -30,8 +29,15 @@ class ShuttleDeparture {
     if (mins <= 0) return 'Departing now';
     if (mins == 1) return 'In 1 min';
     if (mins < 60) return 'In $mins min';
-    return formattedTime;
+
+    // absolute time for later departures
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
   }
+
+  String get departureTimeDisplay => formattedTime;
 }
 
 class ConcordiaShuttleService {
@@ -61,7 +67,6 @@ class ConcordiaShuttleService {
   static LatLng stopLocation(String stop) =>
       stop == 'SGW' ? shuttleStopSGW : shuttleStopLoyola;
 
-
   /// Appends departures for a single [day] into [departures], stopping once
   /// [count] is reached.  Only candidates at or after [earliestBoard] are added.
   static void _collectDeparturesForDay({
@@ -83,12 +88,14 @@ class ConcordiaShuttleService {
 
     while (!candidate.isAfter(endOfService) && departures.length < count) {
       if (!candidate.isBefore(earliestBoard)) {
-        departures.add(ShuttleDeparture(
-          time: candidate,
-          fromStop: fromStop,
-          toStop: fromStop == 'SGW' ? 'Loyola' : 'SGW',
-          walkingTime: walkingDuration,
-        ));
+        departures.add(
+          ShuttleDeparture(
+            time: candidate,
+            fromStop: fromStop,
+            toStop: fromStop == 'SGW' ? 'Loyola' : 'SGW',
+            walkingTime: walkingDuration,
+          ),
+        );
       }
       candidate = candidate.add(Duration(minutes: intervalMin));
     }
@@ -103,7 +110,11 @@ class ConcordiaShuttleService {
     final departures = <ShuttleDeparture>[];
     final earliestBoard = now.add(walkingDuration);
 
-    for (var dayOffset = 0; dayOffset <= 1 && departures.length < count; dayOffset++) {
+    for (
+      var dayOffset = 0;
+      dayOffset <= 1 && departures.length < count;
+      dayOffset++
+    ) {
       _collectDeparturesForDay(
         departures: departures,
         day: now.add(Duration(days: dayOffset)),

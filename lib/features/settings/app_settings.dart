@@ -10,6 +10,7 @@ class AppSettingsState {
   static const String defaultCampusLoyola = 'Loyola';
 
   final bool accessibilityModeEnabled;
+  final bool wheelchairRoutingDefaultEnabled;
   final bool highContrastModeEnabled;
   final bool largeTextModeEnabled;
   final bool calendarAccessEnabled;
@@ -17,6 +18,7 @@ class AppSettingsState {
 
   const AppSettingsState({
     this.accessibilityModeEnabled = false,
+    this.wheelchairRoutingDefaultEnabled = false,
     this.highContrastModeEnabled = false,
     this.largeTextModeEnabled = false,
     this.calendarAccessEnabled = true,
@@ -25,6 +27,7 @@ class AppSettingsState {
 
   AppSettingsState copyWith({
     bool? accessibilityModeEnabled,
+    bool? wheelchairRoutingDefaultEnabled,
     bool? highContrastModeEnabled,
     bool? largeTextModeEnabled,
     bool? calendarAccessEnabled,
@@ -33,6 +36,9 @@ class AppSettingsState {
     return AppSettingsState(
       accessibilityModeEnabled:
           accessibilityModeEnabled ?? this.accessibilityModeEnabled,
+      wheelchairRoutingDefaultEnabled:
+          wheelchairRoutingDefaultEnabled ??
+          this.wheelchairRoutingDefaultEnabled,
       highContrastModeEnabled:
           highContrastModeEnabled ?? this.highContrastModeEnabled,
       largeTextModeEnabled: largeTextModeEnabled ?? this.largeTextModeEnabled,
@@ -47,6 +53,8 @@ class AppSettingsController {
   static const String _anonymousScope = 'anonymous';
   static const String _accessibilityModeEnabledKey =
       'settings_accessibility_mode_enabled';
+  static const String _wheelchairRoutingDefaultEnabledKey =
+      'settings_wheelchair_routing_default_enabled';
   static const String _highContrastModeEnabledKey =
       'settings_high_contrast_mode_enabled';
   static const String _largeTextModeEnabledKey =
@@ -55,10 +63,12 @@ class AppSettingsController {
       'settings_calendar_access_enabled';
   static const String _defaultCampusKey = 'settings_default_campus';
 
-  static final ValueNotifier<AppSettingsState> notifier =
-      ValueNotifier(const AppSettingsState());
+  static final ValueNotifier<AppSettingsState> notifier = ValueNotifier(
+    const AppSettingsState(),
+  );
 
   static bool _initialized = false;
+  static int _persistGeneration = 0;
   static String _activeScope = _anonymousScope;
   static String? Function() _userIdResolver = _defaultUserIdResolver;
 
@@ -100,6 +110,12 @@ class AppSettingsController {
           scope,
           fallback: false,
         ),
+        wheelchairRoutingDefaultEnabled: _getScopedBool(
+          prefs,
+          _wheelchairRoutingDefaultEnabledKey,
+          scope,
+          fallback: false,
+        ),
         highContrastModeEnabled: _getScopedBool(
           prefs,
           _highContrastModeEnabledKey,
@@ -134,17 +150,28 @@ class AppSettingsController {
 
   static void _updateState(AppSettingsState newState) {
     notifier.value = newState;
-    unawaited(_persist(newState));
+    final generation = ++_persistGeneration;
+    unawaited(_persist(newState, generation));
   }
 
-  static Future<void> _persist(AppSettingsState newState) async {
+  static Future<void> _persist(
+    AppSettingsState newState,
+    int generation,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (generation != _persistGeneration) {
+        return;
+      }
       final scope = _scope();
 
       await prefs.setBool(
         _scopedKey(_accessibilityModeEnabledKey, scope: scope),
         newState.accessibilityModeEnabled,
+      );
+      await prefs.setBool(
+        _scopedKey(_wheelchairRoutingDefaultEnabledKey, scope: scope),
+        newState.wheelchairRoutingDefaultEnabled,
       );
       await prefs.setBool(
         _scopedKey(_highContrastModeEnabledKey, scope: scope),
@@ -218,11 +245,25 @@ class AppSettingsController {
   }
 
   static void setAccessibilityMode(bool enabled) {
-    _updateState(state.copyWith(
-      accessibilityModeEnabled: enabled,
-      highContrastModeEnabled: enabled ? state.highContrastModeEnabled : false,
-      largeTextModeEnabled: enabled ? state.largeTextModeEnabled : false,
-    ));
+    _updateState(
+      state.copyWith(
+        accessibilityModeEnabled: enabled,
+        wheelchairRoutingDefaultEnabled: enabled
+            ? state.wheelchairRoutingDefaultEnabled
+            : false,
+        highContrastModeEnabled: enabled
+            ? state.highContrastModeEnabled
+            : false,
+        largeTextModeEnabled: enabled ? state.largeTextModeEnabled : false,
+      ),
+    );
+  }
+
+  static void setWheelchairRoutingDefault(bool enabled) {
+    if (!state.accessibilityModeEnabled && enabled) {
+      return;
+    }
+    _updateState(state.copyWith(wheelchairRoutingDefaultEnabled: enabled));
   }
 
   static void setHighContrastMode(bool enabled) {

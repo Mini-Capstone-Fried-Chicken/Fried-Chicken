@@ -1,13 +1,62 @@
 import 'package:campus_app/features/calendar/data/models/calendar_connection_state.dart';
 import 'package:campus_app/features/calendar/data/models/google_calendar_event.dart';
 import 'package:campus_app/features/calendar/data/models/google_calendar_info.dart';
+import 'package:campus_app/features/calendar/data/repositories/google_calendar_repository.dart';
+import 'package:campus_app/features/calendar/services/google_calendar_api_service.dart';
+import 'package:campus_app/features/calendar/services/google_calendar_auth_service.dart';
 import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import 'package:campus_app/features/calendar/services/google_calendar_session.dart';
 import 'package:campus_app/features/calendar/ui/google_calendar_setup_screen.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _AdapterFakeSignInGateway implements GoogleSignInGateway {
+  @override
+  Future<void> initialize({String? clientId, String? serverClientId}) async {}
+
+  @override
+  Future<GoogleSignedInUserGateway?> authenticate({
+    required List<String> scopeHint,
+  }) async {
+    return null;
+  }
+
+  @override
+  Future<GoogleSignedInUserGateway?> attemptLightweightAuthentication() async {
+    return null;
+  }
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> disconnect() async {}
+}
+
+class _AdapterFakeAuthService extends GoogleCalendarAuthService {
+  _AdapterFakeAuthService() : super(signInGateway: _AdapterFakeSignInGateway());
+
+  bool connectResult = true;
+  bool restoreResult = false;
+
+  @override
+  Future<void> initialize({String? clientId, String? serverClientId}) async {}
+
+  @override
+  Future<bool> signIn() async => connectResult;
+
+  @override
+  Future<bool> restorePreviousSignIn() async => restoreResult;
+
+  @override
+  Future<AuthClient?> getAuthenticatedClient() async => null;
+
+  @override
+  Future<void> disconnect() async {}
+}
 
 class FakeCalendarRepository implements CalendarRepositoryContract {
   @override
@@ -534,6 +583,8 @@ void main() {
           findsOneWidget,
         );
         expect(find.byIcon(Icons.calendar_month_outlined), findsOneWidget);
+        expect(repo.restoreCalls, 0);
+        expect(session.restoreCalls, 0);
       },
     );
 
@@ -588,6 +639,105 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Please log in first'), findsOneWidget);
+    });
+
+    testWidgets(
+      'settings changes refresh state only when calendar access value changes',
+      (tester) async {
+        repo.restoreResult = false;
+
+        await tester.pumpWidget(
+          wrap(
+            CalendarScreen(
+              isLoggedIn: true,
+              repository: repo,
+              session: session,
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        expect(repo.restoreCalls, 1);
+
+        AppSettingsController.setCalendarAccess(true);
+        await tester.pumpAndSettle();
+        expect(repo.restoreCalls, 1);
+
+        AppSettingsController.setCalendarAccess(false);
+        await tester.pumpAndSettle();
+        expect(find.text('Calendar access is disabled'), findsOneWidget);
+
+        AppSettingsController.setCalendarAccess(true);
+        await tester.pumpAndSettle();
+        expect(repo.restoreCalls, 2);
+        expect(find.text('Connect to Google Calendar'), findsNWidgets(2));
+      },
+    );
+
+    test('default adapters forward repository and session calls', () async {
+      SharedPreferences.setMockInitialValues({});
+      await GoogleCalendarSession.instance.clear();
+
+      final authService = _AdapterFakeAuthService();
+      final repository = GoogleCalendarRepository(
+        authService: authService,
+        apiService: GoogleCalendarApiService(),
+      );
+      final repositoryAdapter = DefaultCalendarRepositoryAdapter(repository);
+
+      expect(repositoryAdapter.cachedCalendars, isEmpty);
+      expect(repositoryAdapter.cachedEvents, isEmpty);
+      expect(await repositoryAdapter.connect(), isTrue);
+      expect(await repositoryAdapter.getCalendars(), isEmpty);
+      expect(
+        await repositoryAdapter.getUpcomingEventsForCalendars(const []),
+        isEmpty,
+      );
+      repositoryAdapter.updateSelectedCalendars(['cal1']);
+      repositoryAdapter.goToSelection();
+      expect(await repositoryAdapter.restoreConnection(), isFalse);
+
+      final sessionAdapter = DefaultCalendarSessionAdapter(
+        GoogleCalendarSession.instance,
+      );
+      final sampleCalendar = const GoogleCalendarInfo(
+        id: 'cal1',
+        name: 'SOEN 341',
+        isPrimary: false,
+      );
+      final sampleEvent = GoogleCalendarEvent(
+        id: 'e1',
+        title: 'Lecture',
+        start: DateTime(2026, 3, 12, 10),
+        end: DateTime(2026, 3, 12, 11),
+        location: 'H-937',
+        calendarId: 'cal1',
+        calendarName: 'SOEN 341',
+        color: Colors.red,
+      );
+
+      sessionAdapter.isConnected = true;
+      sessionAdapter.step = CalendarConnectionStep.schedule;
+      sessionAdapter.calendars = [sampleCalendar];
+      sessionAdapter.selectedCalendarIds = {'cal1'};
+      sessionAdapter.events = [sampleEvent];
+
+      expect(sessionAdapter.isConnected, isTrue);
+      expect(sessionAdapter.step, CalendarConnectionStep.schedule);
+      expect(sessionAdapter.calendars, hasLength(1));
+      expect(sessionAdapter.selectedCalendarIds, {'cal1'});
+      expect(sessionAdapter.events, hasLength(1));
+
+      await sessionAdapter.persist();
+
+      sessionAdapter.isConnected = false;
+      sessionAdapter.step = CalendarConnectionStep.connect;
+      sessionAdapter.selectedCalendarIds = {};
+
+      await sessionAdapter.restore();
+      expect(sessionAdapter.isConnected, isTrue);
+      expect(sessionAdapter.step, CalendarConnectionStep.schedule);
+      expect(sessionAdapter.selectedCalendarIds, {'cal1'});
     });
   });
 }

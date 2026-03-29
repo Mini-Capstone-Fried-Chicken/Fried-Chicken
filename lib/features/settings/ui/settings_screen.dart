@@ -1,9 +1,9 @@
 import 'package:campus_app/features/auth/ui/login_page.dart';
+import 'package:campus_app/features/calendar/data/repositories/google_calendar_repository.dart';
 import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:campus_app/shared/widgets/app_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:campus_app/features/calendar/data/repositories/google_calendar_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool isLoggedIn;
@@ -28,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     setState(() {
       _accessibilityModeEnabled = state.accessibilityModeEnabled;
+      _wheelchairRoutingDefault = state.wheelchairRoutingDefaultEnabled;
       _highContrastMode = state.highContrastModeEnabled;
       _largeTextMode = state.largeTextModeEnabled;
       _calendarAccessEnabled = state.calendarAccessEnabled;
@@ -118,14 +119,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
+                    const Center(
                       child: SizedBox(
                         width: 140,
                         height: 140,
-                        child: const FittedBox(
-                          fit: BoxFit.contain,
-                          child: AppLogo(),
-                        ),
+                        child: FittedBox(fit: BoxFit.contain, child: AppLogo()),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -305,6 +303,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     setState(() {
                                       _wheelchairRoutingDefault = value;
                                     });
+                                    AppSettingsController.setWheelchairRoutingDefault(
+                                      value,
+                                    );
                                   },
                                 ),
                                 SwitchListTile(

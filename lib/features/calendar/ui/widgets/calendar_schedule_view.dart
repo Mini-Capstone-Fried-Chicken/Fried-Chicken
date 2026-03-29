@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'dart:ui';
 
+import '../../../saved/saved_directions_controller.dart';
 import '../../data/models/google_calendar_event.dart';
 import '../../services/calendar_building_resolver.dart';
 import '../../services/calendar_today_highlight_helper.dart';
@@ -56,6 +57,22 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final secondaryText = isHighContrast
         ? const Color(0xFF89D9C2)
         : const Color(0xFF8B1E3F);
+<<<<<<< HEAD
+=======
+    final emptyStateTextColor = isHighContrast
+        ? Colors.white70
+        : Colors.black54;
+
+    final calendarBackgroundColor = isHighContrast
+        ? const Color(0xFF0F0F0F)
+        : Colors.white;
+
+    final calendarCellBorderColor = isHighContrast
+        ? const Color(0x3389D9C2)
+        : const Color(0x1A000000);
+
+    final timeTextColor = isHighContrast ? Colors.white : Colors.black54;
+>>>>>>> main
 
     final dataSource = GoogleCalendarDataSource(widget.events);
 
@@ -65,6 +82,24 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     } else {
       initialDate = DateTime.now();
     }
+
+    final calendarTodayHighlightColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+
+    final calendarSelectionBorderColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+
+    final calendarHeaderBackgroundColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : null;
+
+    final calendarHeaderTextColor = isHighContrast ? Colors.black : primaryText;
+
+    final viewHeaderDateTextColor = isHighContrast
+        ? Colors.black
+        : Colors.black87;
 
     return Column(
       children: [
@@ -130,58 +165,39 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
               ? Center(
                   child: Text(
                     'No events found in this calendar.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isHighContrast ? Colors.white70 : Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 15, color: emptyStateTextColor),
                   ),
                 )
               : SfCalendar(
                   key: ValueKey(_calendarView),
                   view: _calendarView,
                   dataSource: dataSource,
-                  backgroundColor: isHighContrast
-                      ? const Color(0xFF0F0F0F)
-                      : Colors.white,
-                  cellBorderColor: isHighContrast
-                      ? const Color(0x3389D9C2)
-                      : const Color(0x1A000000),
+                  backgroundColor: calendarBackgroundColor,
+                  cellBorderColor: calendarCellBorderColor,
                   initialDisplayDate: initialDate,
                   firstDayOfWeek: 1,
-                  todayHighlightColor: isHighContrast
-                      ? const Color(0xFF89D9C2)
-                      : const Color(0xFF8B1E3F),
+                  todayHighlightColor: calendarTodayHighlightColor,
                   specialRegions: buildTodayHighlightRegion(_calendarView),
                   selectionDecoration: BoxDecoration(
                     border: Border.all(
-                      color: isHighContrast
-                          ? const Color(0xFF89D9C2)
-                          : const Color(0xFF8B1E3F),
+                      color: calendarSelectionBorderColor,
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   headerStyle: CalendarHeaderStyle(
-                    backgroundColor: isHighContrast
-                        ? const Color(0xFF89D9C2)
-                        : null,
+                    backgroundColor: calendarHeaderBackgroundColor,
                     textAlign: TextAlign.center,
                     textStyle: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isHighContrast ? Colors.black : primaryText,
+                      color: calendarHeaderTextColor,
                     ),
                   ),
                   viewHeaderStyle: ViewHeaderStyle(
-                    backgroundColor: isHighContrast
-                        ? const Color(0xFF89D9C2)
-                        : Colors.white,
-                    dayTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.black54 : Colors.black54,
-                    ),
-                    dateTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.black : Colors.black87,
-                    ),
+                    backgroundColor: calendarBackgroundColor,
+                    dayTextStyle: const TextStyle(color: Colors.black54),
+                    dateTextStyle: TextStyle(color: viewHeaderDateTextColor),
                   ),
                   monthViewSettings: const MonthViewSettings(
                     appointmentDisplayMode:
@@ -193,10 +209,10 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                     endHour: 22,
                     timeIntervalHeight: 60,
                     timeTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.white : Colors.black54,
+                      color: timeTextColor,
                       fontSize: 12,
                     ),
-                    minimumAppointmentDuration: Duration(minutes: 45),
+                    minimumAppointmentDuration: const Duration(minutes: 45),
                   ),
                   onTap: handleCalendarTap,
                 ),
@@ -242,15 +258,18 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
               },
               onGoToBuilding: () {
                 Navigator.of(context).pop();
+                SavedDirectionsController.requestDirectionsToBuildingCode(
+                  buildingCode,
+                );
                 widget.onGoToBuilding?.call(event, buildingCode);
               },
               onGoToRoom: () {
                 Navigator.of(context).pop();
+                SavedDirectionsController.requestDirectionsToBuildingRoom(
+                  buildingCode: buildingCode,
+                  roomCode: roomNumber,
+                );
                 widget.onGoToRoom?.call(event, buildingCode, roomNumber);
-              },
-              onSave: () {
-                Navigator.of(context).pop();
-                widget.onSave?.call(event, buildingCode);
               },
             ),
           ),

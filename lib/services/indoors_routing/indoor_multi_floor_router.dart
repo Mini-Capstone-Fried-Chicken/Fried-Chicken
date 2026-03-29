@@ -31,6 +31,7 @@ class IndoorMultiFloorRouter {
   IndoorRoutePlan? buildRoute({
     required IndoorResolvedRoom originRoom,
     required IndoorResolvedRoom destinationRoom,
+    IndoorTransitionMode? preferredTransitionMode,
   }) {
     if (originRoom.floorAssetPath == destinationRoom.floorAssetPath) {
       return _buildSameFloorRoute(
@@ -42,6 +43,7 @@ class IndoorMultiFloorRouter {
     return _buildDifferentFloorRoute(
       originRoom: originRoom,
       destinationRoom: destinationRoom,
+      preferredTransitionMode: preferredTransitionMode,
     );
   }
 
@@ -80,6 +82,7 @@ class IndoorMultiFloorRouter {
   IndoorRoutePlan? _buildDifferentFloorRoute({
     required IndoorResolvedRoom originRoom,
     required IndoorResolvedRoom destinationRoom,
+    IndoorTransitionMode? preferredTransitionMode,
   }) {
     final originNodes = sameFloorRouter.buildNodesFromFloorGeoJson(
       originRoom.floorGeoJson,
@@ -102,51 +105,29 @@ class IndoorMultiFloorRouter {
       return null;
     }
 
-    final transitionCandidates = transitionMatcher.compatiblePairs(
-      originTransitions: originNodes
-          .where((node) => node.isTransition)
-          .toList(),
-      destinationTransitions: destinationNodes
-          .where((node) => node.isTransition)
-          .toList(),
+    final transitionCandidates = _compatibleTransitionCandidates(
+      originNodes: originNodes,
+      destinationNodes: destinationNodes,
+      preferredTransitionMode: preferredTransitionMode,
     );
 
     _ScoredRouteCandidate? bestCandidate;
 
     for (final candidate in transitionCandidates) {
-      final originWalkPath = sameFloorRouter.findShortestPathBetweenNodeIds(
-        nodes: originNodes,
-        startNodeId: originRoomNode.id,
-        endNodeId: candidate.originNodeId,
-        allowedRoomIds: {originRoomNode.id},
+      final scoredCandidate = _buildScoredRouteCandidate(
+        candidate: candidate,
+        originNodes: originNodes,
+        destinationNodes: destinationNodes,
+        originRoomNode: originRoomNode,
+        destinationRoomNode: destinationRoomNode,
       );
-      if (originWalkPath == null || originWalkPath.length < 2) {
+      if (scoredCandidate == null) {
         continue;
       }
 
-      final destinationWalkPath = sameFloorRouter
-          .findShortestPathBetweenNodeIds(
-            nodes: destinationNodes,
-            startNodeId: candidate.destinationNodeId,
-            endNodeId: destinationRoomNode.id,
-            allowedRoomIds: {destinationRoomNode.id},
-          );
-      if (destinationWalkPath == null || destinationWalkPath.length < 2) {
-        continue;
-      }
-
-      final score =
-          geometry.polylineLengthMeters(originWalkPath) +
-          geometry.polylineLengthMeters(destinationWalkPath) +
-          candidate.alignmentDistanceMeters;
-
-      if (bestCandidate == null || score < bestCandidate.score) {
-        bestCandidate = _ScoredRouteCandidate(
-          score: score,
-          transitionCandidate: candidate,
-          originWalkPath: originWalkPath,
-          destinationWalkPath: destinationWalkPath,
-        );
+      if (bestCandidate == null ||
+          scoredCandidate.score < bestCandidate.score) {
+        bestCandidate = scoredCandidate;
       }
     }
 
@@ -211,6 +192,69 @@ class IndoorMultiFloorRouter {
       totalDistanceMeters:
           geometry.polylineLengthMeters(originWalkPath) +
           geometry.polylineLengthMeters(destinationWalkPath),
+    );
+  }
+
+  List<IndoorTransitionCandidate> _compatibleTransitionCandidates({
+    required List<IndoorRoutingNode> originNodes,
+    required List<IndoorRoutingNode> destinationNodes,
+    required IndoorTransitionMode? preferredTransitionMode,
+  }) {
+    var transitionCandidates = transitionMatcher.compatiblePairs(
+      originTransitions: originNodes
+          .where((node) => node.isTransition)
+          .toList(),
+      destinationTransitions: destinationNodes
+          .where((node) => node.isTransition)
+          .toList(),
+    );
+
+    if (preferredTransitionMode != null) {
+      transitionCandidates = transitionCandidates
+          .where((candidate) => candidate.mode == preferredTransitionMode)
+          .toList();
+    }
+
+    return transitionCandidates;
+  }
+
+  _ScoredRouteCandidate? _buildScoredRouteCandidate({
+    required IndoorTransitionCandidate candidate,
+    required List<IndoorRoutingNode> originNodes,
+    required List<IndoorRoutingNode> destinationNodes,
+    required IndoorRoutingNode originRoomNode,
+    required IndoorRoutingNode destinationRoomNode,
+  }) {
+    final originWalkPath = sameFloorRouter.findShortestPathBetweenNodeIds(
+      nodes: originNodes,
+      startNodeId: originRoomNode.id,
+      endNodeId: candidate.originNodeId,
+      allowedRoomIds: {originRoomNode.id},
+    );
+    if (originWalkPath == null || originWalkPath.length < 2) {
+      return null;
+    }
+
+    final destinationWalkPath = sameFloorRouter.findShortestPathBetweenNodeIds(
+      nodes: destinationNodes,
+      startNodeId: candidate.destinationNodeId,
+      endNodeId: destinationRoomNode.id,
+      allowedRoomIds: {destinationRoomNode.id},
+    );
+    if (destinationWalkPath == null || destinationWalkPath.length < 2) {
+      return null;
+    }
+
+    final score =
+        geometry.polylineLengthMeters(originWalkPath) +
+        geometry.polylineLengthMeters(destinationWalkPath) +
+        candidate.alignmentDistanceMeters;
+
+    return _ScoredRouteCandidate(
+      score: score,
+      transitionCandidate: candidate,
+      originWalkPath: originWalkPath,
+      destinationWalkPath: destinationWalkPath,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:campus_app/data/building_names.dart';
 import 'package:campus_app/data/search_suggestion.dart';
+import 'package:campus_app/shared/widgets/rooms_field_section.dart';
 import 'package:campus_app/shared/widgets/route_preview_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -505,227 +506,233 @@ void main() {
       expect(find.text('Destination 2'), findsOneWidget);
     });
 
-    testWidgets('didUpdateWidget updates origin controller when originText changes', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: 'Origin A',
-              destinationText: 'Destination A',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+    testWidgets(
+      'didUpdateWidget updates origin controller when originText changes',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Origin A',
+                destinationText: 'Destination A',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: 'Origin B',
-              destinationText: 'Destination A',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Origin B',
+                destinationText: 'Destination A',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      final startField = tester.widget<TextField>(find.byKey(const Key('start_field')));
-      expect(startField.controller?.text, 'Origin B');
-    });
+        final startField = tester.widget<TextField>(
+          find.byKey(const Key('start_field')),
+        );
+        expect(startField.controller?.text, 'Origin B');
+      },
+    );
 
-    testWidgets('didUpdateWidget updates destination controller when destinationText changes', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: 'Origin A',
-              destinationText: 'Destination A',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+    testWidgets(
+      'didUpdateWidget updates destination controller when destinationText changes',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Origin A',
+                destinationText: 'Destination A',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: 'Origin A',
-              destinationText: 'Destination B',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Origin A',
+                destinationText: 'Destination B',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      final destinationField = tester.widget<TextField>(
-        find.byKey(const Key('destination_field')),
-      );
-      expect(destinationField.controller?.text, 'Destination B');
-    });
+        final destinationField = tester.widget<TextField>(
+          find.byKey(const Key('destination_field')),
+        );
+        expect(destinationField.controller?.text, 'Destination B');
+      },
+    );
 
-    testWidgets('didUpdateWidget updates origin suggestions visibility when list changes', (
-      WidgetTester tester,
-    ) async {
-      final updatedOriginSuggestions = [
-        SearchSuggestion.fromConcordiaBuilding(concordiaBuildingNames[0]),
-      ];
+    testWidgets(
+      'didUpdateWidget updates origin suggestions visibility when list changes',
+      (WidgetTester tester) async {
+        final updatedOriginSuggestions = [
+          SearchSuggestion.fromConcordiaBuilding(concordiaBuildingNames[0]),
+        ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.byKey(const Key('start_field')));
-      await tester.pumpAndSettle();
-      expect(find.text(updatedOriginSuggestions.first.name), findsNothing);
+        await tester.tap(find.byKey(const Key('start_field')));
+        await tester.pumpAndSettle();
+        expect(find.text(updatedOriginSuggestions.first.name), findsNothing);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: updatedOriginSuggestions,
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: updatedOriginSuggestions,
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
-      expect(find.text(updatedOriginSuggestions.first.name), findsOneWidget);
-    });
+        await tester.pumpAndSettle();
+        expect(find.text(updatedOriginSuggestions.first.name), findsOneWidget);
+      },
+    );
 
-    testWidgets('didUpdateWidget updates destination suggestions visibility when list changes', (
-      WidgetTester tester,
-    ) async {
-      final updatedDestinationSuggestions = [
-        SearchSuggestion.fromGooglePlace(
-          name: 'Updated Place',
-          subtitle: 'Updated Address',
-          placeId: 'updated_place_id',
-        ),
-      ];
+    testWidgets(
+      'didUpdateWidget updates destination suggestions visibility when list changes',
+      (WidgetTester tester) async {
+        final updatedDestinationSuggestions = [
+          SearchSuggestion.fromGooglePlace(
+            name: 'Updated Place',
+            subtitle: 'Updated Address',
+            placeId: 'updated_place_id',
+          ),
+        ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: const [],
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.byKey(const Key('destination_field')));
-      await tester.pumpAndSettle();
-      expect(find.text('Updated Place'), findsNothing);
+        await tester.tap(find.byKey(const Key('destination_field')));
+        await tester.pumpAndSettle();
+        expect(find.text('Updated Place'), findsNothing);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RoutePreviewPanel(
-              originText: '',
-              destinationText: '',
-              onClose: () {},
-              onSwitch: () {},
-              onOriginChanged: (_) {},
-              onDestinationChanged: (_) {},
-              onOriginSelected: (_) {},
-              onDestinationSelected: (_) {},
-              originSuggestions: const [],
-              destinationSuggestions: updatedDestinationSuggestions,
-              originRoomController: originRoomController,
-              destinationRoomController: destinationRoomController,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: '',
+                destinationText: '',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: updatedDestinationSuggestions,
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
-      expect(find.text('Updated Place'), findsOneWidget);
-    });
+        await tester.pumpAndSettle();
+        expect(find.text('Updated Place'), findsOneWidget);
+      },
+    );
 
     testWidgets('RoutePreviewPanel shows hint texts when fields are empty', (
       WidgetTester tester,
@@ -1096,5 +1103,273 @@ void main() {
       expect(destinationValidCalled, isTrue);
       expect(destinationSubmittedCalled, isTrue);
     });
+
+    testWidgets(
+      'Room fields hidden when both origin and destination are POIs',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Coffee Shop',
+                destinationText: 'Pharmacy',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+                originBuildingCode: 'HALL',
+                destinationBuildingCode: 'VE',
+                isOriginPoi: true,
+                isDestinationPoi: true,
+                isConcordiaBuilding: (_) => true,
+                indoorRepository: indoorRepository,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(RoomFieldsSection), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Room fields shown with origin enabled and destination disabled when destination is POI',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Hall Building - HALL',
+                destinationText: 'Coffee Shop',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+                originBuildingCode: 'HALL',
+                destinationBuildingCode: null,
+                isOriginPoi: false,
+                isDestinationPoi: true,
+                isConcordiaBuilding: (code) => code == 'HALL',
+                indoorRepository: indoorRepository,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(RoomFieldsSection), findsOneWidget);
+
+        final originRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField && widget.controller == originRoomController,
+        );
+        final destRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.controller == destinationRoomController,
+        );
+
+        expect(originRoomField, findsOneWidget);
+        expect(destRoomField, findsOneWidget);
+
+        final originTextField = tester.widget<TextField>(originRoomField);
+        final destTextField = tester.widget<TextField>(destRoomField);
+        expect(originTextField.enabled, isTrue);
+        expect(destTextField.enabled, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Room fields shown with destination enabled and origin disabled when origin is POI',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Coffee Shop',
+                destinationText: 'Hall Building - HALL',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+                originBuildingCode: null,
+                destinationBuildingCode: 'HALL',
+                isOriginPoi: true,
+                isDestinationPoi: false,
+                isConcordiaBuilding: (code) => code == 'HALL',
+                indoorRepository: indoorRepository,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(RoomFieldsSection), findsOneWidget);
+
+        final originRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField && widget.controller == originRoomController,
+        );
+        final destRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.controller == destinationRoomController,
+        );
+
+        expect(originRoomField, findsOneWidget);
+        expect(destRoomField, findsOneWidget);
+
+        final originTextField = tester.widget<TextField>(originRoomField);
+        final destTextField = tester.widget<TextField>(destRoomField);
+        expect(originTextField.enabled, isFalse);
+        expect(destTextField.enabled, isTrue);
+      },
+    );
+
+    testWidgets(
+      'Room fields both enabled when neither origin nor destination is POI',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Hall Building - HALL',
+                destinationText: 'VE Building - VE',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+                originBuildingCode: 'HALL',
+                destinationBuildingCode: 'VE',
+                isOriginPoi: false,
+                isDestinationPoi: false,
+                isConcordiaBuilding: (code) => code == 'HALL' || code == 'VE',
+                indoorRepository: indoorRepository,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(RoomFieldsSection), findsOneWidget);
+
+        final originRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField && widget.controller == originRoomController,
+        );
+        final destRoomField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.controller == destinationRoomController,
+        );
+
+        final originTextField = tester.widget<TextField>(originRoomField);
+        final destTextField = tester.widget<TextField>(destRoomField);
+        expect(originTextField.enabled, isTrue);
+        expect(destTextField.enabled, isTrue);
+      },
+    );
+
+    testWidgets('POI flags default to false when not specified', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RoutePreviewPanel(
+              originText: 'Hall Building - HALL',
+              destinationText: 'VE Building - VE',
+              onClose: () {},
+              onSwitch: () {},
+              onOriginChanged: (_) {},
+              onDestinationChanged: (_) {},
+              onOriginSelected: (_) {},
+              onDestinationSelected: (_) {},
+              originSuggestions: const [],
+              destinationSuggestions: const [],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+              originBuildingCode: 'HALL',
+              destinationBuildingCode: 'VE',
+              isConcordiaBuilding: (code) => code == 'HALL' || code == 'VE',
+              indoorRepository: indoorRepository,
+            ),
+          ),
+        ),
+      );
+
+      // Without POI flags, room fields should show and both be enabled
+      expect(find.byType(RoomFieldsSection), findsOneWidget);
+
+      final originRoomField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.controller == originRoomController,
+      );
+      final destRoomField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.controller == destinationRoomController,
+      );
+
+      final originTextField = tester.widget<TextField>(originRoomField);
+      final destTextField = tester.widget<TextField>(destRoomField);
+      expect(originTextField.enabled, isTrue);
+      expect(destTextField.enabled, isTrue);
+    });
+
+    testWidgets(
+      'Room fields hidden when no Concordia buildings even without POI flags',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RoutePreviewPanel(
+                originText: 'Some Place',
+                destinationText: 'Another Place',
+                onClose: () {},
+                onSwitch: () {},
+                onOriginChanged: (_) {},
+                onDestinationChanged: (_) {},
+                onOriginSelected: (_) {},
+                onDestinationSelected: (_) {},
+                originSuggestions: const [],
+                destinationSuggestions: const [],
+                originRoomController: originRoomController,
+                destinationRoomController: destinationRoomController,
+                originBuildingCode: null,
+                destinationBuildingCode: null,
+                isOriginPoi: false,
+                isDestinationPoi: false,
+                isConcordiaBuilding: (_) => false,
+                indoorRepository: indoorRepository,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(RoomFieldsSection), findsNothing);
+      },
+    );
   });
 }
