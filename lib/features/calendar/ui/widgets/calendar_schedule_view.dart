@@ -73,6 +73,26 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
       initialDate = DateTime.now();
     }
 
+    final calendarTodayHighlightColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+
+    final calendarSelectionBorderColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+
+    final calendarHeaderBackgroundColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : null;
+
+    final calendarHeaderTextColor = isHighContrast ? Colors.black : primaryText;
+
+    final viewHeaderDayTextColor = Colors.black54;
+
+    final viewHeaderDateTextColor = isHighContrast
+        ? Colors.black
+        : Colors.black87;
+
     return Column(
       children: [
         Padding(
@@ -142,44 +162,32 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                   key: ValueKey(_calendarView),
                   view: _calendarView,
                   dataSource: dataSource,
-                  backgroundColor: isHighContrast
-                      ? const Color(0xFF0F0F0F)
-                      : Colors.white,
+                  backgroundColor: calendarBackgroundColor,
                   cellBorderColor: calendarCellBorderColor,
                   initialDisplayDate: initialDate,
                   firstDayOfWeek: 1,
-                  todayHighlightColor: isHighContrast
-                      ? const Color(0xFF89D9C2)
-                      : const Color(0xFF8B1E3F),
+                  todayHighlightColor: calendarTodayHighlightColor,
                   specialRegions: buildTodayHighlightRegion(_calendarView),
                   selectionDecoration: BoxDecoration(
                     border: Border.all(
-                      color: isHighContrast
-                          ? const Color(0xFF89D9C2)
-                          : const Color(0xFF8B1E3F),
+                      color: calendarSelectionBorderColor,
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   headerStyle: CalendarHeaderStyle(
-                    backgroundColor: isHighContrast
-                        ? const Color(0xFF89D9C2)
-                        : null,
+                    backgroundColor: calendarHeaderBackgroundColor,
                     textAlign: TextAlign.center,
                     textStyle: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isHighContrast ? Colors.black : primaryText,
+                      color: calendarHeaderTextColor,
                     ),
                   ),
                   viewHeaderStyle: ViewHeaderStyle(
                     backgroundColor: calendarBackgroundColor,
-                    dayTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.black54 : Colors.black54,
-                    ),
-                    dateTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.black : Colors.black87,
-                    ),
+                    dayTextStyle: TextStyle(color: viewHeaderDayTextColor),
+                    dateTextStyle: TextStyle(color: viewHeaderDateTextColor),
                   ),
                   monthViewSettings: const MonthViewSettings(
                     appointmentDisplayMode:
