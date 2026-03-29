@@ -410,7 +410,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             Text(
               widget.title,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: primaryText,
@@ -420,7 +420,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             Text(
               widget.description,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: secondaryText),
+              style: const TextStyle(fontSize: 12.5, color: secondaryText),
             ),
             const SizedBox(height: 12),
             Row(
