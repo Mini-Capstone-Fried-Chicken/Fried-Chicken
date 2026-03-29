@@ -40,6 +40,34 @@ class CalendarScheduleView extends StatefulWidget {
   State<CalendarScheduleView> createState() => _CalendarScheduleViewState();
 }
 
+class _CalendarContentConfig {
+  final Color emptyStateTextColor;
+  final GoogleCalendarDataSource dataSource;
+  final Color calendarBackgroundColor;
+  final Color calendarCellBorderColor;
+  final DateTime initialDate;
+  final Color calendarTodayHighlightColor;
+  final Color calendarSelectionBorderColor;
+  final Color? calendarHeaderBackgroundColor;
+  final Color calendarHeaderTextColor;
+  final Color viewHeaderDateTextColor;
+  final Color timeTextColor;
+
+  const _CalendarContentConfig({
+    required this.emptyStateTextColor,
+    required this.dataSource,
+    required this.calendarBackgroundColor,
+    required this.calendarCellBorderColor,
+    required this.initialDate,
+    required this.calendarTodayHighlightColor,
+    required this.calendarSelectionBorderColor,
+    required this.calendarHeaderBackgroundColor,
+    required this.calendarHeaderTextColor,
+    required this.viewHeaderDateTextColor,
+    required this.timeTextColor,
+  });
+}
+
 class _CalendarScheduleViewState extends State<CalendarScheduleView> {
   CalendarView _calendarView = CalendarView.week;
 
@@ -84,6 +112,20 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final viewHeaderDateTextColor = isHighContrast
         ? Colors.black
         : Colors.black87;
+
+    final contentConfig = _CalendarContentConfig(
+      emptyStateTextColor: emptyStateTextColor,
+      dataSource: dataSource,
+      calendarBackgroundColor: calendarBackgroundColor,
+      calendarCellBorderColor: calendarCellBorderColor,
+      initialDate: initialDate,
+      calendarTodayHighlightColor: calendarTodayHighlightColor,
+      calendarSelectionBorderColor: calendarSelectionBorderColor,
+      calendarHeaderBackgroundColor: calendarHeaderBackgroundColor,
+      calendarHeaderTextColor: calendarHeaderTextColor,
+      viewHeaderDateTextColor: viewHeaderDateTextColor,
+      timeTextColor: timeTextColor,
+    );
 
     return Column(
       children: [
@@ -142,21 +184,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
           ),
         ),
         const SizedBox(height: 12),
-        Expanded(
-          child: _buildCalendarContent(
-            emptyStateTextColor: emptyStateTextColor,
-            dataSource: dataSource,
-            calendarBackgroundColor: calendarBackgroundColor,
-            calendarCellBorderColor: calendarCellBorderColor,
-            initialDate: initialDate,
-            calendarTodayHighlightColor: calendarTodayHighlightColor,
-            calendarSelectionBorderColor: calendarSelectionBorderColor,
-            calendarHeaderBackgroundColor: calendarHeaderBackgroundColor,
-            calendarHeaderTextColor: calendarHeaderTextColor,
-            viewHeaderDateTextColor: viewHeaderDateTextColor,
-            timeTextColor: timeTextColor,
-          ),
-        ),
+        Expanded(child: _buildCalendarContent(contentConfig)),
       ],
     );
   }
@@ -168,24 +196,12 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     return DateTime.now();
   }
 
-  Widget _buildCalendarContent({
-    required Color emptyStateTextColor,
-    required GoogleCalendarDataSource dataSource,
-    required Color calendarBackgroundColor,
-    required Color calendarCellBorderColor,
-    required DateTime initialDate,
-    required Color calendarTodayHighlightColor,
-    required Color calendarSelectionBorderColor,
-    required Color? calendarHeaderBackgroundColor,
-    required Color calendarHeaderTextColor,
-    required Color viewHeaderDateTextColor,
-    required Color timeTextColor,
-  }) {
+  Widget _buildCalendarContent(_CalendarContentConfig config) {
     if (widget.events.isEmpty) {
       return Center(
         child: Text(
           'No events found in this calendar.',
-          style: TextStyle(fontSize: 15, color: emptyStateTextColor),
+          style: TextStyle(fontSize: 15, color: config.emptyStateTextColor),
         ),
       );
     }
@@ -193,30 +209,33 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     return SfCalendar(
       key: ValueKey(_calendarView),
       view: _calendarView,
-      dataSource: dataSource,
-      backgroundColor: calendarBackgroundColor,
-      cellBorderColor: calendarCellBorderColor,
-      initialDisplayDate: initialDate,
+      dataSource: config.dataSource,
+      backgroundColor: config.calendarBackgroundColor,
+      cellBorderColor: config.calendarCellBorderColor,
+      initialDisplayDate: config.initialDate,
       firstDayOfWeek: 1,
-      todayHighlightColor: calendarTodayHighlightColor,
+      todayHighlightColor: config.calendarTodayHighlightColor,
       specialRegions: buildTodayHighlightRegion(_calendarView),
       selectionDecoration: BoxDecoration(
-        border: Border.all(color: calendarSelectionBorderColor, width: 2),
+        border: Border.all(
+          color: config.calendarSelectionBorderColor,
+          width: 2,
+        ),
         borderRadius: BorderRadius.circular(6),
       ),
       headerStyle: CalendarHeaderStyle(
-        backgroundColor: calendarHeaderBackgroundColor,
+        backgroundColor: config.calendarHeaderBackgroundColor,
         textAlign: TextAlign.center,
         textStyle: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: calendarHeaderTextColor,
+          color: config.calendarHeaderTextColor,
         ),
       ),
       viewHeaderStyle: ViewHeaderStyle(
-        backgroundColor: calendarBackgroundColor,
+        backgroundColor: config.calendarBackgroundColor,
         dayTextStyle: const TextStyle(color: Colors.black54),
-        dateTextStyle: TextStyle(color: viewHeaderDateTextColor),
+        dateTextStyle: TextStyle(color: config.viewHeaderDateTextColor),
       ),
       monthViewSettings: const MonthViewSettings(
         appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
@@ -226,7 +245,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
         startHour: 8,
         endHour: 22,
         timeIntervalHeight: 60,
-        timeTextStyle: TextStyle(color: timeTextColor, fontSize: 12),
+        timeTextStyle: TextStyle(color: config.timeTextColor, fontSize: 12),
         minimumAppointmentDuration: const Duration(minutes: 45),
       ),
       onTap: handleCalendarTap,

@@ -14,6 +14,46 @@ class SavedScreen extends StatefulWidget {
   State<SavedScreen> createState() => _SavedScreenState();
 }
 
+class _SavedScreenStyles {
+  final Color cardBackground;
+  final Color cardBorder;
+  final Color headingColor;
+  final Color textColor;
+  final Color subTextColor;
+  final Color inputFill;
+  final Color buttonBg;
+  final Color buttonText;
+
+  const _SavedScreenStyles({
+    required this.cardBackground,
+    required this.cardBorder,
+    required this.headingColor,
+    required this.textColor,
+    required this.subTextColor,
+    required this.inputFill,
+    required this.buttonBg,
+    required this.buttonText,
+  });
+}
+
+class _SavedBodyData {
+  final List<SavedPlace> savedPlaces;
+  final List<SavedPlace> visiblePlaces;
+  final List<String> filters;
+  final String effectiveFilter;
+  final String radiusLabel;
+  final _SavedScreenStyles styles;
+
+  const _SavedBodyData({
+    required this.savedPlaces,
+    required this.visiblePlaces,
+    required this.filters,
+    required this.effectiveFilter,
+    required this.radiusLabel,
+    required this.styles,
+  });
+}
+
 class _SavedScreenState extends State<SavedScreen> {
   int _radiusOptionIndex = 19;
   String _selectedFilter = 'all';
@@ -176,26 +216,29 @@ class _SavedScreenState extends State<SavedScreen> {
           selectedRadiusKm: selectedRadiusKm,
         );
         final radiusLabel = _radiusLabel(selectedRadiusKm);
+        final styles = _SavedScreenStyles(
+          cardBackground: cardBackground,
+          cardBorder: cardBorder,
+          headingColor: headingColor,
+          textColor: textColor,
+          subTextColor: subTextColor,
+          inputFill: inputFill,
+          buttonBg: buttonBg,
+          buttonText: buttonText,
+        );
+        final bodyData = _SavedBodyData(
+          savedPlaces: savedPlaces,
+          visiblePlaces: visiblePlaces,
+          filters: filters,
+          effectiveFilter: effectiveFilter,
+          radiusLabel: radiusLabel,
+          styles: styles,
+        );
 
         return Scaffold(
           backgroundColor: pageBackground,
           body: SafeArea(
-            child: _buildSavedBody(
-              context: context,
-              savedPlaces: savedPlaces,
-              visiblePlaces: visiblePlaces,
-              filters: filters,
-              effectiveFilter: effectiveFilter,
-              radiusLabel: radiusLabel,
-              cardBackground: cardBackground,
-              cardBorder: cardBorder,
-              headingColor: headingColor,
-              textColor: textColor,
-              subTextColor: subTextColor,
-              inputFill: inputFill,
-              buttonBg: buttonBg,
-              buttonText: buttonText,
-            ),
+            child: _buildSavedBody(context: context, data: bodyData),
           ),
         );
       },
@@ -223,20 +266,10 @@ class _SavedScreenState extends State<SavedScreen> {
 
   Widget _buildSavedBody({
     required BuildContext context,
-    required List<SavedPlace> savedPlaces,
-    required List<SavedPlace> visiblePlaces,
-    required List<String> filters,
-    required String effectiveFilter,
-    required String radiusLabel,
-    required Color cardBackground,
-    required Color cardBorder,
-    required Color headingColor,
-    required Color textColor,
-    required Color subTextColor,
-    required Color inputFill,
-    required Color buttonBg,
-    required Color buttonText,
+    required _SavedBodyData data,
   }) {
+    final styles = data.styles;
+
     return Column(
       children: [
         const SizedBox(height: 8),
@@ -249,44 +282,35 @@ class _SavedScreenState extends State<SavedScreen> {
               children: [
                 _buildRadiusSection(
                   context: context,
-                  radiusLabel: radiusLabel,
-                  headingColor: headingColor,
-                  subTextColor: subTextColor,
+                  radiusLabel: data.radiusLabel,
+                  headingColor: styles.headingColor,
+                  subTextColor: styles.subTextColor,
                 ),
                 const SizedBox(height: 10),
                 _buildFilterDropdown(
-                  filters: filters,
-                  effectiveFilter: effectiveFilter,
-                  inputFill: inputFill,
-                  cardBorder: cardBorder,
-                  textColor: textColor,
-                  headingColor: headingColor,
+                  filters: data.filters,
+                  effectiveFilter: data.effectiveFilter,
+                  inputFill: styles.inputFill,
+                  cardBorder: styles.cardBorder,
+                  textColor: styles.textColor,
+                  headingColor: styles.headingColor,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Saved places',
                   style: TextStyle(
-                    color: headingColor,
+                    color: styles.headingColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 18,
                   ),
                 ),
-                if (visiblePlaces.isEmpty)
+                if (data.visiblePlaces.isEmpty)
                   _buildEmptyStateMessage(
-                    savedPlaces: savedPlaces,
-                    subTextColor: subTextColor,
+                    savedPlaces: data.savedPlaces,
+                    subTextColor: styles.subTextColor,
                   ),
-                ...visiblePlaces.map(
-                  (place) => _buildPlaceCard(
-                    place: place,
-                    cardBackground: cardBackground,
-                    cardBorder: cardBorder,
-                    headingColor: headingColor,
-                    textColor: textColor,
-                    subTextColor: subTextColor,
-                    buttonBg: buttonBg,
-                    buttonText: buttonText,
-                  ),
+                ...data.visiblePlaces.map(
+                  (place) => _buildPlaceCard(place: place, styles: styles),
                 ),
               ],
             ),
@@ -407,13 +431,7 @@ class _SavedScreenState extends State<SavedScreen> {
 
   Widget _buildPlaceCard({
     required SavedPlace place,
-    required Color cardBackground,
-    required Color cardBorder,
-    required Color headingColor,
-    required Color textColor,
-    required Color subTextColor,
-    required Color buttonBg,
-    required Color buttonText,
+    required _SavedScreenStyles styles,
   }) {
     final distanceKm = _distanceKmFor(place);
     final distanceLabel = distanceKm == null
@@ -424,9 +442,9 @@ class _SavedScreenState extends State<SavedScreen> {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: cardBackground,
+        color: styles.cardBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cardBorder),
+        border: Border.all(color: styles.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +455,7 @@ class _SavedScreenState extends State<SavedScreen> {
                 child: Text(
                   place.name,
                   style: TextStyle(
-                    color: textColor,
+                    color: styles.textColor,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -448,7 +466,7 @@ class _SavedScreenState extends State<SavedScreen> {
                 icon: Icon(
                   Icons.bookmark_remove_outlined,
                   size: 20,
-                  color: headingColor,
+                  color: styles.headingColor,
                 ),
                 constraints: const BoxConstraints.tightFor(
                   width: 30,
@@ -464,17 +482,17 @@ class _SavedScreenState extends State<SavedScreen> {
           const SizedBox(height: 6),
           Text(
             'Category: ${_formatCategoryLabel(place.category)}',
-            style: TextStyle(color: subTextColor, fontSize: 13.5),
+            style: TextStyle(color: styles.subTextColor, fontSize: 13.5),
           ),
           const SizedBox(height: 2),
           Text(
             'Distance: $distanceLabel',
-            style: TextStyle(color: subTextColor, fontSize: 13.5),
+            style: TextStyle(color: styles.subTextColor, fontSize: 13.5),
           ),
           const SizedBox(height: 2),
           Text(
             place.openingHoursToday,
-            style: TextStyle(color: subTextColor, fontSize: 13.5),
+            style: TextStyle(color: styles.subTextColor, fontSize: 13.5),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -486,8 +504,8 @@ class _SavedScreenState extends State<SavedScreen> {
               icon: const Icon(Icons.directions),
               label: const Text('Get directions'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: buttonBg,
-                foregroundColor: buttonText,
+                backgroundColor: styles.buttonBg,
+                foregroundColor: styles.buttonText,
                 minimumSize: const Size(0, 42),
               ),
             ),

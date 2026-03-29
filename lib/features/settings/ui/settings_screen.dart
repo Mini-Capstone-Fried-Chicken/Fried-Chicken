@@ -14,6 +14,32 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+class _SettingsViewStyle {
+  final bool isHighContrast;
+  final Color cardBackground;
+  final Color borderColor;
+  final Color headingColor;
+  final Color textColor;
+  final Color subTextColor;
+  final Color? dividerColor;
+  final Color toggleActiveColor;
+  final Color? toggleInactiveThumb;
+  final Color? toggleInactiveTrack;
+
+  const _SettingsViewStyle({
+    required this.isHighContrast,
+    required this.cardBackground,
+    required this.borderColor,
+    required this.headingColor,
+    required this.textColor,
+    required this.subTextColor,
+    required this.dividerColor,
+    required this.toggleActiveColor,
+    required this.toggleInactiveThumb,
+    required this.toggleInactiveTrack,
+  });
+}
+
 class _SettingsScreenState extends State<SettingsScreen> {
   String _defaultCampus = AppSettingsState.defaultCampusSgw;
   bool _accessibilityModeEnabled = false;
@@ -104,6 +130,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         : AppUiColors.defaultPrimary;
     final toggleInactiveThumb = isHighContrast ? Colors.white70 : null;
     final toggleInactiveTrack = isHighContrast ? Colors.white24 : null;
+    final style = _SettingsViewStyle(
+      isHighContrast: isHighContrast,
+      cardBackground: cardBackground,
+      borderColor: borderColor,
+      headingColor: headingColor,
+      textColor: textColor,
+      subTextColor: subTextColor,
+      dividerColor: dividerColor,
+      toggleActiveColor: toggleActiveColor,
+      toggleInactiveThumb: toggleInactiveThumb,
+      toggleInactiveTrack: toggleInactiveTrack,
+    );
 
     return Scaffold(
       backgroundColor: pageBackground,
@@ -127,18 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildGeneralSettingsCard(
-                      isHighContrast: isHighContrast,
-                      cardBackground: cardBackground,
-                      borderColor: borderColor,
-                      headingColor: headingColor,
-                      textColor: textColor,
-                      subTextColor: subTextColor,
-                      dividerColor: dividerColor,
-                      toggleActiveColor: toggleActiveColor,
-                      toggleInactiveThumb: toggleInactiveThumb,
-                      toggleInactiveTrack: toggleInactiveTrack,
-                    ),
+                    _buildGeneralSettingsCard(style: style),
                     const SizedBox(height: 12),
                     _buildAccessibilitySettingsCard(
                       cardBackground: cardBackground,
@@ -160,22 +187,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildGeneralSettingsCard({
-    required bool isHighContrast,
-    required Color cardBackground,
-    required Color borderColor,
-    required Color headingColor,
-    required Color textColor,
-    required Color subTextColor,
-    required Color? dividerColor,
-    required Color toggleActiveColor,
-    required Color? toggleInactiveThumb,
-    required Color? toggleInactiveTrack,
-  }) {
+  Widget _buildGeneralSettingsCard({required _SettingsViewStyle style}) {
     return Card(
-      color: cardBackground,
+      color: style.cardBackground,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: borderColor),
+        side: BorderSide(color: style.borderColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -188,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: headingColor,
+                color: style.headingColor,
               ),
             ),
             const SizedBox(height: 10),
@@ -196,22 +212,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Default Campus',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: subTextColor,
+                color: style.subTextColor,
               ),
             ),
             const SizedBox(height: 8),
-            _buildCampusSegmentedButton(isHighContrast),
+            _buildCampusSegmentedButton(style.isHighContrast),
             const SizedBox(height: 10),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(
                 'Accessibility Mode',
-                style: TextStyle(color: textColor),
+                style: TextStyle(color: style.textColor),
               ),
               value: _accessibilityModeEnabled,
-              activeThumbColor: toggleActiveColor,
-              inactiveThumbColor: toggleInactiveThumb,
-              inactiveTrackColor: toggleInactiveTrack,
+              activeThumbColor: style.toggleActiveColor,
+              inactiveThumbColor: style.toggleInactiveThumb,
+              inactiveTrackColor: style.toggleInactiveTrack,
               onChanged: (value) {
                 setState(() {
                   _accessibilityModeEnabled = value;
@@ -219,14 +235,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 AppSettingsController.setAccessibilityMode(value);
               },
             ),
-            Divider(height: 12, color: dividerColor),
+            Divider(height: 12, color: style.dividerColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(
                 'Permission Management',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: subTextColor,
+                  color: style.subTextColor,
                 ),
               ),
             ),
@@ -234,12 +250,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               contentPadding: const EdgeInsets.only(left: 12),
               title: Text(
                 'Calendar Access',
-                style: TextStyle(color: textColor),
+                style: TextStyle(color: style.textColor),
               ),
               value: _calendarAccessEnabled,
-              activeThumbColor: toggleActiveColor,
-              inactiveThumbColor: toggleInactiveThumb,
-              inactiveTrackColor: toggleInactiveTrack,
+              activeThumbColor: style.toggleActiveColor,
+              inactiveThumbColor: style.toggleInactiveThumb,
+              inactiveTrackColor: style.toggleInactiveTrack,
               onChanged: (value) {
                 setState(() {
                   _calendarAccessEnabled = value;
