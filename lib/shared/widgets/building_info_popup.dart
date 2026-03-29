@@ -381,8 +381,8 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     final popupBackground = widget.highContrastMode
         ? AppUiColors.highContrastPrimary
         : Colors.white;
-    final primaryText = Colors.black;
-    final secondaryText = Colors.black54;
+    const primaryText = Colors.black;
+    const secondaryText = Colors.black54;
 
     final topIcons = _collectTopIcons();
 
@@ -410,7 +410,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             Text(
               widget.title,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: primaryText,
@@ -420,7 +420,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
             Text(
               widget.description,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: secondaryText),
+              style: const TextStyle(fontSize: 12.5, color: secondaryText),
             ),
             const SizedBox(height: 12),
             Row(
