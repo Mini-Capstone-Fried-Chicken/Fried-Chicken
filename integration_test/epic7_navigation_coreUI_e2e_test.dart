@@ -3,8 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:campus_app/main.dart' as app;
 import 'package:campus_app/app/app_shell.dart';
-
-// Adjust these imports if your screen/widget paths differ
 import 'package:campus_app/features/explore/ui/explore_screen.dart';
 import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import 'package:campus_app/features/saved/ui/saved_screen.dart';
@@ -45,37 +43,33 @@ void main() {
         await tester.pumpAndSettle(const Duration(seconds: 2));
       }
 
-      // FLOW 1: GUEST USER NAVIGATION BAR
+      // FLOW 1: CONTINUE AS GUEST
       // Verify guest sees only Explore and Settings
-      // --- ENTER GUEST MODE IF ON AUTH SCREEN ---
       await _enterGuestModeIfNeeded(tester);
       await tester.pumpAndSettle(const Duration(seconds: 2));
       await _expectGuestNavigation(tester);
 
-      // Verify Explore screen is accessible
+      // exlore screen visible
       await _openBottomTabByText(tester, 'Explore');
       await tester.pumpAndSettle(const Duration(seconds: 2));
       expect(find.byType(ExploreScreen), findsOneWidget);
 
-      // Verify Settings screen is accessible for guests
+      // settings screen visible
       await _openBottomTabByText(tester, 'Settings');
       await tester.pumpAndSettle(const Duration(seconds: 2));
       expect(find.byType(SettingsScreen), findsOneWidget);
 
       // FLOW 2: SETTINGS FOR GUEST
-      // Verify settings page contains expected setting groups/options
       await _expectSettingsCoreOptionsVisible(tester, loggedIn: false);
 
       // Verify general settings can be modified
       await _toggleIfExists(tester, const Key('accessibility_mode_toggle'));
       await _toggleIfExists(tester, const Key('high_contrast_toggle'));
       await _toggleIfExists(tester, const Key('large_text_toggle'));
-
-      // Default campus selection
       await _changeDefaultCampusIfExists(tester);
 
       // FLOW 3: LOGIN
-      // From guest settings page, press sign in button
+      // sign in first from the settings page to the auth page
       final signInButton = find.byKey(const Key('go_to_login_button'));
       final signInText = find.textContaining('Sign In');
 
@@ -87,7 +81,7 @@ void main() {
         await tester.pumpAndSettle(const Duration(seconds: 2));
       }
 
-      // Login (if not already done)
+      // Login
       if (!_isLoggedInNavVisible(tester)) {
         final emailField = find.byKey(const Key('login_email'));
         final passwordField = find.byKey(const Key('login_password'));
@@ -115,14 +109,12 @@ void main() {
       // Verify we're on the main app shell
       expect(find.byType(AppShell), findsOneWidget);
 
-      // Give the auth transition time to fully swap guest nav -> logged-in nav
       await tester.runAsync(() async {
         await Future.delayed(const Duration(seconds: 3));
       });
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // FLOW 4: LOGGED-IN USER NAVIGATION BAR
-      // Logged-in nav should show Explore, Calendar, Saved, Settings
+      // FLOW 4: CHECK NAVIGATION FOR LOGGED IN USERS (EXPLORE, CALENDAR, SAVED, SETTINGS)
       await _expectLoggedInNavigation(tester);
 
       // Explore
@@ -158,10 +150,9 @@ void main() {
       await _toggleIfExists(tester, const Key('high_contrast_toggle'));
       await _toggleIfExists(tester, const Key('large_text_toggle'));
 
-      // Change default campus again if the control exists
       await _changeDefaultCampusIfExists(tester);
 
-      // FLOW 6: SAVE / UNSAVE LOCATION
+      // FLOW 6: SAVE / UNSAVE LOCATION FLOW
       await _openBottomTabByText(tester, 'Explore');
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
@@ -193,21 +184,6 @@ void main() {
       await _openBottomTabByText(tester, 'Saved');
       await tester.pumpAndSettle(const Duration(seconds: 2));
       expect(find.byType(SavedScreen), findsOneWidget);
-
-      // Optional: verify at least one saved item appears
-      final savedItem = find.byKey(const Key('saved_location_item'));
-      if (savedItem.evaluate().isNotEmpty) {
-        expect(savedItem, findsWidgets);
-      }
-
-      // Optional: unfavorite from saved screen
-      final removeFavoriteButton = find.byKey(
-        const Key('remove_favorite_button'),
-      );
-      if (removeFavoriteButton.evaluate().isNotEmpty) {
-        await tester.tap(removeFavoriteButton.first);
-        await tester.pumpAndSettle(const Duration(seconds: 2));
-      }
 
       // FLOW 7: SIGN OUT
       await _openBottomTabByText(tester, 'Settings');
