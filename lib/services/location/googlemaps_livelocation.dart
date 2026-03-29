@@ -3392,15 +3392,16 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final needsFloorSwitch =
         destinationFloorLabel.trim().toUpperCase() !=
         entryFloorOption.label.trim().toUpperCase();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          needsFloorSwitch
-              ? 'Indoor navigation started from floor ${entryFloorOption.label}. Follow the ${_effectiveIndoorTransitionMode == null ? 'selected' : _preferredIndoorTransitionModeLabel() ?? 'selected'} transition to floor $destinationFloorLabel for room ${destinationRoom.roomCode}.'
-              : 'Indoor navigation started on floor ${entryFloorOption.label}. Continue to room ${destinationRoom.roomCode}.',
-        ),
-      ),
-    );
+
+    final transitionLabel = _preferredIndoorTransitionModeLabel() ?? 'selected';
+
+    final indoorNavigationMessage = needsFloorSwitch
+        ? 'Indoor navigation started from floor ${entryFloorOption.label}. Follow the $transitionLabel transition to floor $destinationFloorLabel for room ${destinationRoom.roomCode}.'
+        : 'Indoor navigation started on floor ${entryFloorOption.label}. Continue to room ${destinationRoom.roomCode}.';
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(indoorNavigationMessage)));
 
     await _maybeStartIndoorNavigationFromRooms();
   }
