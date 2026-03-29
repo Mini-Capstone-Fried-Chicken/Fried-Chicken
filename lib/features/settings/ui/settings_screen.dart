@@ -14,6 +14,32 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+class _SettingsViewStyle {
+  final bool isHighContrast;
+  final Color cardBackground;
+  final Color borderColor;
+  final Color headingColor;
+  final Color textColor;
+  final Color subTextColor;
+  final Color? dividerColor;
+  final Color toggleActiveColor;
+  final Color? toggleInactiveThumb;
+  final Color? toggleInactiveTrack;
+
+  const _SettingsViewStyle({
+    required this.isHighContrast,
+    required this.cardBackground,
+    required this.borderColor,
+    required this.headingColor,
+    required this.textColor,
+    required this.subTextColor,
+    required this.dividerColor,
+    required this.toggleActiveColor,
+    required this.toggleInactiveThumb,
+    required this.toggleInactiveTrack,
+  });
+}
+
 class _SettingsScreenState extends State<SettingsScreen> {
   String _defaultCampus = AppSettingsState.defaultCampusSgw;
   bool _accessibilityModeEnabled = false;
@@ -104,6 +130,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         : AppUiColors.defaultPrimary;
     final toggleInactiveThumb = isHighContrast ? Colors.white70 : null;
     final toggleInactiveTrack = isHighContrast ? Colors.white24 : null;
+    final style = _SettingsViewStyle(
+      isHighContrast: isHighContrast,
+      cardBackground: cardBackground,
+      borderColor: borderColor,
+      headingColor: headingColor,
+      textColor: textColor,
+      subTextColor: subTextColor,
+      dividerColor: dividerColor,
+      toggleActiveColor: toggleActiveColor,
+      toggleInactiveThumb: toggleInactiveThumb,
+      toggleInactiveTrack: toggleInactiveTrack,
+    );
 
     return Scaffold(
       backgroundColor: pageBackground,
@@ -127,263 +165,262 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Card(
-                      color: cardBackground,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: borderColor),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'General Settings',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: headingColor,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Default Campus',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: subTextColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SegmentedButton<String>(
-                              segments: const [
-                                ButtonSegment<String>(
-                                  value: 'SGW',
-                                  label: Text('SGW'),
-                                ),
-                                ButtonSegment<String>(
-                                  value: 'Loyola',
-                                  label: Text('Loyola'),
-                                ),
-                              ],
-                              selected: {_defaultCampus},
-                              style: ButtonStyle(
-                                foregroundColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                      if (states.contains(
-                                        WidgetState.selected,
-                                      )) {
-                                        return isHighContrast
-                                            ? Colors.black
-                                            : Colors.white;
-                                      }
-                                      return isHighContrast
-                                          ? const Color(0xFF89D9C2)
-                                          : Colors.black87;
-                                    }),
-                                backgroundColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                      if (states.contains(
-                                        WidgetState.selected,
-                                      )) {
-                                        return isHighContrast
-                                            ? const Color(0xFF89D9C2)
-                                            : AppUiColors.defaultPrimary;
-                                      }
-                                      return isHighContrast
-                                          ? const Color(0xFF1B1B1B)
-                                          : Colors.white;
-                                    }),
-                                side: WidgetStateProperty.all(
-                                  BorderSide(
-                                    color: isHighContrast
-                                        ? const Color(0xFF89D9C2)
-                                        : Colors.grey.shade400,
-                                  ),
-                                ),
-                              ),
-                              onSelectionChanged: (selection) {
-                                final selectedCampus = selection.first;
-                                setState(() {
-                                  _defaultCampus = selectedCampus;
-                                });
-                                AppSettingsController.setDefaultCampus(
-                                  selectedCampus,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 10),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                'Accessibility Mode',
-                                style: TextStyle(color: textColor),
-                              ),
-                              value: _accessibilityModeEnabled,
-                              activeThumbColor: toggleActiveColor,
-                              inactiveThumbColor: toggleInactiveThumb,
-                              inactiveTrackColor: toggleInactiveTrack,
-                              onChanged: (value) {
-                                setState(() {
-                                  _accessibilityModeEnabled = value;
-                                });
-                                AppSettingsController.setAccessibilityMode(
-                                  value,
-                                );
-                              },
-                            ),
-                            Divider(height: 12, color: dividerColor),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                'Permission Management',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: subTextColor,
-                                ),
-                              ),
-                            ),
-                            SwitchListTile(
-                              contentPadding: const EdgeInsets.only(left: 12),
-                              title: Text(
-                                'Calendar Access',
-                                style: TextStyle(color: textColor),
-                              ),
-                              value: _calendarAccessEnabled,
-                              activeThumbColor: toggleActiveColor,
-                              inactiveThumbColor: toggleInactiveThumb,
-                              inactiveTrackColor: toggleInactiveTrack,
-                              onChanged: (value) {
-                                setState(() {
-                                  _calendarAccessEnabled = value;
-                                });
-                                AppSettingsController.setCalendarAccess(value);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    _buildGeneralSettingsCard(style: style),
                     const SizedBox(height: 12),
-                    Card(
-                      color: cardBackground,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: borderColor),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Opacity(
-                          opacity: _accessibilityModeEnabled ? 1.0 : 0.5,
-                          child: IgnorePointer(
-                            ignoring: !_accessibilityModeEnabled,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Accessibility Settings',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: headingColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(
-                                    'Wheelchair routing as default',
-                                    style: TextStyle(color: textColor),
-                                  ),
-                                  value: _wheelchairRoutingDefault,
-                                  activeThumbColor: toggleActiveColor,
-                                  inactiveThumbColor: toggleInactiveThumb,
-                                  inactiveTrackColor: toggleInactiveTrack,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _wheelchairRoutingDefault = value;
-                                    });
-                                    AppSettingsController.setWheelchairRoutingDefault(
-                                      value,
-                                    );
-                                  },
-                                ),
-                                SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(
-                                    'High Contrast mode',
-                                    style: TextStyle(color: textColor),
-                                  ),
-                                  value: _highContrastMode,
-                                  activeThumbColor: toggleActiveColor,
-                                  inactiveThumbColor: toggleInactiveThumb,
-                                  inactiveTrackColor: toggleInactiveTrack,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _highContrastMode = value;
-                                    });
-                                    AppSettingsController.setHighContrastMode(
-                                      value,
-                                    );
-                                  },
-                                ),
-                                SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(
-                                    'Large Text',
-                                    style: TextStyle(color: textColor),
-                                  ),
-                                  value: _largeTextMode,
-                                  activeThumbColor: toggleActiveColor,
-                                  inactiveThumbColor: toggleInactiveThumb,
-                                  inactiveTrackColor: toggleInactiveTrack,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _largeTextMode = value;
-                                    });
-                                    AppSettingsController.setLargeTextMode(
-                                      value,
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                    _buildAccessibilitySettingsCard(
+                      cardBackground: cardBackground,
+                      borderColor: borderColor,
+                      headingColor: headingColor,
+                      textColor: textColor,
+                      toggleActiveColor: toggleActiveColor,
+                      toggleInactiveThumb: toggleInactiveThumb,
+                      toggleInactiveTrack: toggleInactiveTrack,
                     ),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-              child: SizedBox(
-                width: 220,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (widget.isLoggedIn) {
-                      _handleLogout(context);
-                    } else {
-                      _handleSignIn(context);
-                    }
-                  },
-                  icon: Icon(widget.isLoggedIn ? Icons.logout : Icons.login),
-                  label: Text(widget.isLoggedIn ? 'Sign Out' : 'Sign In'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppUiColors.primary(
-                      highContrastEnabled:
-                          AppSettingsController.state.highContrastModeEnabled,
-                    ),
-                    foregroundColor: isHighContrast
-                        ? Colors.black
-                        : Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
+            _buildAuthButton(context, isHighContrast),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGeneralSettingsCard({required _SettingsViewStyle style}) {
+    return Card(
+      color: style.cardBackground,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: style.borderColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'General Settings',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: style.headingColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Default Campus',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: style.subTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildCampusSegmentedButton(style.isHighContrast),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Accessibility Mode',
+                style: TextStyle(color: style.textColor),
+              ),
+              value: _accessibilityModeEnabled,
+              activeThumbColor: style.toggleActiveColor,
+              inactiveThumbColor: style.toggleInactiveThumb,
+              inactiveTrackColor: style.toggleInactiveTrack,
+              onChanged: (value) {
+                setState(() {
+                  _accessibilityModeEnabled = value;
+                });
+                AppSettingsController.setAccessibilityMode(value);
+              },
+            ),
+            Divider(height: 12, color: style.dividerColor),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Permission Management',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: style.subTextColor,
                 ),
               ),
             ),
+            SwitchListTile(
+              contentPadding: const EdgeInsets.only(left: 12),
+              title: Text(
+                'Calendar Access',
+                style: TextStyle(color: style.textColor),
+              ),
+              value: _calendarAccessEnabled,
+              activeThumbColor: style.toggleActiveColor,
+              inactiveThumbColor: style.toggleInactiveThumb,
+              inactiveTrackColor: style.toggleInactiveTrack,
+              onChanged: (value) {
+                setState(() {
+                  _calendarAccessEnabled = value;
+                });
+                AppSettingsController.setCalendarAccess(value);
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCampusSegmentedButton(bool isHighContrast) {
+    return SegmentedButton<String>(
+      segments: const [
+        ButtonSegment<String>(value: 'SGW', label: Text('SGW')),
+        ButtonSegment<String>(value: 'Loyola', label: Text('Loyola')),
+      ],
+      selected: {_defaultCampus},
+      style: ButtonStyle(
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return isHighContrast ? Colors.black : Colors.white;
+          }
+          return isHighContrast ? const Color(0xFF89D9C2) : Colors.black87;
+        }),
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return isHighContrast
+                ? const Color(0xFF89D9C2)
+                : AppUiColors.defaultPrimary;
+          }
+          return isHighContrast ? const Color(0xFF1B1B1B) : Colors.white;
+        }),
+        side: WidgetStateProperty.all(
+          BorderSide(
+            color: isHighContrast
+                ? const Color(0xFF89D9C2)
+                : Colors.grey.shade400,
+          ),
+        ),
+      ),
+      onSelectionChanged: (selection) {
+        final selectedCampus = selection.first;
+        setState(() {
+          _defaultCampus = selectedCampus;
+        });
+        AppSettingsController.setDefaultCampus(selectedCampus);
+      },
+    );
+  }
+
+  Widget _buildAccessibilitySettingsCard({
+    required Color cardBackground,
+    required Color borderColor,
+    required Color headingColor,
+    required Color textColor,
+    required Color toggleActiveColor,
+    required Color? toggleInactiveThumb,
+    required Color? toggleInactiveTrack,
+  }) {
+    return Card(
+      color: cardBackground,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: borderColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Opacity(
+          opacity: _accessibilityModeEnabled ? 1.0 : 0.5,
+          child: IgnorePointer(
+            ignoring: !_accessibilityModeEnabled,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Accessibility Settings',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: headingColor,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Wheelchair routing as default',
+                    style: TextStyle(color: textColor),
+                  ),
+                  value: _wheelchairRoutingDefault,
+                  activeThumbColor: toggleActiveColor,
+                  inactiveThumbColor: toggleInactiveThumb,
+                  inactiveTrackColor: toggleInactiveTrack,
+                  onChanged: (value) {
+                    setState(() {
+                      _wheelchairRoutingDefault = value;
+                    });
+                    AppSettingsController.setWheelchairRoutingDefault(value);
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'High Contrast mode',
+                    style: TextStyle(color: textColor),
+                  ),
+                  value: _highContrastMode,
+                  activeThumbColor: toggleActiveColor,
+                  inactiveThumbColor: toggleInactiveThumb,
+                  inactiveTrackColor: toggleInactiveTrack,
+                  onChanged: (value) {
+                    setState(() {
+                      _highContrastMode = value;
+                    });
+                    AppSettingsController.setHighContrastMode(value);
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Large Text', style: TextStyle(color: textColor)),
+                  value: _largeTextMode,
+                  activeThumbColor: toggleActiveColor,
+                  inactiveThumbColor: toggleInactiveThumb,
+                  inactiveTrackColor: toggleInactiveTrack,
+                  onChanged: (value) {
+                    setState(() {
+                      _largeTextMode = value;
+                    });
+                    AppSettingsController.setLargeTextMode(value);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAuthButton(BuildContext context, bool isHighContrast) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      child: SizedBox(
+        width: 220,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            if (widget.isLoggedIn) {
+              _handleLogout(context);
+            } else {
+              _handleSignIn(context);
+            }
+          },
+          icon: Icon(widget.isLoggedIn ? Icons.logout : Icons.login),
+          label: Text(widget.isLoggedIn ? 'Sign Out' : 'Sign In'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppUiColors.primary(
+              highContrastEnabled:
+                  AppSettingsController.state.highContrastModeEnabled,
+            ),
+            foregroundColor: isHighContrast ? Colors.black : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
         ),
       ),
     );

@@ -285,17 +285,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final accent = widget.highContrastMode
-        ? Colors.black
-        : const Color(0xFF76263D);
-    final popupBackground = widget.highContrastMode
-        ? AppUiColors.highContrastPrimary
-        : Colors.white;
-    final primaryText = Colors.black;
-    final secondaryText = Colors.black54;
-
+  List<Widget> _collectTopIcons() {
     final topIcons = <Widget>[];
 
     if (widget.accessibility) {
@@ -316,7 +306,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
       topIcons.add(_topIcon(icon: Icons.wc, tooltip: 'Washrooms'));
     }
 
-    // facility-based coffee/restaurant icons only for non-POI popups (concordia buildings)
+    // Facility-based coffee/restaurant icons only for non-POI popups.
     if (widget.poiCategory == null) {
       if (_hasFacility(['coffee', 'coffee shop', 'cafe'])) {
         topIcons.add(_topIcon(icon: Icons.local_cafe, tooltip: 'Coffee'));
@@ -335,6 +325,66 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     if (_hasFacility(['parking'])) {
       topIcons.add(_topIcon(icon: Icons.local_parking, tooltip: 'Parking'));
     }
+
+    return topIcons;
+  }
+
+  Widget _buildTopIconsContent(List<Widget> topIcons) {
+    if (topIcons.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Wrap(spacing: -15, runSpacing: -15, children: topIcons),
+    );
+  }
+
+  Widget _buildHeaderRow({
+    required Color accent,
+    required List<Widget> topIcons,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.isLoggedIn) ...[
+          _buildIconButton(
+            icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
+            tooltip: _isSaved ? 'Unsave' : 'Save',
+            key: const Key('save_toggle_button'),
+            onPressed: () => unawaited(_toggleSavedPlace()),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Expanded(child: _buildTopIconsContent(topIcons)),
+        Tooltip(
+          message: 'Close',
+          triggerMode: _triggerMode,
+          showDuration: const Duration(seconds: 1),
+          child: IconButton(
+            onPressed: widget.onClose,
+            icon: const Icon(Icons.close),
+            color: accent,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = widget.highContrastMode
+        ? Colors.black
+        : const Color(0xFF76263D);
+    final popupBackground = widget.highContrastMode
+        ? AppUiColors.highContrastPrimary
+        : Colors.white;
+    final primaryText = Colors.black;
+    final secondaryText = Colors.black54;
+
+    final topIcons = _collectTopIcons();
 
     return Material(
       color: Colors.transparent,
@@ -355,47 +405,7 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (widget.isLoggedIn) ...[
-                  _buildIconButton(
-                    icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
-                    tooltip: _isSaved ? 'Unsave' : 'Save',
-                    key: const Key('save_toggle_button'),
-                    onPressed: () => unawaited(_toggleSavedPlace()),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(
-                  child: topIcons.isEmpty
-                      ? const SizedBox.shrink()
-                      : Padding(
-                          padding: const EdgeInsets.only(left: 2),
-                          child: Wrap(
-                            spacing: -15,
-                            runSpacing: -15,
-                            children: topIcons,
-                          ),
-                        ),
-                ),
-                Tooltip(
-                  message: 'Close',
-                  triggerMode: _triggerMode,
-                  showDuration: const Duration(seconds: 1),
-                  child: IconButton(
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.close),
-                    color: accent,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 32,
-                      height: 32,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _buildHeaderRow(accent: accent, topIcons: topIcons),
             const SizedBox(height: 2),
             Text(
               widget.title,
