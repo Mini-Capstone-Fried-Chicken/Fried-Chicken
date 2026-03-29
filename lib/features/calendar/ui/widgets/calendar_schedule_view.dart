@@ -87,8 +87,6 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
 
     final calendarHeaderTextColor = isHighContrast ? Colors.black : primaryText;
 
-    const viewHeaderDayTextColor = Colors.black54;
-
     final viewHeaderDateTextColor = isHighContrast
         ? Colors.black
         : Colors.black87;
@@ -186,7 +184,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
                   ),
                   viewHeaderStyle: ViewHeaderStyle(
                     backgroundColor: calendarBackgroundColor,
-                    dayTextStyle: TextStyle(color: viewHeaderDayTextColor),
+                    dayTextStyle: const TextStyle(color: Colors.black54),
                     dateTextStyle: TextStyle(color: viewHeaderDateTextColor),
                   ),
                   monthViewSettings: const MonthViewSettings(
