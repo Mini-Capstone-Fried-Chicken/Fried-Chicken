@@ -518,6 +518,162 @@ class RouteTravelModeBar extends StatelessWidget {
     this.shuttleRouteData,
   });
 
+  bool get _isShuttleSelected => selectedTravelMode == RouteTravelMode.shuttle;
+
+  bool get _isStartDisabled => isNavigating || _isShuttleSelected;
+
+  VoidCallback? get _detailsAction =>
+      _isShuttleSelected ? onViewSchedule : onShowSteps;
+
+  String get _detailsActionLabel => _isShuttleSelected ? 'Schedule' : 'Steps';
+
+  double get _startButtonAlpha => _isStartDisabled ? 0.20 : 0.40;
+
+  Widget _buildHeaderActions(Color selectedText, Color buttonActive) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: _detailsAction,
+          style: TextButton.styleFrom(
+            foregroundColor: selectedText,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            _detailsActionLabel,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(width: 6),
+        TextButton(
+          onPressed: _isStartDisabled ? null : onStart,
+          style: TextButton.styleFrom(
+            foregroundColor: selectedText,
+            backgroundColor: buttonActive.withValues(alpha: _startButtonAlpha),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            isNavigating ? 'Started' : 'Start',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        const SizedBox(width: 6),
+        IconButton(
+          onPressed: onClose,
+          icon: const Icon(Icons.close),
+          color: selectedText,
+          iconSize: 20,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeButtons(Color selectedText) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Expanded(
+          child: Center(
+            child: _buildTravelModeButton(
+              mode: RouteTravelMode.driving,
+              icon: Icons.directions_car,
+              label: _durationLabelFor(RouteTravelMode.driving),
+              labelSize: 10,
+              selectedColor: selectedText,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: _buildTravelModeButton(
+              mode: RouteTravelMode.walking,
+              icon: Icons.directions_walk,
+              label: _durationLabelFor(RouteTravelMode.walking),
+              labelSize: 10,
+              selectedColor: selectedText,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: _buildTravelModeButton(
+              mode: RouteTravelMode.bicycling,
+              icon: Icons.directions_bike,
+              label: _durationLabelFor(RouteTravelMode.bicycling),
+              labelSize: 10,
+              selectedColor: selectedText,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: _buildTravelModeButton(
+              mode: RouteTravelMode.transit,
+              icon: Icons.directions_transit,
+              label: _durationLabelFor(RouteTravelMode.transit),
+              labelSize: 10,
+              selectedColor: selectedText,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: _buildTravelModeButton(
+              mode: RouteTravelMode.shuttle,
+              icon: Icons.directions_bus_filled,
+              label: _durationLabelFor(RouteTravelMode.shuttle),
+              labelSize: 10,
+              selectedColor: selectedText,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDurationSummary(
+    (String, String) durationParts,
+    Color selectedText,
+    Color mutedText,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 72,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                durationParts.$1,
+                style: TextStyle(
+                  color: selectedText,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Opacity(
+                opacity: durationParts.$2.isNotEmpty ? 1 : 0,
+                child: Text(
+                  durationParts.$2.isNotEmpty ? durationParts.$2 : '--',
+                  style: TextStyle(color: mutedText, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(child: _buildRouteDetails()),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final barBg = highContrastMode
@@ -567,131 +723,12 @@ class RouteTravelModeBar extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Steps button
-              TextButton(
-                onPressed: selectedTravelMode == RouteTravelMode.shuttle
-                    ? onViewSchedule
-                    : onShowSteps,
-                style: TextButton.styleFrom(
-                  foregroundColor: selectedText,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  selectedTravelMode == RouteTravelMode.shuttle
-                      ? 'Schedule'
-                      : 'Steps',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              TextButton(
-                onPressed:
-                    (isNavigating ||
-                        selectedTravelMode == RouteTravelMode.shuttle)
-                    ? null
-                    : onStart,
-                style: TextButton.styleFrom(
-                  foregroundColor: selectedText,
-                  backgroundColor: buttonActive.withValues(
-                    alpha:
-                        (isNavigating ||
-                            selectedTravelMode == RouteTravelMode.shuttle)
-                        ? 0.20
-                        : 0.40,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  isNavigating ? 'Started' : 'Start',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              IconButton(
-                onPressed: onClose,
-                icon: const Icon(Icons.close),
-                color: selectedText,
-                iconSize: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+              _buildHeaderActions(selectedText, buttonActive),
             ],
           ),
           const SizedBox(height: 6),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Expanded(
-                child: Center(
-                  child: _buildTravelModeButton(
-                    mode: RouteTravelMode.driving,
-                    icon: Icons.directions_car,
-                    label: _durationLabelFor(RouteTravelMode.driving),
-                    labelSize: 10,
-                    selectedColor: selectedText,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: _buildTravelModeButton(
-                    mode: RouteTravelMode.walking,
-                    icon: Icons.directions_walk,
-                    label: _durationLabelFor(RouteTravelMode.walking),
-                    labelSize: 10,
-                    selectedColor: selectedText,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: _buildTravelModeButton(
-                    mode: RouteTravelMode.bicycling,
-                    icon: Icons.directions_bike,
-                    label: _durationLabelFor(RouteTravelMode.bicycling),
-                    labelSize: 10,
-                    selectedColor: selectedText,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: _buildTravelModeButton(
-                    mode: RouteTravelMode.transit,
-                    icon: Icons.directions_transit,
-                    label: _durationLabelFor(RouteTravelMode.transit),
-                    labelSize: 10,
-                    selectedColor: selectedText,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: _buildTravelModeButton(
-                    mode: RouteTravelMode.shuttle,
-                    icon: Icons.directions_bus_filled,
-                    label: _durationLabelFor(RouteTravelMode.shuttle),
-                    labelSize: 10,
-                    selectedColor: selectedText,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _buildModeButtons(selectedText),
 
           const SizedBox(height: 10),
           Container(
@@ -700,36 +737,7 @@ class RouteTravelModeBar extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 72,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      durationParts.$1,
-                      style: TextStyle(
-                        color: selectedText,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Opacity(
-                      opacity: durationParts.$2.isNotEmpty ? 1 : 0,
-                      child: Text(
-                        durationParts.$2.isNotEmpty ? durationParts.$2 : '--',
-                        style: TextStyle(color: mutedText, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(child: _buildRouteDetails()),
-            ],
-          ),
+          _buildDurationSummary(durationParts, selectedText, mutedText),
         ],
       ),
     );

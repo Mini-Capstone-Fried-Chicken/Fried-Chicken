@@ -360,7 +360,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
     final subtitleColor = suggestion.isConcordiaBuilding
         ? AppUiColors.primary(
             highContrastEnabled: widget.highContrastMode,
-          ).withOpacity(0.7)
+          ).withValues(alpha: 0.7)
         : Colors.grey[600];
 
     return Text(subtitle, style: TextStyle(fontSize: 12, color: subtitleColor));

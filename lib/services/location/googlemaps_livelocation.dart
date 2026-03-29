@@ -1900,9 +1900,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   /// Shuttle stop marker icon
   Future<void> _createShuttleStopIcon() async {
-    _shuttleStopIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(600, 600)),
+    _shuttleStopIcon = await BitmapDescriptor.asset(
+      const ImageConfiguration(),
       'assets/images/shuttle_icon.png',
+      width: 20,
     );
   }
 
@@ -2936,7 +2937,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
         anchor: const Offset(0.5, 0.5),
         flat: true,
-        zIndex: 999,
+        zIndexInt: 999,
       ),
     );
   }
@@ -3578,7 +3579,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     double top = ay - (_popupH / 2);
 
     const margin = 8.0;
-    final minLeft = margin;
+    const minLeft = margin;
     final maxLeft = screen.width - _popupW - margin;
     final minTop = topPad + margin;
     final maxTop = screen.height - _popupH - margin;
@@ -4246,27 +4247,233 @@ class _ShuttleScheduleSheet extends StatelessWidget {
     required this.highContrastMode,
   });
 
+  _ShuttleSheetPalette _buildPalette() {
+    final accent = AppUiColors.primary(highContrastEnabled: highContrastMode);
+    return _ShuttleSheetPalette(
+      accent: accent,
+      sheetBackground: highContrastMode
+          ? AppUiColors.highContrastPrimary
+          : Colors.white,
+      titleColor: highContrastMode ? Colors.black : accent,
+      primaryText: highContrastMode ? Colors.black : Colors.black87,
+      secondaryText: Colors.black54,
+      mutedText: Colors.black45,
+      nextHighlight: highContrastMode
+          ? const Color(0xFF5EBFA7)
+          : accent.withValues(alpha: 0.08),
+      nextBorder: highContrastMode
+          ? Colors.black26
+          : accent.withValues(alpha: 0.3),
+      nextBadgeBg: highContrastMode ? Colors.black : accent,
+      nextBadgeText: highContrastMode
+          ? AppUiColors.highContrastPrimary
+          : Colors.white,
+      stopChipColor: highContrastMode ? Colors.black : accent,
+      dividerColor: highContrastMode ? Colors.black26 : null,
+    );
+  }
+
+  String _scheduleSummary(bool isWeekday) {
+    return isWeekday
+        ? 'Mon–Fri  ·  Every 30 min  ·  8:00 AM – 10:00 PM'
+        : 'Sat–Sun  ·  Every 15 min  ·  9:00 AM – 6:00 PM';
+  }
+
+  Widget _buildSheetHandle() {
+    return Container(
+      height: 4,
+      width: 44,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    _ShuttleSheetPalette palette,
+    bool isWeekday,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 10, 8),
+      child: Row(
+        children: [
+          Icon(Icons.directions_bus_filled, color: palette.accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Concordia Shuttle Schedule',
+                  style: TextStyle(
+                    color: palette.titleColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  _scheduleSummary(isWeekday),
+                  style: TextStyle(color: palette.secondaryText, fontSize: 11),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: Icon(Icons.close, color: palette.titleColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStopRow(_ShuttleSheetPalette palette) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _StopChip(
+              label: 'SGW  (Hall Building)',
+              color: palette.stopChipColor,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(Icons.sync_alt, size: 16, color: palette.mutedText),
+            ),
+            _StopChip(label: 'Loyola', color: palette.stopChipColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScheduleList(
+    ScrollController scrollController,
+    List<DateTime> times,
+    _ShuttleSheetPalette palette,
+  ) {
+    return ListView.builder(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: times.length,
+      itemBuilder: (context, index) {
+        final time = times[index];
+        final now = DateTime.now();
+        final isPast = time.isBefore(now);
+        final isNext = _isNextBusTime(times, index, now, isPast);
+
+        return _buildScheduleRow(
+          time,
+          isNext: isNext,
+          rowColors: _rowColors(
+            isPast: isPast,
+            isNext: isNext,
+            palette: palette,
+          ),
+          palette: palette,
+        );
+      },
+    );
+  }
+
+  bool _isNextBusTime(
+    List<DateTime> times,
+    int index,
+    DateTime now,
+    bool isPast,
+  ) {
+    return !isPast && (index == 0 || times[index - 1].isBefore(now));
+  }
+
+  _ShuttleScheduleRowColors _rowColors({
+    required bool isPast,
+    required bool isNext,
+    required _ShuttleSheetPalette palette,
+  }) {
+    if (isPast) {
+      return const _ShuttleScheduleRowColors(
+        iconColor: Colors.black26,
+        timeColor: Colors.black26,
+      );
+    }
+
+    if (isNext) {
+      return _ShuttleScheduleRowColors(
+        iconColor: palette.titleColor,
+        timeColor: palette.titleColor,
+      );
+    }
+
+    return _ShuttleScheduleRowColors(
+      iconColor: palette.secondaryText,
+      timeColor: palette.primaryText,
+    );
+  }
+
+  Widget _buildScheduleRow(
+    DateTime time, {
+    required bool isNext,
+    required _ShuttleScheduleRowColors rowColors,
+    required _ShuttleSheetPalette palette,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isNext ? palette.nextHighlight : Colors.transparent,
+        border: isNext ? Border.all(color: palette.nextBorder) : null,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.directions_bus_filled,
+            size: 16,
+            color: rowColors.iconColor,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            ConcordiaShuttleService.formatTime(time),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isNext ? FontWeight.w700 : FontWeight.w400,
+              color: rowColors.timeColor,
+            ),
+          ),
+          if (isNext) ...[
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: palette.nextBadgeBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Next bus',
+                style: TextStyle(
+                  color: palette.nextBadgeText,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final accent = AppUiColors.primary(highContrastEnabled: highContrastMode);
-    final sheetBackground = highContrastMode
-        ? AppUiColors.highContrastPrimary
-        : Colors.white;
-    final titleColor = highContrastMode ? Colors.black : accent;
-    final primaryText = highContrastMode ? Colors.black : Colors.black87;
-    final secondaryText = highContrastMode ? Colors.black54 : Colors.black54;
-    final mutedText = highContrastMode ? Colors.black45 : Colors.black45;
-    final nextHighlight = highContrastMode
-        ? const Color(0xFF5EBFA7)
-        : accent.withValues(alpha: 0.08);
-    final nextBorder = highContrastMode
-        ? Colors.black26
-        : accent.withValues(alpha: 0.3);
-    final nextBadgeBg = highContrastMode ? Colors.black : accent;
-    final nextBadgeText = highContrastMode
-        ? AppUiColors.highContrastPrimary
-        : Colors.white;
-    final stopChipColor = highContrastMode ? Colors.black : accent;
+    final palette = _buildPalette();
     final today = DateTime.now();
     final times = ConcordiaShuttleService.getFullScheduleForDay(today);
     final isWeekday =
@@ -4279,174 +4486,21 @@ class _ShuttleScheduleSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: sheetBackground,
+            color: palette.sheetBackground,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
           ),
           child: Column(
             children: [
               const SizedBox(height: 10),
-              Container(
-                height: 4,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              _buildSheetHandle(),
               const SizedBox(height: 10),
+              _buildHeader(context, palette, isWeekday),
+              _buildStopRow(palette),
 
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 10, 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.directions_bus_filled, color: accent),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Concordia Shuttle Schedule',
-                            style: TextStyle(
-                              color: titleColor,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            isWeekday
-                                ? 'Mon–Fri  ·  Every 30 min  ·  8:00 AM – 10:00 PM'
-                                : 'Sat–Sun  ·  Every 15 min  ·  9:00 AM – 6:00 PM',
-                            style: TextStyle(
-                              color: secondaryText,
-                              fontSize: 11,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: Icon(Icons.close, color: titleColor),
-                    ),
-                  ],
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _StopChip(
-                        label: 'SGW  (Hall Building)',
-                        color: stopChipColor,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Icon(Icons.sync_alt, size: 16, color: mutedText),
-                      ),
-                      _StopChip(label: 'Loyola', color: stopChipColor),
-                    ],
-                  ),
-                ),
-              ),
-
-              Divider(
-                height: 1,
-                color: highContrastMode ? Colors.black26 : null,
-              ),
+              Divider(height: 1, color: palette.dividerColor),
 
               Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: times.length,
-                  itemBuilder: (context, index) {
-                    final t = times[index];
-                    final now = DateTime.now();
-                    final isPast = t.isBefore(now);
-                    final isNext =
-                        !isPast &&
-                        (index == 0 || times[index - 1].isBefore(now));
-
-                    late final Color busIconColor;
-                    late final Color busTimeColor;
-
-                    if (isPast) {
-                      busIconColor = Colors.black26;
-                      busTimeColor = Colors.black26;
-                    } else if (isNext) {
-                      busIconColor = titleColor;
-                      busTimeColor = titleColor;
-                    } else {
-                      busIconColor = secondaryText;
-                      busTimeColor = primaryText;
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isNext ? nextHighlight : Colors.transparent,
-                        border: isNext ? Border.all(color: nextBorder) : null,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.directions_bus_filled,
-                            size: 16,
-                            color: busIconColor,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            ConcordiaShuttleService.formatTime(t),
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: isNext
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
-                              color: busTimeColor,
-                            ),
-                          ),
-                          if (isNext) ...[
-                            const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: nextBadgeBg,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'Next bus',
-                                style: TextStyle(
-                                  color: nextBadgeText,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                child: _buildScheduleList(scrollController, times, palette),
               ),
             ],
           ),
@@ -4454,6 +4508,46 @@ class _ShuttleScheduleSheet extends StatelessWidget {
       },
     );
   }
+}
+
+class _ShuttleSheetPalette {
+  final Color accent;
+  final Color sheetBackground;
+  final Color titleColor;
+  final Color primaryText;
+  final Color secondaryText;
+  final Color mutedText;
+  final Color nextHighlight;
+  final Color nextBorder;
+  final Color nextBadgeBg;
+  final Color nextBadgeText;
+  final Color stopChipColor;
+  final Color? dividerColor;
+
+  const _ShuttleSheetPalette({
+    required this.accent,
+    required this.sheetBackground,
+    required this.titleColor,
+    required this.primaryText,
+    required this.secondaryText,
+    required this.mutedText,
+    required this.nextHighlight,
+    required this.nextBorder,
+    required this.nextBadgeBg,
+    required this.nextBadgeText,
+    required this.stopChipColor,
+    required this.dividerColor,
+  });
+}
+
+class _ShuttleScheduleRowColors {
+  final Color iconColor;
+  final Color timeColor;
+
+  const _ShuttleScheduleRowColors({
+    required this.iconColor,
+    required this.timeColor,
+  });
 }
 
 class _StopChip extends StatelessWidget {

@@ -381,8 +381,8 @@ class _BuildingInfoPopupState extends State<BuildingInfoPopup> {
     final popupBackground = widget.highContrastMode
         ? AppUiColors.highContrastPrimary
         : Colors.white;
-    final primaryText = Colors.black;
-    final secondaryText = Colors.black54;
+    const primaryText = Colors.black;
+    const secondaryText = Colors.black54;
 
     final topIcons = _collectTopIcons();
 
