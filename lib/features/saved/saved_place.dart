@@ -24,25 +24,20 @@ class SavedPlace {
     this.roomCode,
   });
 
-  SavedPlace copyWith({
-    String? id,
-    String? name,
-    String? category,
-    double? latitude,
-    double? longitude,
-    String? openingHoursToday,
-    String? googlePlaceType,
-    String? roomCode,
-  }) {
+  SavedPlace copyWith([SavedPlaceChanges changes = const SavedPlaceChanges()]) {
     return SavedPlace(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      category: category ?? this.category,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      openingHoursToday: openingHoursToday ?? this.openingHoursToday,
-      googlePlaceType: googlePlaceType ?? this.googlePlaceType,
-      roomCode: roomCode ?? this.roomCode,
+      id: changes.id ?? id,
+      name: changes.name ?? name,
+      category: changes.category ?? category,
+      latitude: changes.latitude ?? latitude,
+      longitude: changes.longitude ?? longitude,
+      openingHoursToday: changes.openingHoursToday ?? openingHoursToday,
+      googlePlaceType: changes.googlePlaceType is _UnsetValue
+          ? googlePlaceType
+          : changes.googlePlaceType as String?,
+      roomCode: changes.roomCode is _UnsetValue
+          ? roomCode
+          : changes.roomCode as String?,
     );
   }
 
@@ -75,3 +70,31 @@ class SavedPlace {
     );
   }
 }
+
+class SavedPlaceChanges {
+  final String? id;
+  final String? name;
+  final String? category;
+  final double? latitude;
+  final double? longitude;
+  final String? openingHoursToday;
+  final Object? googlePlaceType;
+  final Object? roomCode;
+
+  const SavedPlaceChanges({
+    this.id,
+    this.name,
+    this.category,
+    this.latitude,
+    this.longitude,
+    this.openingHoursToday,
+    this.googlePlaceType = _unsetValue,
+    this.roomCode = _unsetValue,
+  });
+}
+
+class _UnsetValue {
+  const _UnsetValue();
+}
+
+const _unsetValue = _UnsetValue();

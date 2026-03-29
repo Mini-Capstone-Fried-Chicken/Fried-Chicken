@@ -40,6 +40,34 @@ class CalendarScheduleView extends StatefulWidget {
   State<CalendarScheduleView> createState() => _CalendarScheduleViewState();
 }
 
+class _CalendarContentConfig {
+  final Color emptyStateTextColor;
+  final GoogleCalendarDataSource dataSource;
+  final Color calendarBackgroundColor;
+  final Color calendarCellBorderColor;
+  final DateTime initialDate;
+  final Color calendarTodayHighlightColor;
+  final Color calendarSelectionBorderColor;
+  final Color? calendarHeaderBackgroundColor;
+  final Color calendarHeaderTextColor;
+  final Color viewHeaderDateTextColor;
+  final Color timeTextColor;
+
+  const _CalendarContentConfig({
+    required this.emptyStateTextColor,
+    required this.dataSource,
+    required this.calendarBackgroundColor,
+    required this.calendarCellBorderColor,
+    required this.initialDate,
+    required this.calendarTodayHighlightColor,
+    required this.calendarSelectionBorderColor,
+    required this.calendarHeaderBackgroundColor,
+    required this.calendarHeaderTextColor,
+    required this.viewHeaderDateTextColor,
+    required this.timeTextColor,
+  });
+}
+
 class _CalendarScheduleViewState extends State<CalendarScheduleView> {
   CalendarView _calendarView = CalendarView.week;
 
@@ -50,15 +78,54 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final secondaryText = isHighContrast
         ? const Color(0xFF89D9C2)
         : const Color(0xFF8B1E3F);
+    final emptyStateTextColor = isHighContrast
+        ? Colors.white70
+        : Colors.black54;
+
+    final calendarBackgroundColor = isHighContrast
+        ? const Color(0xFF0F0F0F)
+        : Colors.white;
+
+    final calendarCellBorderColor = isHighContrast
+        ? const Color(0x3389D9C2)
+        : const Color(0x1A000000);
+
+    final timeTextColor = isHighContrast ? Colors.white : Colors.black54;
 
     final dataSource = GoogleCalendarDataSource(widget.events);
+    final initialDate = _resolveInitialDate();
 
-    DateTime initialDate;
-    if (widget.events.isNotEmpty && widget.events.first.start != null) {
-      initialDate = widget.events.first.start!;
-    } else {
-      initialDate = DateTime.now();
-    }
+    final calendarTodayHighlightColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+
+    final calendarSelectionBorderColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : const Color(0xFF8B1E3F);
+
+    final calendarHeaderBackgroundColor = isHighContrast
+        ? const Color(0xFF89D9C2)
+        : null;
+
+    final calendarHeaderTextColor = isHighContrast ? Colors.black : primaryText;
+
+    final viewHeaderDateTextColor = isHighContrast
+        ? Colors.black
+        : Colors.black87;
+
+    final contentConfig = _CalendarContentConfig(
+      emptyStateTextColor: emptyStateTextColor,
+      dataSource: dataSource,
+      calendarBackgroundColor: calendarBackgroundColor,
+      calendarCellBorderColor: calendarCellBorderColor,
+      initialDate: initialDate,
+      calendarTodayHighlightColor: calendarTodayHighlightColor,
+      calendarSelectionBorderColor: calendarSelectionBorderColor,
+      calendarHeaderBackgroundColor: calendarHeaderBackgroundColor,
+      calendarHeaderTextColor: calendarHeaderTextColor,
+      viewHeaderDateTextColor: viewHeaderDateTextColor,
+      timeTextColor: timeTextColor,
+    );
 
     return Column(
       children: [
@@ -117,83 +184,71 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
           ),
         ),
         const SizedBox(height: 12),
-        Expanded(
-          child: widget.events.isEmpty
-              ? Center(
-                  child: Text(
-                    'No events found in this calendar.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isHighContrast ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                )
-              : SfCalendar(
-                  key: ValueKey(_calendarView),
-                  view: _calendarView,
-                  dataSource: dataSource,
-                  backgroundColor: isHighContrast
-                      ? const Color(0xFF0F0F0F)
-                      : Colors.white,
-                  cellBorderColor: isHighContrast
-                      ? const Color(0x3389D9C2)
-                      : const Color(0x1A000000),
-                  initialDisplayDate: initialDate,
-                  firstDayOfWeek: 1,
-                  todayHighlightColor: isHighContrast
-                      ? const Color(0xFF89D9C2)
-                      : const Color(0xFF8B1E3F),
-                  specialRegions: buildTodayHighlightRegion(_calendarView),
-                  selectionDecoration: BoxDecoration(
-                    border: Border.all(
-                      color: isHighContrast
-                          ? const Color(0xFF89D9C2)
-                          : const Color(0xFF8B1E3F),
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  headerStyle: CalendarHeaderStyle(
-                    backgroundColor: isHighContrast
-                        ? const Color(0xFF89D9C2)
-                        : null,
-                    textAlign: TextAlign.center,
-                    textStyle: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isHighContrast ? Colors.black : primaryText,
-                    ),
-                  ),
-                  viewHeaderStyle: ViewHeaderStyle(
-                    backgroundColor: isHighContrast
-                        ? const Color(0xFF89D9C2)
-                        : Colors.white,
-                    dayTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.black54 : Colors.black54,
-                    ),
-                    dateTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.black : Colors.black87,
-                    ),
-                  ),
-                  monthViewSettings: const MonthViewSettings(
-                    appointmentDisplayMode:
-                        MonthAppointmentDisplayMode.appointment,
-                    showAgenda: true,
-                  ),
-                  timeSlotViewSettings: TimeSlotViewSettings(
-                    startHour: 8,
-                    endHour: 22,
-                    timeIntervalHeight: 60,
-                    timeTextStyle: TextStyle(
-                      color: isHighContrast ? Colors.white : Colors.black54,
-                      fontSize: 12,
-                    ),
-                    minimumAppointmentDuration: Duration(minutes: 45),
-                  ),
-                  onTap: handleCalendarTap,
-                ),
-        ),
+        Expanded(child: _buildCalendarContent(contentConfig)),
       ],
+    );
+  }
+
+  DateTime _resolveInitialDate() {
+    if (widget.events.isNotEmpty && widget.events.first.start != null) {
+      return widget.events.first.start!;
+    }
+    return DateTime.now();
+  }
+
+  Widget _buildCalendarContent(_CalendarContentConfig config) {
+    if (widget.events.isEmpty) {
+      return Center(
+        child: Text(
+          'No events found in this calendar.',
+          style: TextStyle(fontSize: 15, color: config.emptyStateTextColor),
+        ),
+      );
+    }
+
+    return SfCalendar(
+      key: ValueKey(_calendarView),
+      view: _calendarView,
+      dataSource: config.dataSource,
+      backgroundColor: config.calendarBackgroundColor,
+      cellBorderColor: config.calendarCellBorderColor,
+      initialDisplayDate: config.initialDate,
+      firstDayOfWeek: 1,
+      todayHighlightColor: config.calendarTodayHighlightColor,
+      specialRegions: buildTodayHighlightRegion(_calendarView),
+      selectionDecoration: BoxDecoration(
+        border: Border.all(
+          color: config.calendarSelectionBorderColor,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      headerStyle: CalendarHeaderStyle(
+        backgroundColor: config.calendarHeaderBackgroundColor,
+        textAlign: TextAlign.center,
+        textStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: config.calendarHeaderTextColor,
+        ),
+      ),
+      viewHeaderStyle: ViewHeaderStyle(
+        backgroundColor: config.calendarBackgroundColor,
+        dayTextStyle: const TextStyle(color: Colors.black54),
+        dateTextStyle: TextStyle(color: config.viewHeaderDateTextColor),
+      ),
+      monthViewSettings: const MonthViewSettings(
+        appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+        showAgenda: true,
+      ),
+      timeSlotViewSettings: TimeSlotViewSettings(
+        startHour: 8,
+        endHour: 22,
+        timeIntervalHeight: 60,
+        timeTextStyle: TextStyle(color: config.timeTextColor, fontSize: 12),
+        minimumAppointmentDuration: const Duration(minutes: 45),
+      ),
+      onTap: handleCalendarTap,
     );
   }
 

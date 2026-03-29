@@ -274,16 +274,19 @@ class _StepTile extends StatelessWidget {
     const burgundy = Color(0xFF76263D);
 
     final icon = _iconFor(step);
-    final iconBg = highContrastMode
-        ? Colors.black.withValues(alpha: 0.08)
-        : step.travelMode == 'transit'
-        ? Colors.black.withValues(alpha: 0.06)
-        : burgundy.withValues(alpha: 0.12);
-    final iconColor = highContrastMode
-        ? Colors.black
-        : step.travelMode == 'transit'
-        ? Colors.black87
-        : burgundy;
+    late final Color iconBg;
+    late final Color iconColor;
+
+    if (highContrastMode) {
+      iconBg = Colors.black.withValues(alpha: 0.08);
+      iconColor = Colors.black;
+    } else if (step.travelMode == 'transit') {
+      iconBg = Colors.black.withValues(alpha: 0.06);
+      iconColor = Colors.black87;
+    } else {
+      iconBg = burgundy.withValues(alpha: 0.12);
+      iconColor = burgundy;
+    }
     final tileBackground = highContrastMode
         ? const Color(0xFF6CCEB5)
         : Colors.white;
@@ -473,26 +476,8 @@ class NavigationNextStepHeader extends StatelessWidget {
         : Colors.white.withValues(alpha: 0.14);
 
     final step = nextStep;
-    final stepLabel = step != null && step.travelMode == 'transit'
-        ? step.transitLabel
-        : step?.instruction;
-    final primary = stepLabel ?? 'Continue';
-
-    final secondaryParts = <String>[];
-    if (step != null &&
-        step.travelMode == 'transit' &&
-        step.transitHeadsign != null &&
-        step.transitHeadsign!.trim().isNotEmpty) {
-      secondaryParts.add(step.transitHeadsign!.trim());
-    }
-    final fallback = step?.distanceText;
-    final dist = (nextDistance?.trim().isNotEmpty == true)
-        ? nextDistance
-        : fallback;
-    if (dist != null && dist.trim().isNotEmpty) secondaryParts.add(dist.trim());
-    if (step?.indoorFloorLabel?.trim().isNotEmpty == true) {
-      secondaryParts.add('Floor ${step!.indoorFloorLabel!.trim()}');
-    }
+    final primary = _primaryInstruction(step);
+    final secondary = _secondaryInstruction(step);
 
     return SafeArea(
       bottom: false,
@@ -545,9 +530,7 @@ class NavigationNextStepHeader extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            secondaryParts.isEmpty
-                                ? modeLabel
-                                : secondaryParts.join(' • '),
+                            secondary,
                             style: TextStyle(
                               color: secondaryText,
                               fontSize: 12,
@@ -556,93 +539,144 @@ class NavigationNextStepHeader extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Column(
-                      children: [
-                        TextButton(
-                          onPressed: onShowSteps,
-                          style: TextButton.styleFrom(
-                            foregroundColor: primaryText,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Steps',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        TextButton(
-                          onPressed: onStop,
-                          style: TextButton.styleFrom(
-                            foregroundColor: primaryText,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Stop',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildActionButtons(primaryText),
                   ],
                 ),
-                if (onPrevious != null || onNext != null) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: canGoPrevious ? onPrevious : null,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: primaryText,
-                            side: BorderSide(color: secondaryText),
-                          ),
-                          child: const Text('Previous'),
-                        ),
-                      ),
-                      if (progressLabel != null) ...[
-                        const SizedBox(width: 10),
-                        Text(
-                          progressLabel!,
-                          style: TextStyle(
-                            color: secondaryText,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                      ] else
-                        const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: canGoNext ? onNext : null,
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: highContrastMode
-                                ? Colors.black
-                                : const Color(0xFF76263D),
-                            backgroundColor: Colors.white,
-                          ),
-                          child: const Text('Next Step'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ..._buildPaginationSection(primaryText, secondaryText),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _primaryInstruction(NavigationStep? step) {
+    final stepLabel = step != null && step.travelMode == 'transit'
+        ? step.transitLabel
+        : step?.instruction;
+    return stepLabel ?? 'Continue';
+  }
+
+  String _secondaryInstruction(NavigationStep? step) {
+    final parts = <String>[];
+    _addTransitHeadsignPart(parts, step);
+    _addDistancePart(parts, step);
+    _addFloorPart(parts, step);
+    return parts.isEmpty ? modeLabel : parts.join(' • ');
+  }
+
+  void _addTransitHeadsignPart(List<String> parts, NavigationStep? step) {
+    if (step == null || step.travelMode != 'transit') return;
+    final headsign = step.transitHeadsign?.trim();
+    if (headsign == null || headsign.isEmpty) return;
+    parts.add(headsign);
+  }
+
+  void _addDistancePart(List<String> parts, NavigationStep? step) {
+    final fallback = step?.distanceText;
+    final dist = (nextDistance?.trim().isNotEmpty == true)
+        ? nextDistance
+        : fallback;
+    final normalized = dist?.trim();
+    if (normalized == null || normalized.isEmpty) return;
+    parts.add(normalized);
+  }
+
+  void _addFloorPart(List<String> parts, NavigationStep? step) {
+    final floor = step?.indoorFloorLabel?.trim();
+    if (floor == null || floor.isEmpty) return;
+    parts.add('Floor $floor');
+  }
+
+  Widget _buildActionButtons(Color primaryText) {
+    return Column(
+      children: [
+        TextButton(
+          onPressed: onShowSteps,
+          style: TextButton.styleFrom(
+            foregroundColor: primaryText,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text(
+            'Steps',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(height: 2),
+        TextButton(
+          onPressed: onStop,
+          style: TextButton.styleFrom(
+            foregroundColor: primaryText,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text(
+            'Stop',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildPaginationSection(Color primaryText, Color secondaryText) {
+    if (onPrevious == null && onNext == null) {
+      return const [];
+    }
+
+    return [
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: canGoPrevious ? onPrevious : null,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryText,
+                side: BorderSide(color: secondaryText),
+              ),
+              child: const Text('Previous'),
+            ),
+          ),
+          ..._buildProgressLabelWidgets(secondaryText),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: canGoNext ? onNext : null,
+              style: ElevatedButton.styleFrom(
+                foregroundColor: highContrastMode
+                    ? Colors.black
+                    : const Color(0xFF76263D),
+                backgroundColor: Colors.white,
+              ),
+              child: const Text('Next Step'),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildProgressLabelWidgets(Color secondaryText) {
+    if (progressLabel == null) {
+      return const [SizedBox(width: 10)];
+    }
+
+    return [
+      const SizedBox(width: 10),
+      Text(
+        progressLabel!,
+        style: TextStyle(
+          color: secondaryText,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(width: 10),
+    ];
   }
 }
 

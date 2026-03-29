@@ -64,6 +64,7 @@ class IndoorRouteService {
     required String buildingCode,
     required String originRoomCode,
     required String destinationRoomCode,
+    IndoorTransitionMode? preferredTransitionMode,
   }) async {
     final originRoom = await indoorRepository.resolveRoom(
       buildingCode,
@@ -78,9 +79,15 @@ class IndoorRouteService {
       return null;
     }
 
+    if (originRoom.floorAssetPath != destinationRoom.floorAssetPath &&
+        preferredTransitionMode == null) {
+      return null;
+    }
+
     final routePlan = multiFloorRouter.buildRoute(
       originRoom: originRoom,
       destinationRoom: destinationRoom,
+      preferredTransitionMode: preferredTransitionMode,
     );
     if (routePlan == null) {
       return null;
@@ -181,32 +188,9 @@ class IndoorRouteService {
       }
       totalMeters += meters;
 
-      String instruction;
-      String? maneuver;
-      if (i == 1) {
-        instruction = 'Walk ahead';
-        maneuver = 'straight';
-      } else {
-        final prevA = routePoints[i - 2];
-        final prevB = routePoints[i - 1];
-        final previousBearing = _bearingDegrees(prevA, prevB);
-        final currentBearing = _bearingDegrees(a, b);
-        final turn = _normalizeTurnDelta(currentBearing - previousBearing);
-
-        if (turn > 25 && turn < 140) {
-          instruction = 'Turn right';
-          maneuver = 'turn-right';
-        } else if (turn < -25 && turn > -140) {
-          instruction = 'Turn left';
-          maneuver = 'turn-left';
-        } else if (turn.abs() >= 140) {
-          instruction = 'Make a U-turn';
-          maneuver = 'uturn-right';
-        } else {
-          instruction = 'Continue straight';
-          maneuver = 'straight';
-        }
-      }
+      final direction = _directionForSegment(routePoints, i, a, b);
+      final instruction = direction.$1;
+      final maneuver = direction.$2;
 
       final stepSeconds = (meters / _walkingMetersPerSecond).round();
       steps.add(
@@ -241,6 +225,37 @@ class IndoorRouteService {
       distanceText: _metersText(totalMeters),
       durationText: _durationTextFromSeconds(totalSeconds),
     );
+  }
+
+  (String, String?) _directionForSegment(
+    List<LatLng> routePoints,
+    int index,
+    LatLng from,
+    LatLng to,
+  ) {
+    if (index == 1) {
+      return ('Walk ahead', 'straight');
+    }
+
+    final prevA = routePoints[index - 2];
+    final prevB = routePoints[index - 1];
+    final previousBearing = _bearingDegrees(prevA, prevB);
+    final currentBearing = _bearingDegrees(from, to);
+    final turn = _normalizeTurnDelta(currentBearing - previousBearing);
+    return _turnInstruction(turn);
+  }
+
+  (String, String?) _turnInstruction(double turn) {
+    if (turn > 25 && turn < 140) {
+      return ('Turn right', 'turn-right');
+    }
+    if (turn < -25 && turn > -140) {
+      return ('Turn left', 'turn-left');
+    }
+    if (turn.abs() >= 140) {
+      return ('Make a U-turn', 'uturn-right');
+    }
+    return ('Continue straight', 'straight');
   }
 
   Map<String, Set<Polyline>> _buildPolylinesByFloorAsset(

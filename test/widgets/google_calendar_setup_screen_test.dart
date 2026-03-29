@@ -4,17 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   Widget makeTestableWidget(Widget child) {
-    return MaterialApp(
-      home: child,
-    );
+    return MaterialApp(home: child);
   }
 
   group('GoogleCalendarSetupScreen', () {
     testWidgets('renders title, intro text, and steps', (tester) async {
       await tester.pumpWidget(
-        makeTestableWidget(
-          const GoogleCalendarSetupScreen(),
-        ),
+        makeTestableWidget(const GoogleCalendarSetupScreen()),
       );
 
       expect(find.text('How to set up your Google Calendar'), findsOneWidget);
@@ -27,6 +23,7 @@ void main() {
 
       expect(find.text('Step 1'), findsOneWidget);
       expect(find.text('Step 2'), findsOneWidget);
+      expect(find.text('Step 3'), findsOneWidget);
 
       expect(
         find.text(
@@ -45,9 +42,7 @@ void main() {
 
     testWidgets('renders back button', (tester) async {
       await tester.pumpWidget(
-        makeTestableWidget(
-          const GoogleCalendarSetupScreen(),
-        ),
+        makeTestableWidget(const GoogleCalendarSetupScreen()),
       );
 
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
@@ -56,12 +51,10 @@ void main() {
 
     testWidgets('renders two images', (tester) async {
       await tester.pumpWidget(
-        makeTestableWidget(
-          const GoogleCalendarSetupScreen(),
-        ),
+        makeTestableWidget(const GoogleCalendarSetupScreen()),
       );
 
-      expect(find.byType(Image), findsNWidgets(2));
+      expect(find.byType(Image), findsNWidgets(3));
     });
 
     testWidgets('can pop screen when back button is tapped', (tester) async {
@@ -103,9 +96,7 @@ void main() {
 
     testWidgets('screen is scrollable', (tester) async {
       await tester.pumpWidget(
-        makeTestableWidget(
-          const GoogleCalendarSetupScreen(),
-        ),
+        makeTestableWidget(const GoogleCalendarSetupScreen()),
       );
 
       expect(find.byType(SingleChildScrollView), findsOneWidget);

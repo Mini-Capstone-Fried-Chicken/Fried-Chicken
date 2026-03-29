@@ -15,10 +15,12 @@
 
 import 'package:campus_app/data/building_polygons.dart';
 import 'package:campus_app/features/indoor/data/building_info.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:campus_app/models/campus.dart';
 import 'package:campus_app/services/google_directions_service.dart';
 import 'package:campus_app/services/indoor_maps/indoor_floor_config.dart';
 import 'package:campus_app/services/indoor_maps/indoor_map_controller.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
 import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
 import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/services/location/indoor_navigation_session.dart';
@@ -346,16 +348,22 @@ IndoorNavigationSession _fakeHallIndoorSession() {
 }
 
 class _FakeIndoorRouteService extends IndoorRouteService {
-  final IndoorNavigationSession session;
+  final IndoorNavigationSession? session;
+  IndoorTransitionMode? lastPreferredTransitionMode;
+  int buildIndoorNavigationSessionCallCount = 0;
 
-  _FakeIndoorRouteService(this.session);
+  _FakeIndoorRouteService(this.session, {IndoorMapRepository? indoorRepository})
+    : super(indoorRepository: indoorRepository);
 
   @override
   Future<IndoorNavigationSession?> buildIndoorNavigationSession({
     required String buildingCode,
     required String originRoomCode,
     required String destinationRoomCode,
+    IndoorTransitionMode? preferredTransitionMode,
   }) async {
+    buildIndoorNavigationSessionCallCount += 1;
+    lastPreferredTransitionMode = preferredTransitionMode;
     return session;
   }
 }
@@ -377,6 +385,43 @@ class _FakeIndoorMapController extends IndoorMapController {
       amenityIcons: const {},
       geoJson: const {'type': 'FeatureCollection', 'features': []},
     );
+  }
+}
+
+Future<void> _submitHallRoomRoute(
+  WidgetTester tester, {
+  String originRoom = '803',
+  String destinationRoom = '909',
+}) async {
+  final roomFields = find.descendant(
+    of: find.byType(MapSearchBar),
+    matching: find.byType(TextField),
+  );
+  final originField = roomFields.at(1);
+  final destinationField = roomFields.at(2);
+  final roomSection = tester.widget<RoomFieldsSection>(
+    find.byType(RoomFieldsSection),
+  );
+
+  await tester.tap(originField);
+  await tester.enterText(originField, originRoom);
+  await tester.tap(destinationField);
+  await tester.enterText(destinationField, destinationRoom);
+
+  final originResult = roomSection.onOriginRoomSubmitted?.call(
+    'HALL',
+    originRoom,
+  );
+  if (originResult is Future<void>) {
+    await originResult;
+  }
+
+  final destinationResult = roomSection.onDestinationRoomSubmitted?.call(
+    'HALL',
+    destinationRoom,
+  );
+  if (destinationResult is Future<void>) {
+    await destinationResult;
   }
 }
 
@@ -555,6 +600,14 @@ Campus campusFromPoint(LatLng p) {
 // ============================================================================
 
 void main() {
+  setUp(() {
+    AppSettingsController.notifier.value = const AppSettingsState();
+  });
+
+  tearDown(() {
+    AppSettingsController.notifier.value = const AppSettingsState();
+  });
+
   // --------------------------------------------------------------------------
   // 1. _isPointInPolygon algorithm coverage
   // --------------------------------------------------------------------------
@@ -1986,6 +2039,163 @@ void main() {
       expect(find.text('Destination Room'), findsOneWidget);
       expect(find.byType(RoomFieldsSection), findsOneWidget);
     });
+
+    testWidgets(
+      'preferred indoor transition mode is forwarded from room fields',
+      (tester) async {
+        final fakeRouteService = _FakeIndoorRouteService(
+          _fakeHallIndoorSession(),
+        );
+
+        await pumpNoMap(
+          tester,
+          debugSelectedBuilding: hallBuilding,
+          debugAnchorOffset: const Offset(200, 400),
+          isLoggedIn: true,
+          debugIndoorRouteService: fakeRouteService,
+          debugIndoorMapController: _FakeIndoorMapController(),
+        );
+        await tester.pumpAndSettle();
+
+        final popup = find.byType(BuildingInfoPopup);
+        final indoorButton = find.descendant(
+          of: popup,
+          matching: find.byIcon(Icons.map),
+        );
+        await tester.tap(indoorButton);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Switch floors by'), findsOneWidget);
+        await tester.tap(find.widgetWithText(ChoiceChip, 'Elevator'));
+        await tester.pumpAndSettle();
+
+        await _submitHallRoomRoute(tester);
+        await tester.pumpAndSettle();
+
+        expect(
+          fakeRouteService.lastPreferredTransitionMode,
+          IndoorTransitionMode.elevator,
+        );
+      },
+    );
+
+    testWidgets(
+      'wheelchair routing defaults multi-floor indoor navigation to elevators',
+      (tester) async {
+        AppSettingsController.notifier.value = const AppSettingsState(
+          accessibilityModeEnabled: true,
+          wheelchairRoutingDefaultEnabled: true,
+        );
+
+        final fakeIndoorRouteService = _FakeIndoorRouteService(
+          _fakeHallIndoorSession(),
+        );
+
+        await pumpNoMap(
+          tester,
+          debugSelectedBuilding: hallBuilding,
+          debugAnchorOffset: const Offset(200, 400),
+          isLoggedIn: true,
+          debugIndoorRouteService: fakeIndoorRouteService,
+          debugIndoorMapController: _FakeIndoorMapController(),
+        );
+        await tester.pumpAndSettle();
+
+        final popup = find.byType(BuildingInfoPopup);
+        final indoorButton = find.descendant(
+          of: popup,
+          matching: find.byIcon(Icons.map),
+        );
+        await tester.tap(indoorButton);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        await _submitHallRoomRoute(tester);
+        await _pumpUntilFound(tester, find.text('Next Step'));
+
+        expect(
+          fakeIndoorRouteService.lastPreferredTransitionMode,
+          IndoorTransitionMode.elevator,
+        );
+      },
+    );
+
+    testWidgets('missing multi-floor transition selection shows snackbar', (
+      tester,
+    ) async {
+      final fakeRouteService = _FakeIndoorRouteService(null);
+
+      await pumpNoMap(
+        tester,
+        debugSelectedBuilding: hallBuilding,
+        debugAnchorOffset: const Offset(200, 400),
+        isLoggedIn: true,
+        debugIndoorRouteService: fakeRouteService,
+        debugIndoorMapController: _FakeIndoorMapController(),
+      );
+      await tester.pumpAndSettle();
+
+      final popup = find.byType(BuildingInfoPopup);
+      final indoorButton = find.descendant(
+        of: popup,
+        matching: find.byIcon(Icons.map),
+      );
+      await tester.tap(indoorButton);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await _submitHallRoomRoute(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Select stairs, elevator, or escalator before starting a multi-floor route.',
+        ),
+        findsOneWidget,
+      );
+      expect(fakeRouteService.lastPreferredTransitionMode, isNull);
+    });
+
+    testWidgets(
+      'wheelchair routing ignores stairs selection and still uses elevator',
+      (tester) async {
+        AppSettingsController.notifier.value = const AppSettingsState(
+          accessibilityModeEnabled: true,
+          wheelchairRoutingDefaultEnabled: true,
+        );
+
+        final fakeIndoorRouteService = _FakeIndoorRouteService(
+          _fakeHallIndoorSession(),
+        );
+
+        await pumpNoMap(
+          tester,
+          debugSelectedBuilding: hallBuilding,
+          debugAnchorOffset: const Offset(200, 400),
+          isLoggedIn: true,
+          debugIndoorRouteService: fakeIndoorRouteService,
+          debugIndoorMapController: _FakeIndoorMapController(),
+        );
+        await tester.pumpAndSettle();
+
+        final popup = find.byType(BuildingInfoPopup);
+        final indoorButton = find.descendant(
+          of: popup,
+          matching: find.byIcon(Icons.map),
+        );
+        await tester.tap(indoorButton);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        await tester.tap(find.widgetWithText(ChoiceChip, 'Stairs'));
+        await tester.pumpAndSettle();
+
+        await _submitHallRoomRoute(tester);
+        await _pumpUntilFound(tester, find.text('Next Step'));
+
+        expect(
+          fakeIndoorRouteService.lastPreferredTransitionMode,
+          IndoorTransitionMode.elevator,
+        );
+      },
+    );
 
     testWidgets(
       'multi-floor indoor route supports steps, next, previous, and stop',

@@ -4,10 +4,11 @@ import 'package:campus_app/data/building_names.dart';
 import 'package:campus_app/features/saved/saved_place.dart';
 import 'package:campus_app/services/google_places_service.dart';
 
-typedef SavedPlaceMetadataResolver = Future<PlaceResult?> Function({
-  required String query,
-  required LatLng location,
-});
+typedef SavedPlaceMetadataResolver =
+    Future<PlaceResult?> Function({
+      required String query,
+      required LatLng location,
+    });
 
 const String _concordiaBuildingCategory = 'concordia building';
 
@@ -19,7 +20,8 @@ class SavedPlaceMetadataService {
     SavedPlaceMetadataResolver? metadataResolver,
   }) async {
     final isConcordiaBuilding = _isConcordiaBuildingFromKnownList(place);
-    final resolver = metadataResolver ??
+    final resolver =
+        metadataResolver ??
         ({required String query, required LatLng location}) {
           return GooglePlacesService.instance.resolvePlaceMetadata(
             query: query,
@@ -35,7 +37,9 @@ class SavedPlaceMetadataService {
 
       if (metadata == null) {
         if (isConcordiaBuilding) {
-          return place.copyWith(category: _concordiaBuildingCategory);
+          return place.copyWith(
+            const SavedPlaceChanges(category: _concordiaBuildingCategory),
+          );
         }
         return place;
       }
@@ -52,13 +56,17 @@ class SavedPlaceMetadataService {
           : (category ?? place.category);
 
       return place.copyWith(
-        category: resolvedCategory,
-        openingHoursToday: openingHours ?? place.openingHoursToday,
-        googlePlaceType: metadata.primaryType,
+        SavedPlaceChanges(
+          category: resolvedCategory,
+          openingHoursToday: openingHours ?? place.openingHoursToday,
+          googlePlaceType: metadata.primaryType,
+        ),
       );
     } catch (_) {
       if (isConcordiaBuilding) {
-        return place.copyWith(category: _concordiaBuildingCategory);
+        return place.copyWith(
+          const SavedPlaceChanges(category: _concordiaBuildingCategory),
+        );
       }
       return place;
     }
@@ -102,8 +110,6 @@ class SavedPlaceMetadataService {
 
     final tokenized = trimmed.toLowerCase().replaceAll('-', '_');
 
-    // Collapse cuisine-specific restaurant subtypes (e.g. japanese_restaurant)
-    // into a broad category so filters remain useful.
     if (tokenized == 'restaurant' || tokenized.endsWith('_restaurant')) {
       return 'restaurant';
     }
@@ -116,7 +122,9 @@ class SavedPlaceMetadataService {
       return 'bar';
     }
 
-    if (tokenized == 'university' || tokenized == 'school' || tokenized == 'college') {
+    if (tokenized == 'university' ||
+        tokenized == 'school' ||
+        tokenized == 'college') {
       return _concordiaBuildingCategory;
     }
 

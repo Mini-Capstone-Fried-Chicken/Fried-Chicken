@@ -227,10 +227,8 @@ void main() {
 
         expect(calendar.headerStyle.backgroundColor, const Color(0xFF89D9C2));
         expect(calendar.headerStyle.textStyle?.color, Colors.black);
-        expect(
-          calendar.viewHeaderStyle.backgroundColor,
-          const Color(0xFF89D9C2),
-        );
+        expect(calendar.viewHeaderStyle.dateTextStyle?.color, Colors.black);
+        expect(calendar.viewHeaderStyle.dayTextStyle?.color, Colors.black54);
         expect(
           calendar.timeSlotViewSettings.timeTextStyle?.color,
           Colors.white,

@@ -123,6 +123,43 @@ void main() {
         expect(plan, isNull);
       },
     );
+
+    test('buildRoute respects a preferred transition mode when available', () {
+      final plan = router.buildRoute(
+        originRoom: _resolvedRoom(
+          buildingCode: 'HALL',
+          roomCode: 'A801',
+          floorLabel: '8',
+          floorAssetPath: 'floor_8',
+          floorGeoJson: _originFloorGeoJson(
+            extraTransitionProperties: const [
+              {'highway': 'elevator', 'level': '8'},
+            ],
+          ),
+          center: const LatLng(45.000025, -72.999975),
+        ),
+        destinationRoom: _resolvedRoom(
+          buildingCode: 'HALL',
+          roomCode: 'B901',
+          floorLabel: '9',
+          floorAssetPath: 'floor_9',
+          floorGeoJson: _destinationFloorGeoJson(
+            extraTransitionProperties: const [
+              {'highway': 'elevator', 'level': '9'},
+            ],
+          ),
+          center: const LatLng(45.000025, -72.999975),
+        ),
+        preferredTransitionMode: IndoorTransitionMode.elevator,
+      );
+
+      expect(plan, isNotNull);
+      expect(plan!.segments[1].transitionMode, IndoorTransitionMode.elevator);
+      expect(
+        plan.segments[1].instruction,
+        'Take the elevator from floor 8 to floor 9',
+      );
+    });
   });
 }
 
@@ -156,7 +193,9 @@ Map<String, dynamic> _sameFloorGeoJson() {
   };
 }
 
-Map<String, dynamic> _originFloorGeoJson() {
+Map<String, dynamic> _originFloorGeoJson({
+  List<Map<String, dynamic>> extraTransitionProperties = const [],
+}) {
   return {
     'type': 'FeatureCollection',
     'features': [
@@ -168,12 +207,20 @@ Map<String, dynamic> _originFloorGeoJson() {
         rightLng: -72.99985,
         properties: {'highway': 'steps', 'level': '8'},
       ),
+      for (final properties in extraTransitionProperties)
+        _transitionFeature(
+          level: '8',
+          leftLng: -72.99990,
+          rightLng: -72.99985,
+          properties: properties,
+        ),
     ],
   };
 }
 
 Map<String, dynamic> _destinationFloorGeoJson({
   Map<String, dynamic>? transitionProperties,
+  List<Map<String, dynamic>> extraTransitionProperties = const [],
 }) {
   return {
     'type': 'FeatureCollection',
@@ -186,6 +233,13 @@ Map<String, dynamic> _destinationFloorGeoJson({
       ),
       _corridorFeature('9', -72.99995, -72.99990),
       _roomFeature('B901', '9', -72.99990, -72.99985),
+      for (final properties in extraTransitionProperties)
+        _transitionFeature(
+          level: '9',
+          leftLng: -73.00000,
+          rightLng: -72.99995,
+          properties: properties,
+        ),
     ],
   };
 }
