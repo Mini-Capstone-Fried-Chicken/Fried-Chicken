@@ -133,248 +133,367 @@ class _SavedScreenState extends State<SavedScreen> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<AppSettingsState>(
       valueListenable: AppSettingsController.notifier,
-      builder: (context, settings, _) {
-        final isHighContrast = settings.highContrastModeEnabled;
-        final pageBackground = isHighContrast ? Colors.black : Colors.white;
-        final cardBackground = isHighContrast ? const Color(0xFF121212) : Colors.white;
-        final cardBorder = isHighContrast
-            ? AppUiColors.highContrastPrimary.withValues(alpha: 0.85)
-            : const Color(0xFFDADADA);
-        final headingColor = isHighContrast ? AppUiColors.highContrastPrimary : const Color(0xFF76263D);
-        final textColor = isHighContrast ? Colors.white : Colors.black87;
-        final subTextColor = isHighContrast ? Colors.white70 : Colors.black54;
-        final inputFill = isHighContrast ? const Color(0xFF1D1D1D) : const Color(0xFFF6F6F6);
-        final buttonBg = isHighContrast ? AppUiColors.highContrastPrimary : const Color(0xFF76263D);
-        final buttonText = isHighContrast ? Colors.black : Colors.white;
+      builder: _buildWithSettings,
+    );
+  }
+
+  Widget _buildWithSettings(
+    BuildContext context,
+    AppSettingsState settings,
+    Widget? _,
+  ) {
+    final isHighContrast = settings.highContrastModeEnabled;
+    final pageBackground = isHighContrast ? Colors.black : Colors.white;
+    final cardBackground = isHighContrast
+        ? const Color(0xFF121212)
+        : Colors.white;
+    final cardBorder = isHighContrast
+        ? AppUiColors.highContrastPrimary.withValues(alpha: 0.85)
+        : const Color(0xFFDADADA);
+    final headingColor = isHighContrast
+        ? AppUiColors.highContrastPrimary
+        : const Color(0xFF76263D);
+    final textColor = isHighContrast ? Colors.white : Colors.black87;
+    final subTextColor = isHighContrast ? Colors.white70 : Colors.black54;
+    final inputFill = isHighContrast
+        ? const Color(0xFF1D1D1D)
+        : const Color(0xFFF6F6F6);
+    final buttonBg = isHighContrast
+        ? AppUiColors.highContrastPrimary
+        : const Color(0xFF76263D);
+    final buttonText = isHighContrast ? Colors.black : Colors.white;
+
+    return ValueListenableBuilder<List<SavedPlace>>(
+      valueListenable: SavedPlacesController.notifier,
+      builder: (context, savedPlaces, __) {
+        final dynamicCategories = _collectDynamicCategories(savedPlaces);
+        final filters = <String>{'all', ...dynamicCategories}.toList();
+        final effectiveFilter = _resolveEffectiveFilter(filters);
+        final selectedRadiusKm = _radiusOptions[_radiusOptionIndex];
+        final visiblePlaces = _filteredPlaces(
+          savedPlaces,
+          selectedFilter: effectiveFilter,
+          selectedRadiusKm: selectedRadiusKm,
+        );
+        final radiusLabel = _radiusLabel(selectedRadiusKm);
 
         return Scaffold(
           backgroundColor: pageBackground,
           body: SafeArea(
-            child: ValueListenableBuilder<List<SavedPlace>>(
-              valueListenable: SavedPlacesController.notifier,
-              builder: (context, savedPlaces, __) {
-                final dynamicCategories = <String>{
-                  for (final place in savedPlaces)
-                    if (place.category.trim().isNotEmpty &&
-                        place.category.trim().toLowerCase() != 'all')
-                      place.category,
-                }.toList()
-                  ..sort();
-
-                final filters = <String>{'all', ...dynamicCategories}.toList();
-                final effectiveFilter = filters.contains(_selectedFilter)
-                    ? _selectedFilter
-                    : 'all';
-                final selectedRadiusKm = _radiusOptions[_radiusOptionIndex];
-                final visiblePlaces = _filteredPlaces(
-                  savedPlaces,
-                  selectedFilter: effectiveFilter,
-                  selectedRadiusKm: selectedRadiusKm,
-                );
-                final radiusLabel = selectedRadiusKm == null
-                    ? 'All'
-                    : '$selectedRadiusKm km';
-
-                return Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    const SizedBox(height: 72, child: Center(child: AppLogo())),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Search by radius: $radiusLabel',
-                              style: TextStyle(
-                                color: headingColor,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: headingColor,
-                                thumbColor: headingColor,
-                                inactiveTrackColor: headingColor.withValues(alpha: 0.25),
-                                overlayColor: headingColor.withValues(alpha: 0.12),
-                              ),
-                              child: Slider(
-                                value: _radiusOptionIndex.toDouble(),
-                                min: 0,
-                                max: (_radiusOptions.length - 1).toDouble(),
-                                divisions: _radiusOptions.length - 1,
-                                label: radiusLabel,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _radiusOptionIndex = value.round();
-                                  });
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Row(
-                                children: [
-                                  Text('1 km', style: TextStyle(color: subTextColor, fontSize: 12)),
-                                  const Spacer(),
-                                  Text('All', style: TextStyle(color: subTextColor, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: inputFill,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: cardBorder),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: effectiveFilter,
-                                  isExpanded: true,
-                                  dropdownColor: inputFill,
-                                  style: TextStyle(color: textColor, fontSize: 15),
-                                  iconEnabledColor: headingColor,
-                                  items: filters
-                                      .map(
-                                        (filter) => DropdownMenuItem<String>(
-                                          value: filter,
-                                          child: Text(
-                                            filter == 'all'
-                                                ? 'All'
-                                                : _formatCategoryLabel(filter),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (value) {
-                                    if (value == null) return;
-                                    setState(() {
-                                      _selectedFilter = value;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Text(
-                                  'Saved places',
-                                  style: TextStyle(
-                                    color: headingColor,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (visiblePlaces.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 20),
-                                child: Text(
-                                  savedPlaces.isEmpty
-                                      ? 'No saved places yet. Save a place from the map.'
-                                      : 'No places match the selected radius/filter.',
-                                  style: TextStyle(color: subTextColor, fontSize: 14),
-                                ),
-                              ),
-                            ...visiblePlaces.map((place) {
-                              final distanceKm = _distanceKmFor(place);
-                              final distanceLabel = distanceKm == null
-                                  ? 'Distance unavailable'
-                                  : '${distanceKm.toStringAsFixed(2)} km away';
-
-                              return Container(
-                                margin: const EdgeInsets.only(top: 12),
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: cardBackground,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: cardBorder),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            place.name,
-                                            style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Remove from saved',
-                                          icon: Icon(
-                                            Icons.bookmark_remove_outlined,
-                                            size: 20,
-                                            color: headingColor,
-                                          ),
-                                          constraints: const BoxConstraints.tightFor(
-                                            width: 30,
-                                            height: 30,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          onPressed: () {
-                                            SavedPlacesController.removePlace(place.id);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Category: ${_formatCategoryLabel(place.category)}',
-                                      style: TextStyle(color: subTextColor, fontSize: 13.5),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Distance: $distanceLabel',
-                                      style: TextStyle(color: subTextColor, fontSize: 13.5),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      place.openingHoursToday,
-                                      style: TextStyle(color: subTextColor, fontSize: 13.5),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          SavedDirectionsController.requestDirections(place);
-                                        },
-                                        icon: const Icon(Icons.directions),
-                                        label: const Text('Get directions'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: buttonBg,
-                                          foregroundColor: buttonText,
-                                          minimumSize: const Size(0, 42),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+            child: _buildSavedBody(
+              context: context,
+              savedPlaces: savedPlaces,
+              visiblePlaces: visiblePlaces,
+              filters: filters,
+              effectiveFilter: effectiveFilter,
+              radiusLabel: radiusLabel,
+              cardBackground: cardBackground,
+              cardBorder: cardBorder,
+              headingColor: headingColor,
+              textColor: textColor,
+              subTextColor: subTextColor,
+              inputFill: inputFill,
+              buttonBg: buttonBg,
+              buttonText: buttonText,
             ),
           ),
         );
       },
+    );
+  }
+
+  List<String> _collectDynamicCategories(List<SavedPlace> savedPlaces) {
+    final categories = <String>{
+      for (final place in savedPlaces)
+        if (place.category.trim().isNotEmpty &&
+            place.category.trim().toLowerCase() != 'all')
+          place.category,
+    }.toList()..sort();
+
+    return categories;
+  }
+
+  String _resolveEffectiveFilter(List<String> filters) {
+    return filters.contains(_selectedFilter) ? _selectedFilter : 'all';
+  }
+
+  String _radiusLabel(int? selectedRadiusKm) {
+    return selectedRadiusKm == null ? 'All' : '$selectedRadiusKm km';
+  }
+
+  Widget _buildSavedBody({
+    required BuildContext context,
+    required List<SavedPlace> savedPlaces,
+    required List<SavedPlace> visiblePlaces,
+    required List<String> filters,
+    required String effectiveFilter,
+    required String radiusLabel,
+    required Color cardBackground,
+    required Color cardBorder,
+    required Color headingColor,
+    required Color textColor,
+    required Color subTextColor,
+    required Color inputFill,
+    required Color buttonBg,
+    required Color buttonText,
+  }) {
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        const SizedBox(height: 72, child: Center(child: AppLogo())),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildRadiusSection(
+                  context: context,
+                  radiusLabel: radiusLabel,
+                  headingColor: headingColor,
+                  subTextColor: subTextColor,
+                ),
+                const SizedBox(height: 10),
+                _buildFilterDropdown(
+                  filters: filters,
+                  effectiveFilter: effectiveFilter,
+                  inputFill: inputFill,
+                  cardBorder: cardBorder,
+                  textColor: textColor,
+                  headingColor: headingColor,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Saved places',
+                  style: TextStyle(
+                    color: headingColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
+                ),
+                if (visiblePlaces.isEmpty)
+                  _buildEmptyStateMessage(
+                    savedPlaces: savedPlaces,
+                    subTextColor: subTextColor,
+                  ),
+                ...visiblePlaces.map(
+                  (place) => _buildPlaceCard(
+                    place: place,
+                    cardBackground: cardBackground,
+                    cardBorder: cardBorder,
+                    headingColor: headingColor,
+                    textColor: textColor,
+                    subTextColor: subTextColor,
+                    buttonBg: buttonBg,
+                    buttonText: buttonText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRadiusSection({
+    required BuildContext context,
+    required String radiusLabel,
+    required Color headingColor,
+    required Color subTextColor,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Search by radius: $radiusLabel',
+          style: TextStyle(
+            color: headingColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: headingColor,
+            thumbColor: headingColor,
+            inactiveTrackColor: headingColor.withValues(alpha: 0.25),
+            overlayColor: headingColor.withValues(alpha: 0.12),
+          ),
+          child: Slider(
+            value: _radiusOptionIndex.toDouble(),
+            min: 0,
+            max: (_radiusOptions.length - 1).toDouble(),
+            divisions: _radiusOptions.length - 1,
+            label: radiusLabel,
+            onChanged: (value) {
+              setState(() {
+                _radiusOptionIndex = value.round();
+              });
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Text('1 km', style: TextStyle(color: subTextColor, fontSize: 12)),
+              const Spacer(),
+              Text('All', style: TextStyle(color: subTextColor, fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterDropdown({
+    required List<String> filters,
+    required String effectiveFilter,
+    required Color inputFill,
+    required Color cardBorder,
+    required Color textColor,
+    required Color headingColor,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: inputFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cardBorder),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: effectiveFilter,
+          isExpanded: true,
+          dropdownColor: inputFill,
+          style: TextStyle(color: textColor, fontSize: 15),
+          iconEnabledColor: headingColor,
+          items: filters
+              .map(
+                (filter) => DropdownMenuItem<String>(
+                  value: filter,
+                  child: Text(
+                    filter == 'all' ? 'All' : _formatCategoryLabel(filter),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _selectedFilter = value;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateMessage({
+    required List<SavedPlace> savedPlaces,
+    required Color subTextColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Text(
+        savedPlaces.isEmpty
+            ? 'No saved places yet. Save a place from the map.'
+            : 'No places match the selected radius/filter.',
+        style: TextStyle(color: subTextColor, fontSize: 14),
+      ),
+    );
+  }
+
+  Widget _buildPlaceCard({
+    required SavedPlace place,
+    required Color cardBackground,
+    required Color cardBorder,
+    required Color headingColor,
+    required Color textColor,
+    required Color subTextColor,
+    required Color buttonBg,
+    required Color buttonText,
+  }) {
+    final distanceKm = _distanceKmFor(place);
+    final distanceLabel = distanceKm == null
+        ? 'Distance unavailable'
+        : '${distanceKm.toStringAsFixed(2)} km away';
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  place.name,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remove from saved',
+                icon: Icon(
+                  Icons.bookmark_remove_outlined,
+                  size: 20,
+                  color: headingColor,
+                ),
+                constraints: const BoxConstraints.tightFor(
+                  width: 30,
+                  height: 30,
+                ),
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  SavedPlacesController.removePlace(place.id);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Category: ${_formatCategoryLabel(place.category)}',
+            style: TextStyle(color: subTextColor, fontSize: 13.5),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Distance: $distanceLabel',
+            style: TextStyle(color: subTextColor, fontSize: 13.5),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            place.openingHoursToday,
+            style: TextStyle(color: subTextColor, fontSize: 13.5),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                SavedDirectionsController.requestDirections(place);
+              },
+              icon: const Icon(Icons.directions),
+              label: const Text('Get directions'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonBg,
+                foregroundColor: buttonText,
+                minimumSize: const Size(0, 42),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

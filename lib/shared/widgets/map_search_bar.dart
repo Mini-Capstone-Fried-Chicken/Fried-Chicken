@@ -222,6 +222,150 @@ class _MapSearchBarState extends State<MapSearchBar> {
     );
   }
 
+  String _searchHint() {
+    final label = widget.campusLabel.trim();
+    if (label.isEmpty) {
+      return 'Search anywhere';
+    }
+    return 'Search anywhere near $label';
+  }
+
+  Widget _buildSearchPanel({
+    required Color barColor,
+    required Color primaryTextColor,
+    required Color hintTextColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Material(
+        elevation: 4,
+        borderRadius: BorderRadius.circular(8),
+        color: barColor,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const Key('map_search_input'),
+              controller: widget.controller,
+              focusNode: _focusNode,
+              style: TextStyle(color: primaryTextColor),
+              decoration: InputDecoration(
+                hintText: _searchHint(),
+                hintStyle: TextStyle(color: hintTextColor),
+                prefixIcon: Icon(Icons.search, color: primaryTextColor),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onSubmitted: widget.onSubmitted,
+              onChanged: (_) => _updateSuggestionsVisibility(),
+            ),
+            if (_shouldShowRoomFields()) _buildRoomFieldsSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _shouldShowRoomFields() {
+    return _isUserInConcordiaBuilding || _isConcordiaBuilding;
+  }
+
+  Widget _buildRoomFieldsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: RoomFieldsSection(
+        originBuildingCode: widget.currentBuildingCode,
+        destinationBuildingCode: widget.selectedBuildingCode,
+        originRoomController: widget.originRoomController,
+        destinationRoomController: widget.destinationRoomController,
+        originEnabled: _isUserInConcordiaBuilding,
+        destinationEnabled: _isConcordiaBuilding,
+        onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
+        onDestinationRoomSubmitted: widget.onDestinationRoomSubmitted,
+        selectedTransitionMode: widget.selectedTransitionMode,
+        onTransitionModeChanged: widget.onTransitionModeChanged,
+        wheelchairRoutingDefaultEnabled: widget.wheelchairRoutingDefaultEnabled,
+      ),
+    );
+  }
+
+  Widget _buildSuggestionsDropdown() {
+    if (!(_showSuggestions && _hasSuggestions)) {
+      return const SizedBox.shrink();
+    }
+
+    return PointerInterceptor(
+      child: Material(
+        elevation: 4,
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
+          ),
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: widget.suggestions!.length,
+            itemBuilder: (context, index) {
+              final suggestion = widget.suggestions![index];
+              return _buildSuggestionTile(suggestion);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionTile(SearchSuggestion suggestion) {
+    final isSaved = _isSuggestionSaved(suggestion);
+
+    return ListTile(
+      leading: Icon(
+        suggestion.isConcordiaBuilding ? Icons.school : Icons.place,
+        color: suggestion.isConcordiaBuilding
+            ? AppUiColors.primary(highContrastEnabled: widget.highContrastMode)
+            : Colors.grey,
+        size: 20,
+      ),
+      title: Text(suggestion.name),
+      subtitle: _buildSuggestionSubtitle(suggestion),
+      trailing: IconButton(
+        tooltip: isSaved ? 'Remove from saved' : 'Add to saved',
+        icon: Icon(
+          isSaved ? Icons.bookmark : Icons.bookmark_border,
+          size: 20,
+          color: isSaved
+              ? AppUiColors.primary(
+                  highContrastEnabled: widget.highContrastMode,
+                )
+              : Colors.grey[700],
+        ),
+        onPressed: () => unawaited(_toggleSuggestionSaved(suggestion)),
+      ),
+      dense: true,
+      onTap: () => _selectSuggestion(suggestion),
+    );
+  }
+
+  Widget? _buildSuggestionSubtitle(SearchSuggestion suggestion) {
+    final subtitle = suggestion.subtitle;
+    if (subtitle == null) {
+      return null;
+    }
+
+    final subtitleColor = suggestion.isConcordiaBuilding
+        ? AppUiColors.primary(
+            highContrastEnabled: widget.highContrastMode,
+          ).withOpacity(0.7)
+        : Colors.grey[600];
+
+    return Text(subtitle, style: TextStyle(fontSize: 12, color: subtitleColor));
+  }
+
   @override
   Widget build(BuildContext context) {
     final barColor = widget.highContrastMode
@@ -234,10 +378,6 @@ class _MapSearchBarState extends State<MapSearchBar> {
         ? Colors.black54
         : Colors.white70;
 
-    final String hint = widget.campusLabel.trim().isEmpty
-        ? "Search anywhere"
-        : "Search anywhere near ${widget.campusLabel}";
-
     return TapRegion(
       onTapOutside: (_) {
         _focusNode.unfocus();
@@ -246,134 +386,12 @@ class _MapSearchBarState extends State<MapSearchBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(8),
-              color: barColor,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  /// Main search field
-                  TextField(
-                    key: const Key('map_search_input'),
-                    controller: widget.controller,
-                    focusNode: _focusNode,
-                    style: TextStyle(color: primaryTextColor),
-                    decoration: InputDecoration(
-                      hintText: hint,
-                      hintStyle: TextStyle(color: hintTextColor),
-                      prefixIcon: Icon(Icons.search, color: primaryTextColor),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onSubmitted: widget.onSubmitted,
-                    onChanged: (_) => _updateSuggestionsVisibility(),
-                  ),
-                  if (_isUserInConcordiaBuilding || _isConcordiaBuilding)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: RoomFieldsSection(
-                        originBuildingCode: widget.currentBuildingCode,
-                        destinationBuildingCode: widget.selectedBuildingCode,
-                        originRoomController: widget.originRoomController,
-                        destinationRoomController:
-                            widget.destinationRoomController,
-                        originEnabled: _isUserInConcordiaBuilding,
-                        destinationEnabled: _isConcordiaBuilding,
-                        onOriginRoomSubmitted: widget.onOriginRoomSubmitted,
-                        onDestinationRoomSubmitted:
-                            widget.onDestinationRoomSubmitted,
-                        selectedTransitionMode: widget.selectedTransitionMode,
-                        onTransitionModeChanged: widget.onTransitionModeChanged,
-                        wheelchairRoutingDefaultEnabled:
-                            widget.wheelchairRoutingDefaultEnabled,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          _buildSearchPanel(
+            barColor: barColor,
+            primaryTextColor: primaryTextColor,
+            hintTextColor: hintTextColor,
           ),
-
-          /// Suggestions dropdown
-          if (_showSuggestions && _hasSuggestions)
-            PointerInterceptor(
-              child: Material(
-                elevation: 4,
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: widget.suggestions!.length,
-                    itemBuilder: (context, index) {
-                      final suggestion = widget.suggestions![index];
-                      Widget? suggestionSubtitle;
-                      if (suggestion.subtitle != null) {
-                        final subtitleColor = suggestion.isConcordiaBuilding
-                            ? AppUiColors.primary(
-                                highContrastEnabled: widget.highContrastMode,
-                              ).withOpacity(0.7)
-                            : Colors.grey[600];
-
-                        suggestionSubtitle = Text(
-                          suggestion.subtitle!,
-                          style: TextStyle(fontSize: 12, color: subtitleColor),
-                        );
-                      }
-
-                      return ListTile(
-                        leading: Icon(
-                          suggestion.isConcordiaBuilding
-                              ? Icons.school
-                              : Icons.place,
-                          color: suggestion.isConcordiaBuilding
-                              ? AppUiColors.primary(
-                                  highContrastEnabled: widget.highContrastMode,
-                                )
-                              : Colors.grey,
-                          size: 20,
-                        ),
-                        title: Text(suggestion.name),
-                        subtitle: suggestionSubtitle,
-                        trailing: IconButton(
-                          tooltip: _isSuggestionSaved(suggestion)
-                              ? 'Remove from saved'
-                              : 'Add to saved',
-                          icon: Icon(
-                            _isSuggestionSaved(suggestion)
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                            size: 20,
-                            color: _isSuggestionSaved(suggestion)
-                                ? AppUiColors.primary(
-                                    highContrastEnabled:
-                                        widget.highContrastMode,
-                                  )
-                                : Colors.grey[700],
-                          ),
-                          onPressed: () =>
-                              unawaited(_toggleSuggestionSaved(suggestion)),
-                        ),
-                        dense: true,
-                        onTap: () => _selectSuggestion(suggestion),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+          _buildSuggestionsDropdown(),
         ],
       ),
     );

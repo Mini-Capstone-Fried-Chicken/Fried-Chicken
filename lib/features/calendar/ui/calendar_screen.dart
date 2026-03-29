@@ -223,34 +223,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     try {
       final restored = await _repository.restoreConnection();
-
-      if (!mounted) return;
-
-      if (restored) {
-        setState(() {
-          _calendars = List.from(_repository.cachedCalendars);
-          _events = List.from(_repository.cachedEvents);
-          _selectedCalendarIds = Set.from(_session.selectedCalendarIds);
-
-          if (_events.isNotEmpty) {
-            _step = CalendarConnectionStep.schedule;
-          } else if (_calendars.isNotEmpty) {
-            _step = CalendarConnectionStep.selectCalendar;
-          } else {
-            _step = CalendarConnectionStep.connect;
-          }
-        });
-      } else {
-        setState(() {
-          _step = CalendarConnectionStep.connect;
-        });
-      }
+      _applyRestoreConnectionResult(restored);
     } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _step = CalendarConnectionStep.connect;
-      });
+      _setConnectStepIfMounted();
     }
+  }
+
+  void _applyRestoreConnectionResult(bool restored) {
+    if (!mounted) return;
+
+    if (!restored) {
+      _setConnectStepIfMounted();
+      return;
+    }
+
+    setState(() {
+      _calendars = List.from(_repository.cachedCalendars);
+      _events = List.from(_repository.cachedEvents);
+      _selectedCalendarIds = Set.from(_session.selectedCalendarIds);
+
+      if (_events.isNotEmpty) {
+        _step = CalendarConnectionStep.schedule;
+      } else if (_calendars.isNotEmpty) {
+        _step = CalendarConnectionStep.selectCalendar;
+      } else {
+        _step = CalendarConnectionStep.connect;
+      }
+    });
+  }
+
+  void _setConnectStepIfMounted() {
+    if (!mounted) return;
+    setState(() {
+      _step = CalendarConnectionStep.connect;
+    });
   }
 
   Future<void> _saveSession() async {
@@ -376,6 +382,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
+
   Widget _buildBody(bool isHighContrast) {
     switch (_step) {
       case CalendarConnectionStep.connect:
@@ -408,6 +415,69 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  Color _calendarBackgroundColor(bool isHighContrast) {
+    return isHighContrast ? Colors.black : const Color(0xFFF9F4F6);
+  }
+
+  Widget _buildCalendarAccessDisabledScaffold(bool isHighContrast) {
+    return Scaffold(
+      backgroundColor: _calendarBackgroundColor(isHighContrast),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.calendar_month_outlined,
+                  size: 64,
+                  color: isHighContrast
+                      ? const Color(0xFF89D9C2)
+                      : Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Calendar access is disabled',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isHighContrast ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'To use the calendar, enable Calendar Access in the Settings tab.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isHighContrast ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendarScaffold(bool isHighContrast) {
+    return Scaffold(
+      backgroundColor: _calendarBackgroundColor(isHighContrast),
+      body: SafeArea(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: KeyedSubtree(
+            key: ValueKey(_step),
+            child: _buildBody(isHighContrast),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.isLoggedIn) {
@@ -420,69 +490,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final isHighContrast = settings.highContrastModeEnabled;
 
         if (!settings.calendarAccessEnabled) {
-          return Scaffold(
-            backgroundColor: isHighContrast
-                ? Colors.black
-                : const Color(0xFFF9F4F6),
-            body: SafeArea(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.calendar_month_outlined,
-                        size: 64,
-                        color: isHighContrast
-                            ? const Color(0xFF89D9C2)
-                            : Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Calendar access is disabled',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: isHighContrast
-                              ? Colors.white
-                              : Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'To use the calendar, enable Calendar Access in the Settings tab.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isHighContrast
-                              ? Colors.white70
-                              : Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
+          return _buildCalendarAccessDisabledScaffold(isHighContrast);
         }
 
-        return Scaffold(
-          backgroundColor: isHighContrast
-              ? Colors.black
-              : const Color(0xFFF9F4F6),
-          body: SafeArea(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: KeyedSubtree(
-                key: ValueKey(_step),
-                child: _buildBody(isHighContrast),
-              ),
-            ),
-          ),
-        );
+        return _buildCalendarScaffold(isHighContrast);
       },
     );
   }
