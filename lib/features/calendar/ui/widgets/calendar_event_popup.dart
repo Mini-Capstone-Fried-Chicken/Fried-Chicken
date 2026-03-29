@@ -103,15 +103,6 @@ class CalendarEventPopup extends StatelessWidget {
               label: 'Go to Room',
               onPressed: canGoToRoom ? onGoToRoom : null,
             ),
-<<<<<<< HEAD
-            const SizedBox(height: 8),
-            popupButton(
-              key: const Key(saveButtonKey),
-              label: 'Save',
-              onPressed: canSave ? onSave : null,
-            ),
-=======
->>>>>>> main
           ],
         ),
       ),

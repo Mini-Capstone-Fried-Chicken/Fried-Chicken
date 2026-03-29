@@ -57,8 +57,6 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     final secondaryText = isHighContrast
         ? const Color(0xFF89D9C2)
         : const Color(0xFF8B1E3F);
-<<<<<<< HEAD
-=======
     final emptyStateTextColor = isHighContrast
         ? Colors.white70
         : Colors.black54;
@@ -72,7 +70,6 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
         : const Color(0x1A000000);
 
     final timeTextColor = isHighContrast ? Colors.white : Colors.black54;
->>>>>>> main
 
     final dataSource = GoogleCalendarDataSource(widget.events);
 
