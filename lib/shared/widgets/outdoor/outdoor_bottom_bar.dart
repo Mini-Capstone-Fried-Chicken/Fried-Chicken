@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../shared/widgets/campus_toggle.dart';
 import '../../../shared/widgets/route_preview_panel.dart';
-import '../../../services/navigation_steps.dart';
-import '../../../services/location/googlemaps_livelocation.dart' show RouteTravelMode;
 import 'package:campus_app/models/campus.dart';
 
 class OutdoorBottomBar extends StatelessWidget {
   final bool showRoutePreview;
   final bool isNavigating;
+  final bool highContrastMode;
 
   final Campus selectedCampus;
   final void Function(Campus) onCampusChanged;
@@ -31,6 +30,7 @@ class OutdoorBottomBar extends StatelessWidget {
     super.key,
     required this.showRoutePreview,
     required this.isNavigating,
+    this.highContrastMode = false,
     required this.selectedCampus,
     required this.onCampusChanged,
     required this.selectedTravelMode,
@@ -57,6 +57,7 @@ class OutdoorBottomBar extends StatelessWidget {
             child: RouteTravelModeBar(
               selectedTravelMode: selectedTravelMode,
               onTravelModeSelected: onTravelModeSelected,
+              highContrastMode: highContrastMode,
               modeDurations: routeDurations,
               isLoadingDurations: isLoadingRouteData,
               onClose: onCloseRoutePreview,
@@ -82,6 +83,7 @@ class OutdoorBottomBar extends StatelessWidget {
           child: CampusToggle(
             currentCampus: selectedCampus,
             onCampusChanged: onCampusChanged,
+            highContrastMode: highContrastMode,
           ),
         ),
       ),

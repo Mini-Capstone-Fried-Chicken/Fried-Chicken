@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:campus_app/features/settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -20,6 +20,9 @@ class NavigationStep {
   final String? transitLineShortName; // e.g. 165
   final String? transitLineName; // e.g. "STM 165"
   final String? transitHeadsign; // destination direction
+  final String? indoorFloorAssetPath;
+  final String? indoorFloorLabel;
+  final String? indoorTransitionMode;
 
   const NavigationStep({
     required this.instruction,
@@ -31,6 +34,9 @@ class NavigationStep {
     this.transitLineShortName,
     this.transitLineName,
     this.transitHeadsign,
+    this.indoorFloorAssetPath,
+    this.indoorFloorLabel,
+    this.indoorTransitionMode,
     this.points = const [],
   });
 
@@ -49,11 +55,12 @@ class NavigationStep {
   }
 
   String get transitLabel {
-    final line = (transitLineShortName?.trim().isNotEmpty == true)
+    final fallbackLineName = transitLineName?.trim().isNotEmpty == true
+        ? transitLineName!.trim()
+        : null;
+    final line = transitLineShortName?.trim().isNotEmpty == true
         ? transitLineShortName!.trim()
-        : (transitLineName?.trim().isNotEmpty == true
-              ? transitLineName!.trim()
-              : null);
+        : fallbackLineName;
 
     if (line == null) return 'Transit';
     final vehicle = transitVehicleType?.toUpperCase();
@@ -84,6 +91,7 @@ class NavigationStepsSheet extends StatelessWidget {
   final String? totalDuration;
   final String? totalDistance;
   final List<NavigationStep> steps;
+  final bool highContrastMode;
 
   const NavigationStepsSheet({
     super.key,
@@ -91,18 +99,26 @@ class NavigationStepsSheet extends StatelessWidget {
     required this.steps,
     this.totalDuration,
     this.totalDistance,
+    this.highContrastMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    const burgundy = Color(0xFF76263D);
+    final titleColor = highContrastMode
+        ? Colors.black
+        : const Color(0xFF76263D);
+    final sheetBackground = highContrastMode
+        ? const Color(0xFF89D9C2)
+        : Colors.white;
+    final dividerColor = highContrastMode ? Colors.black26 : null;
+    final emptyTextColor = highContrastMode ? Colors.black54 : Colors.black54;
 
     return SafeArea(
       top: false,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        decoration: BoxDecoration(
+          color: sheetBackground,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -113,7 +129,7 @@ class NavigationStepsSheet extends StatelessWidget {
               height: 4,
               width: 44,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -128,7 +144,7 @@ class NavigationStepsSheet extends StatelessWidget {
                     child: _HeaderBlock(
                       title: title,
                       subtitle: _headerSubtitle(totalDuration, totalDistance),
-                      titleColor: burgundy,
+                      titleColor: titleColor,
                     ),
                   ),
                   IconButton(
@@ -139,24 +155,27 @@ class NavigationStepsSheet extends StatelessWidget {
               ),
             ),
 
-            const Divider(height: 1),
+            Divider(height: 1, color: dividerColor),
 
             // Content
             Expanded(
               child: steps.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No steps available',
-                        style: TextStyle(color: Colors.black54),
+                        style: TextStyle(color: emptyTextColor),
                       ),
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
                       itemCount: steps.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final step = steps[index];
-                        return _StepTile(step: step);
+                        return _StepTile(
+                          step: step,
+                          highContrastMode: highContrastMode,
+                        );
                       },
                     ),
             ),
@@ -181,6 +200,7 @@ Future<void> showNavigationStepsModal(
   required List<NavigationStep> steps,
   String? totalDuration,
   String? totalDistance,
+  bool highContrastMode = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -199,6 +219,7 @@ Future<void> showNavigationStepsModal(
             steps: steps,
             totalDuration: totalDuration,
             totalDistance: totalDistance,
+            highContrastMode: highContrastMode,
           );
         },
       );
@@ -244,18 +265,38 @@ class _HeaderBlock extends StatelessWidget {
 
 class _StepTile extends StatelessWidget {
   final NavigationStep step;
+  final bool highContrastMode;
 
-  const _StepTile({required this.step});
+  const _StepTile({required this.step, this.highContrastMode = false});
 
   @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF76263D);
 
     final icon = _iconFor(step);
-    final iconBg = step.travelMode == 'transit'
-        ? Colors.black.withOpacity(0.06)
-        : burgundy.withOpacity(0.12);
-    final iconColor = step.travelMode == 'transit' ? Colors.black87 : burgundy;
+    late final Color iconBg;
+    late final Color iconColor;
+
+    if (highContrastMode) {
+      iconBg = Colors.black.withValues(alpha: 0.08);
+      iconColor = Colors.black;
+    } else if (step.travelMode == 'transit') {
+      iconBg = Colors.black.withValues(alpha: 0.06);
+      iconColor = Colors.black87;
+    } else {
+      iconBg = burgundy.withValues(alpha: 0.12);
+      iconColor = burgundy;
+    }
+    final tileBackground = highContrastMode
+        ? const Color(0xFF6CCEB5)
+        : Colors.white;
+    final tileBorder = highContrastMode
+        ? Colors.black.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.06);
+    final mainTextColor = highContrastMode ? Colors.black : Colors.black87;
+    final secondaryTextColor = highContrastMode
+        ? Colors.black.withValues(alpha: 0.72)
+        : Colors.black.withValues(alpha: 0.6);
 
     // For transit steps, prefer a transit label + headsign line.
     final mainText = step.travelMode == 'transit'
@@ -274,12 +315,12 @@ class _StepTile extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tileBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        border: Border.all(color: tileBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -309,10 +350,10 @@ class _StepTile extends StatelessWidget {
                 children: [
                   Text(
                     mainText,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: mainTextColor,
                       height: 1.15,
                     ),
                   ),
@@ -325,7 +366,7 @@ class _StepTile extends StatelessWidget {
                           line,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black.withOpacity(0.60),
+                            color: secondaryTextColor,
                             height: 1.15,
                           ),
                         ),
@@ -341,6 +382,17 @@ class _StepTile extends StatelessWidget {
   }
 
   IconData _iconFor(NavigationStep s) {
+    final indoorTransitionMode = s.indoorTransitionMode?.toLowerCase();
+    if (indoorTransitionMode == 'stairs') {
+      return Icons.stairs;
+    }
+    if (indoorTransitionMode == 'elevator') {
+      return Icons.elevator;
+    }
+    if (indoorTransitionMode == 'escalator') {
+      return Icons.escalator;
+    }
+
     final mode = s.travelMode.toLowerCase();
 
     if (mode == 'walking') {
@@ -390,6 +442,12 @@ class NavigationNextStepHeader extends StatelessWidget {
   final String? nextDistance; // optional override
   final VoidCallback onStop;
   final VoidCallback onShowSteps;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final bool canGoPrevious;
+  final bool canGoNext;
+  final String? progressLabel;
+  final bool highContrastMode;
 
   const NavigationNextStepHeader({
     super.key,
@@ -397,30 +455,29 @@ class NavigationNextStepHeader extends StatelessWidget {
     required this.nextStep,
     required this.onStop,
     required this.onShowSteps,
+    this.onPrevious,
+    this.onNext,
+    this.canGoPrevious = false,
+    this.canGoNext = false,
+    this.progressLabel,
     this.nextDistance,
+    this.highContrastMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    const burgundy = Color(0xFF76263D);
+    final cardBg = highContrastMode
+        ? AppUiColors.highContrastPrimary
+        : const Color(0xFF76263D);
+    final primaryText = highContrastMode ? Colors.black : Colors.white;
+    final secondaryText = highContrastMode ? Colors.black54 : Colors.white70;
+    final chipBg = highContrastMode
+        ? const Color(0xFF5EBFA7)
+        : Colors.white.withValues(alpha: 0.14);
 
     final step = nextStep;
-    final primary = step == null
-        ? 'Continue'
-        : (step.travelMode == 'transit' ? step.transitLabel : step.instruction);
-
-    final secondaryParts = <String>[];
-    if (step != null &&
-        step.travelMode == 'transit' &&
-        step.transitHeadsign != null &&
-        step.transitHeadsign!.trim().isNotEmpty) {
-      secondaryParts.add(step.transitHeadsign!.trim());
-    }
-    final fallback = step?.distanceText;
-    final dist = (nextDistance?.trim().isNotEmpty == true)
-        ? nextDistance
-        : fallback;
-    if (dist != null && dist.trim().isNotEmpty) secondaryParts.add(dist.trim());
+    final primary = _primaryInstruction(step);
+    final secondary = _secondaryInstruction(step);
 
     return SafeArea(
       bottom: false,
@@ -428,11 +485,11 @@ class NavigationNextStepHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
         child: Container(
           decoration: BoxDecoration(
-            color: burgundy,
+            color: cardBg,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
+                color: Colors.black.withValues(alpha: 0.25),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -440,95 +497,186 @@ class NavigationNextStepHeader extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Leading icon
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.navigation, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-
-                // Text
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        primary,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        secondaryParts.isEmpty
-                            ? modeLabel
-                            : secondaryParts.join(' • '),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Actions
-                Column(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: onShowSteps,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: chipBg,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Text(
-                        'Steps',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      child: Icon(Icons.navigation, color: primaryText),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            primary,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: primaryText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            secondary,
+                            style: TextStyle(
+                              color: secondaryText,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    TextButton(
-                      onPressed: onStop,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Stop',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
+                    _buildActionButtons(primaryText),
                   ],
                 ),
+                ..._buildPaginationSection(primaryText, secondaryText),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _primaryInstruction(NavigationStep? step) {
+    final stepLabel = step != null && step.travelMode == 'transit'
+        ? step.transitLabel
+        : step?.instruction;
+    return stepLabel ?? 'Continue';
+  }
+
+  String _secondaryInstruction(NavigationStep? step) {
+    final parts = <String>[];
+    _addTransitHeadsignPart(parts, step);
+    _addDistancePart(parts, step);
+    _addFloorPart(parts, step);
+    return parts.isEmpty ? modeLabel : parts.join(' • ');
+  }
+
+  void _addTransitHeadsignPart(List<String> parts, NavigationStep? step) {
+    if (step == null || step.travelMode != 'transit') return;
+    final headsign = step.transitHeadsign?.trim();
+    if (headsign == null || headsign.isEmpty) return;
+    parts.add(headsign);
+  }
+
+  void _addDistancePart(List<String> parts, NavigationStep? step) {
+    final fallback = step?.distanceText;
+    final dist = (nextDistance?.trim().isNotEmpty == true)
+        ? nextDistance
+        : fallback;
+    final normalized = dist?.trim();
+    if (normalized == null || normalized.isEmpty) return;
+    parts.add(normalized);
+  }
+
+  void _addFloorPart(List<String> parts, NavigationStep? step) {
+    final floor = step?.indoorFloorLabel?.trim();
+    if (floor == null || floor.isEmpty) return;
+    parts.add('Floor $floor');
+  }
+
+  Widget _buildActionButtons(Color primaryText) {
+    return Column(
+      children: [
+        TextButton(
+          onPressed: onShowSteps,
+          style: TextButton.styleFrom(
+            foregroundColor: primaryText,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text(
+            'Steps',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(height: 2),
+        TextButton(
+          onPressed: onStop,
+          style: TextButton.styleFrom(
+            foregroundColor: primaryText,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text(
+            'Stop',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildPaginationSection(Color primaryText, Color secondaryText) {
+    if (onPrevious == null && onNext == null) {
+      return const [];
+    }
+
+    return [
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: canGoPrevious ? onPrevious : null,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryText,
+                side: BorderSide(color: secondaryText),
+              ),
+              child: const Text('Previous'),
+            ),
+          ),
+          ..._buildProgressLabelWidgets(secondaryText),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: canGoNext ? onNext : null,
+              style: ElevatedButton.styleFrom(
+                foregroundColor: highContrastMode
+                    ? Colors.black
+                    : const Color(0xFF76263D),
+                backgroundColor: Colors.white,
+              ),
+              child: const Text('Next Step'),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildProgressLabelWidgets(Color secondaryText) {
+    if (progressLabel == null) {
+      return const [SizedBox(width: 10)];
+    }
+
+    return [
+      const SizedBox(width: 10),
+      Text(
+        progressLabel!,
+        style: TextStyle(
+          color: secondaryText,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(width: 10),
+    ];
   }
 }
 

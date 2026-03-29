@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/models/campus.dart';
 
 class CampusToggle extends StatelessWidget {
   final Campus currentCampus;
   final ValueChanged<Campus> onCampusChanged;
+  final bool highContrastMode;
 
   const CampusToggle({
     super.key,
     required this.currentCampus,
     required this.onCampusChanged,
+    this.highContrastMode = false,
   });
 
 
@@ -18,6 +19,8 @@ class CampusToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = highContrastMode ? const Color(0xFF002620) : _pillBg;
+    final borderColor = highContrastMode ? const Color(0xFF89D9C2) : _maroon;
     
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
@@ -26,9 +29,9 @@ class CampusToggle extends StatelessWidget {
         height: 40,
         padding: const EdgeInsets.all(3), // inner padding to create the inset look
         decoration: BoxDecoration(
-          color: _pillBg,
+          color: bgColor,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: _maroon, width: 1.4),
+          border: Border.all(color: borderColor, width: 1.4),
         ),
         child: Row(
           children: [
@@ -65,6 +68,13 @@ class CampusToggle extends StatelessWidget {
     required bool isLeft, // kept for readability / possible future tweaks
   }) {
     final bool isSelected = currentCampus == campus;
+    final selectedFill = highContrastMode ? const Color(0xFF014136) : _maroon;
+    final selectedTextColor = highContrastMode
+        ? const Color(0xFF89D9C2)
+        : Colors.white;
+    final unselectedTextColor = highContrastMode
+        ? const Color(0xFF89D9C2).withValues(alpha: 0.82)
+        : _maroon;
 
     return Material(
       color: Colors.transparent, 
@@ -75,7 +85,7 @@ class CampusToggle extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: isSelected ? _maroon : Colors.transparent,
+            color: isSelected ? selectedFill : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
           alignment: Alignment.center,
@@ -86,7 +96,7 @@ class CampusToggle extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis, 
               style: TextStyle(
-                color: isSelected ? Colors.white : _maroon,
+                color: isSelected ? selectedTextColor : unselectedTextColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 12.5,
                 height: 1,

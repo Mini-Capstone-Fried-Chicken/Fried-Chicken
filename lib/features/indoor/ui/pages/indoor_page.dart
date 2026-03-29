@@ -7,8 +7,8 @@ import "package:flutter_svg/flutter_svg.dart";
 import "../../data/building_info.dart";
 
 class IndoorPage extends StatelessWidget {
-  final String id;        // e.g. "MB-1"
-  final String assetPath; // exact path from map: svg or png
+  final String id;
+  final String assetPath;
 
   const IndoorPage({
     super.key,
@@ -18,7 +18,6 @@ class IndoorPage extends StatelessWidget {
 
   bool get _isSvg => assetPath.toLowerCase().endsWith(".svg");
 
-  // JSON naming rule: MB-1 -> mb1.json, LB-2 -> lb2.json, Hall-8 -> hall8.json
   String get _jsonPath {
     final normalized = id.trim().toLowerCase().replaceAll("-", "");
     return "assets/json/$normalized.json";
@@ -54,12 +53,10 @@ class IndoorPage extends StatelessWidget {
     }
 
     final building = map["building"]?.toString() ?? _buildingCode;
-
     final refW = readNum(map["refWidth"], fallback: 1024);
     final refH = readNum(map["refHeight"], fallback: 1024);
     final svgW = readNum(map["svgWidth"], fallback: 1024);
     final svgH = readNum(map["svgHeight"], fallback: 1024);
-
     final flipHorizontally = (map["flipHorizontally"] == true);
 
     List<_PointItem> parsePoints(List<dynamic>? list, _PointType type) {
@@ -70,17 +67,9 @@ class IndoorPage extends StatelessWidget {
         final name = e["name"]?.toString() ?? "Unknown";
         final x = readNum(e["x"]);
         final y = readNum(e["y"]);
-
-        // Convert ref coords -> svg coords
         final sx = (refW == 0) ? 1.0 : (svgW / refW);
         final sy = (refH == 0) ? 1.0 : (svgH / refH);
-
-        return _PointItem(
-          name: name,
-          x: x * sx,
-          y: y * sy,
-          type: type,
-        );
+        return _PointItem(name: name, x: x * sx, y: y * sy, type: type);
       }).toList();
     }
 
@@ -97,25 +86,70 @@ class IndoorPage extends StatelessWidget {
     );
   }
 
+  Widget _buildMapAsset() {
+    return _isSvg
+        ? SvgPicture.asset(assetPath, fit: BoxFit.fill)
+        : Image.asset(assetPath, fit: BoxFit.fill);
+  }
+
+  Widget _buildMarker(
+    BuildContext context,
+    _PointItem item,
+    double offsetX,
+    double offsetY,
+    double scale,
+  ) {
+    final isClassroom = item.type == _PointType.classroom;
+    return Positioned(
+      left: offsetX + (item.x * scale) - 18,
+      top: offsetY + (item.y * scale) - 18,
+      width: 36,
+      height: 36,
+      child: GestureDetector(
+        key: Key('marker_${item.name}'),
+        onTap: () => _showInfo(context, item),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isClassroom
+                ? Colors.red.withValues(alpha: 0.25)
+                : Colors.blue.withValues(alpha: 0.20),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isClassroom
+                  ? Colors.red.withValues(alpha: 0.07)
+                  : Colors.blue.withValues(alpha: 0.07),
+              width: 1.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _applyFlip(Widget child, bool flip) {
+    if (!flip) return child;
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
+      child: child,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final prettyTitle = "Indoor Map - ${id.trim()}";
 
     return Scaffold(
-      key : const Key('indoor_page'),
+      key: const Key('indoor_page'),
       appBar: AppBar(title: Text(prettyTitle)),
       body: FutureBuilder<_FloorData?>(
         future: _tryLoadFloorDataIfJsonExists(),
         builder: (context, snapshot) {
-          final data = snapshot.data; // null => view-only mode
-
-          // choose coordinate box size:
+          final data = snapshot.data;
           final refW = data?.svgW ?? 1024.0;
           final refH = data?.svgH ?? 1024.0;
-
-          final mapWidget = _isSvg
-              ? SvgPicture.asset(assetPath, fit: BoxFit.fill)
-              : Image.asset(assetPath, fit: BoxFit.fill);
 
           return InteractiveViewer(
             minScale: 0.5,
@@ -124,21 +158,15 @@ class IndoorPage extends StatelessWidget {
               builder: (context, constraints) {
                 final boxW = constraints.maxWidth;
                 final boxH = constraints.maxHeight;
-
                 final scale = _containScale(
-                  boxW: boxW,
-                  boxH: boxH,
-                  refW: refW,
-                  refH: refH,
+                  boxW: boxW, boxH: boxH, refW: refW, refH: refH,
                 );
-
                 final drawW = refW * scale;
                 final drawH = refH * scale;
-
                 final offsetX = (boxW - drawW) / 2;
                 final offsetY = (boxH - drawH) / 2;
 
-                Widget stack = Stack(
+                final stack = Stack(
                   key: const Key('indoor_map_stack'),
                   children: [
                     Positioned(
@@ -148,7 +176,7 @@ class IndoorPage extends StatelessWidget {
                       height: drawH,
                       child: Stack(
                         children: [
-                          mapWidget,
+                          _buildMapAsset(),
                           Positioned.fill(
                             child: Material(
                               color: Colors.transparent,
@@ -163,46 +191,17 @@ class IndoorPage extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    // markers if JSON exists
                     if (data != null)
                       for (final item in data.items)
-                        Positioned(
-                          left: offsetX + (item.x * scale) - 18,
-                          top: offsetY + (item.y * scale) - 18,
-                          width: 36,
-                          height: 36,
-                          child: GestureDetector(
-                            key: Key('marker_${item.name}'),
-                            onTap: () => _showInfo(context, item),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: item.type == _PointType.classroom
-                                    ? Colors.red.withOpacity(0.25)
-                                    : Colors.blue.withOpacity(0.20),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: item.type == _PointType.classroom
-                                      ? Colors.red.withOpacity(0.7)
-                                      : Colors.blue.withOpacity(0.7),
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                        _buildMarker(context, item, offsetX, offsetY, scale),
                   ],
                 );
 
-                if (data?.flipHorizontally == true) {
-                  stack = Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
-                    child: stack,
-                  );
-                }
-
-                return SizedBox(width: boxW, height: boxH, child: stack);
+                return SizedBox(
+                  width: boxW,
+                  height: boxH,
+                  child: _applyFlip(stack, data?.flipHorizontally == true),
+                );
               },
             ),
           );

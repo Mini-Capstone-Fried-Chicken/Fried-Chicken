@@ -1,11 +1,11 @@
 import "package:flutter/material.dart";
+import '../features/settings/app_settings.dart';
+import '../features/saved/saved_directions_controller.dart';
 
-import "../features/calendar/ui/calendar_screen.dart";
+import 'package:campus_app/features/calendar/ui/calendar_screen.dart';
 import "../features/explore/ui/explore_screen.dart";
 import "../features/saved/ui/saved_screen.dart";
 import "../features/settings/ui/settings_screen.dart";
-
-const Color burgundy = Color(0xFF76263D);
 
 class AppShell extends StatefulWidget {
   final bool isLoggedIn;
@@ -17,6 +17,27 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    SavedDirectionsController.notifier.addListener(_onDirectionsRequested);
+  }
+
+  void _onDirectionsRequested() {
+    if (!widget.isLoggedIn) return;
+    if (SavedDirectionsController.notifier.value == null) return;
+    if (!mounted) return;
+    if (currentIndex != 0) {
+      setState(() => currentIndex = 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    SavedDirectionsController.notifier.removeListener(_onDirectionsRequested);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,18 +83,29 @@ class _AppShellState extends State<AppShell> {
             ),
           ];
 
-    return Scaffold(
-      body: pages[currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) => setState(() => currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: burgundy,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        items: items,
-      ),
+    return ValueListenableBuilder<AppSettingsState>(
+      valueListenable: AppSettingsController.notifier,
+      builder: (context, settings, _) {
+        return Scaffold(
+          body: pages[currentIndex],
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: (index) => setState(() => currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppUiColors.primary(
+              highContrastEnabled: settings.highContrastModeEnabled,
+            ),
+            selectedItemColor: settings.highContrastModeEnabled
+                ? Colors.black
+                : Colors.white,
+            unselectedItemColor: settings.highContrastModeEnabled
+                ? Colors.black54
+                : Colors.white70,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            items: items,
+          ),
+        );
+      },
     );
   }
 }

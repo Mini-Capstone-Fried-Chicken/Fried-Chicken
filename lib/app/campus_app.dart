@@ -1,17 +1,34 @@
 import "package:campus_app/app/app_shell.dart";
 import "package:campus_app/features/auth/ui/login_page.dart";
-import "package:campus_app/features/indoor/ui/pages/indoor_page.dart";
+import "package:campus_app/features/saved/saved_places_controller.dart";
+import "package:campus_app/features/settings/app_settings.dart";
+//import "package:campus_app/features/indoor/ui/pages/indoor_page.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
+import "package:campus_app/utils/route_factory_indoor.dart";
+import 'dart:async';
+
+typedef RestoreSettingsCallback = Future<void> Function({bool force});
 
 class CampusApp extends StatefulWidget {
   const CampusApp({super.key});
 
   @override
-  State<CampusApp> createState() => _CampusAppState();
+  State<CampusApp> createState() => CampusAppState();
 }
 
-class _CampusAppState extends State<CampusApp> {
+class CampusAppState extends State<CampusApp> {
+  StreamSubscription<User?>? _authStateSub;
+
+  @visibleForTesting
+  static Stream<User?> Function()? debugAuthStateChangesProvider;
+
+  @visibleForTesting
+  static RestoreSettingsCallback? debugRestoreSettings;
+
+  @visibleForTesting
+  static Future<void> Function()? debugReloadSavedPlaces;
+
   static const Map<String, String> indoorAssetsById = {
     // SVGs
     "MB-1": "assets/indoor_svg/MB-1.svg",
@@ -34,7 +51,7 @@ class _CampusAppState extends State<CampusApp> {
     "LB-5": "assets/indoor_svg/LB-5.png",
   };
 
-  String? _findAssetPath(String id) {
+  String? findAssetPath(String id) {
     final direct = indoorAssetsById[id];
     if (direct != null) return direct;
 
@@ -43,6 +60,31 @@ class _CampusAppState extends State<CampusApp> {
       if (entry.key.toLowerCase() == lower) return entry.value;
     }
     return null;
+  }
+
+  Stream<User?> _authStateChanges() {
+    return debugAuthStateChangesProvider?.call() ??
+        FirebaseAuth.instance.authStateChanges();
+  }
+
+  void _handleAuthStateChanged(User? _) {
+    final restoreSettings = debugRestoreSettings ?? AppSettingsController.restore;
+    final reloadSavedPlaces =
+        debugReloadSavedPlaces ?? SavedPlacesController.reloadForCurrentUser;
+    unawaited(restoreSettings(force: true));
+    unawaited(reloadSavedPlaces());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _authStateSub = _authStateChanges().listen(_handleAuthStateChanged);
+  }
+
+  @override
+  void dispose() {
+    _authStateSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -54,10 +96,26 @@ class _CampusAppState extends State<CampusApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF76263D)),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        return ValueListenableBuilder<AppSettingsState>(
+          valueListenable: AppSettingsController.notifier,
+          builder: (context, settings, _) {
+            final mediaQuery = MediaQuery.of(context);
+            final baseScale = mediaQuery.textScaler.scale(1.0);
+            final multiplier = settings.largeTextModeEnabled ? 1.4 : 1.0;
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                textScaler: TextScaler.linear(baseScale * multiplier),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+        );
+      },
 
-      // Auth gate (same logic you already had)
+      // Auth gate
       home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
+        stream: _authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
@@ -73,48 +131,8 @@ class _CampusAppState extends State<CampusApp> {
         },
       ),
 
-      // Your named route logic (same as before)
       onGenerateRoute: (settings) {
-        final name = settings.name ?? "/";
-
-        if (name == "/") {
-          return MaterialPageRoute(builder: (_) => const SignInPage());
-        }
-
-        if (name == "/indoor-map") {
-          final assetPath = _findAssetPath("MB-1");
-          if (assetPath == null) {
-            return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text("MB-1 asset not found")),
-              ),
-            );
-          }
-          return MaterialPageRoute(
-            builder: (_) => IndoorPage(id: "MB-1", assetPath: assetPath),
-          );
-        }
-
-        if (name.startsWith("/indoor/")) {
-          final id = name.replaceFirst("/indoor/", "").trim();
-          final assetPath = _findAssetPath(id);
-
-          if (assetPath == null || assetPath.isEmpty) {
-            return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text("Indoor map not found")),
-              ),
-            );
-          }
-
-          return MaterialPageRoute(
-            builder: (_) => IndoorPage(id: id, assetPath: assetPath),
-          );
-        }
-
-        return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Center(child: Text("404"))),
-        );
+        return RouteFactoryIndoor.createRoute(settings, findAssetPath);
       },
     );
   }

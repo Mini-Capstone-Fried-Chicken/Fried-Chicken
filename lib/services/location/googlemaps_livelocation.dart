@@ -1,42 +1,57 @@
 import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:campus_app/models/campus.dart';
+import 'package:campus_app/utils/geo.dart' as geo;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../shared/widgets/map_search_bar.dart';
-import '../building_detection.dart';
 import '../../data/building_polygons.dart';
 import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
-import '../building_search_service.dart';
-import '../google_places_service.dart';
-import '../google_directions_service.dart';
-import '../../shared/widgets/campus_toggle.dart';
-import '../../shared/widgets/building_info_popup.dart';
-import '../../shared/widgets/route_preview_panel.dart';
 import '../../features/indoor/data/building_info.dart';
-import '../../services/navigation_steps.dart';
-import '../indoor_maps/indoor_floor_config.dart';
-import 'package:campus_app/utils/geo.dart' as geo;
-import '../../shared/widgets/indoor_floor_dropdown.dart';
-import '../indoor_maps/indoor_map_controller.dart';
-import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
-import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
-import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
-import 'package:campus_app/models/campus.dart';
-import '../../shared/widgets/outdoor/outdoor_map_view.dart';
-import '../indoor_maps/indoor_map_repository.dart';
-import '../../shared/widgets/outdoor/outdoor_top_search.dart';
+import '../../features/saved/saved_directions_controller.dart';
+import '../../features/saved/saved_place.dart';
+import '../../features/settings/app_settings.dart';
 import '../../services/concordia_shuttle_service.dart';
+import '../../services/navigation_steps.dart';
+import '../../services/nearby_poi_service.dart';
+import '../../services/poi_icon_factory.dart';
+import '../../shared/widgets/building_info_popup.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_bar.dart';
+import '../../shared/widgets/outdoor/outdoor_bottom_controls.dart';
+import '../../shared/widgets/outdoor/outdoor_building_popup.dart';
+import '../../shared/widgets/outdoor/outdoor_map_view.dart';
+import '../../shared/widgets/outdoor/outdoor_top_search.dart';
+import '../../shared/widgets/route_preview_panel.dart';
+import '../building_detection.dart';
+import '../building_search_service.dart';
+import '../google_directions_service.dart';
+import '../google_places_service.dart';
+import '../indoor_maps/indoor_floor_config.dart';
+import '../indoor_maps/indoor_map_controller.dart';
+import '../indoors_routing/core/indoor_route_plan_models.dart';
+import '../indoors_routing/core/indoor_routing_models.dart';
+import 'indoor_manual_navigation_controller.dart';
+import 'indoor_navigation_session.dart';
+import 'indoor_route_service.dart';
+import 'shuttle_route_service.dart';
 
 // concordia campus coordinates
 const LatLng concordiaSGW = LatLng(45.4973, -73.5789);
 const LatLng concordiaLoyola = LatLng(45.4582, -73.6405);
 const double campusRadius = 500; // meters
 const String currentLocationTag = "Current location";
+
+// Key is injected at build time via --dart-define=GOOGLE_PLACES_API_KEY=...
+// Never hardcode the key here — read it from local.properties via run.ps1
+const String _googleApiKey = String.fromEnvironment(
+  'GOOGLE_PLACES_API_KEY',
+  defaultValue: '',
+);
 
 // when camera center is within this distance auto-switch toggle
 const double campusAutoSwitchRadius = 500; // meters
@@ -61,6 +76,15 @@ Campus detectCampus(LatLng userLocation) {
   return Campus.none;
 }
 
+/// Merges outdoor and indoor polylines into a single set.
+/// Returns an empty set if both inputs are empty.
+Set<Polyline> mergeMapPolylines({
+  required Set<Polyline> outdoorPolylines,
+  required Set<Polyline> indoorPolylines,
+}) {
+  return {...outdoorPolylines, ...indoorPolylines};
+}
+
 class OutdoorMapPage extends StatefulWidget {
   final Campus initialCampus;
   final bool isLoggedIn;
@@ -80,6 +104,15 @@ class OutdoorMapPage extends StatefulWidget {
   @visibleForTesting
   final String? debugLinkOverride;
 
+  @visibleForTesting
+  final IndoorRouteService? debugIndoorRouteService;
+
+  @visibleForTesting
+  final IndoorMapController? debugIndoorMapController;
+  @visibleForTesting
+  final Future<BitmapDescriptor> Function(String text)?
+  debugBuildingLabelIconFactory;
+
   const OutdoorMapPage({
     super.key,
     required this.initialCampus,
@@ -88,6 +121,9 @@ class OutdoorMapPage extends StatefulWidget {
     this.debugDisableMap = false,
     this.debugDisableLocation = false,
     this.debugLinkOverride,
+    this.debugIndoorRouteService,
+    this.debugIndoorMapController,
+    this.debugBuildingLabelIconFactory,
     required this.isLoggedIn,
   });
 
@@ -96,9 +132,15 @@ class OutdoorMapPage extends StatefulWidget {
 }
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
+  final Map<String, BitmapDescriptor> _buildingLabelIcons = {};
+  bool _buildingLabelIconsReady = false;
+  late final IndoorRouteService _indoorRouteService;
+  final IndoorManualNavigationController _indoorNavigationController =
+      IndoorManualNavigationController();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _originRoomController = TextEditingController();
-  final TextEditingController _destinationRoomController = TextEditingController();
+  final TextEditingController _destinationRoomController =
+      TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
   Timer? _debounceTimer;
@@ -108,7 +150,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _showIndoor = false;
   List<IndoorFloorOption> _indoorFloors = const [];
   String? _selectedIndoorFloorAsset;
-  final IndoorMapController _indoorController = IndoorMapController();
+  late final IndoorMapController _indoorController;
 
   // --- Indoor floors state ---
   GoogleMapController? _mapController;
@@ -122,12 +164,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   // ignore: unused_field
   Map<String, dynamic>? _indoorGeoJson;
   Set<Marker> _roomLabelMarkers = {};
+  Set<Marker> _amenityMarkers = {};
 
   Set<Polyline> _routePolylines = {};
 
   // Room location marker
+  Marker? _originRoomMarker;
   Marker? _destinationRoomMarker;
   String? _currentBuildingCode;
+  bool _isBuildingIndoorRoute = false;
 
   // Route preview mode
   bool _showRoutePreview = false;
@@ -143,6 +188,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   final Map<String, List<DirectionsRouteSegment>> _routeSegmentsByMode = {};
   String? _routeOriginBuildingCode;
   String? _routeDestinationBuildingCode;
+  bool _isOriginPoi = false;
+  bool _isDestinationPoi = false;
 
   final Map<String, List<NavigationStep>> _routeStepsByMode = {};
   // --- Navigation camera follow state ---
@@ -161,6 +208,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   bool _isNavigating = false;
   String? _navModeKey;
   int _navStepIndex = 0;
+  IndoorResolvedRoom? _pendingDestinationIndoorRoom;
+  bool _autoHandoffToIndoorPending = false;
+  IndoorResolvedRoom? _pendingOriginIndoorRoom;
+  bool _isOriginIndoorHandoffPhase = false;
+  bool _isCompletingOriginIndoorPhase = false;
   bool _isLoadingRouteData = false;
   List<SearchSuggestion> _routeOriginSuggestions = [];
   List<SearchSuggestion> _routeDestinationSuggestions = [];
@@ -175,10 +227,21 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   ];
 
   // Shuttle state
-  List<ShuttleDeparture> _shuttleNextBuses = [];
-  int? _shuttleWalkingMinutes;
+  List<String> _shuttleNextBuses = [];
+  int? _shuttleWalkingToDestinationMinutes;
+  int? _shuttleWalkingFromDestinationMinutes;
   String _shuttleNearestStop = 'SGW';
   BitmapDescriptor? _shuttleStopIcon;
+  int? _shuttleTotalTripDuration; // ignore: unused_field
+  ShuttleRouteData? _shuttleRouteData;
+
+  // POI state
+  List<PoiPlace> _nearbyPois = [];
+  bool _poisLoaded = false;
+  final Map<PoiCategory, BitmapDescriptor> _poiIcons = {};
+  PoiPlace? _selectedPoi;
+  PlaceResult? _selectedPoiDetails;
+  LatLng? _selectedPoiCenter;
 
   StreamSubscription<Position>? _posSub;
 
@@ -194,6 +257,186 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Campus _selectedCampus = Campus.none;
 
   LatLng? _lastCameraTarget;
+  bool _highContrastMode = false;
+  bool _wheelchairRoutingDefaultEnabled = false;
+  IndoorTransitionMode? _preferredIndoorTransitionMode;
+
+  void _onSavedDirectionsRequested() {
+    final place = SavedDirectionsController.notifier.value;
+    if (place == null) return;
+    unawaited(_startDirectionsForSavedPlace(place));
+  }
+
+  Future<LatLng> _resolveOriginForSavedDirections() async {
+    if (_currentLocation != null) {
+      return _currentLocation!;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      final origin = LatLng(position.latitude, position.longitude);
+      if (mounted) {
+        setState(() {
+          _currentLocation = origin;
+        });
+      }
+      return origin;
+    } catch (_) {
+      // Fall back to map context when GPS is unavailable/denied.
+    }
+
+    if (_lastCameraTarget != null) {
+      return _lastCameraTarget!;
+    }
+
+    return _selectedCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
+  }
+
+  Future<void> _startDirectionsForSavedPlace(SavedPlace place) async {
+    try {
+      final origin = await _resolveOriginForSavedDirections();
+
+      final destination = LatLng(place.latitude, place.longitude);
+      final selectedBuilding = _findBuildingByCode(place.id);
+      final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
+      if (!mounted) return;
+      setState(() {
+        _selectedBuildingPoly = selectedBuilding;
+        _selectedBuildingCenter = null;
+        _selectedPoi = null;
+        _selectedPoiDetails = null;
+        _selectedPoiCenter = null;
+        _anchorOffset = null;
+        _showRoutePreview = true;
+        _routeOrigin = origin;
+        _routeDestination = destination;
+        _routeOriginText = currentLocationTag;
+        _routeDestinationText = place.name;
+        _routeOriginBuildingCode = currentBuildingCode;
+        _routeDestinationBuildingCode = selectedBuilding?.code;
+        _isOriginPoi = false;
+        _isDestinationPoi = false;
+
+        // Prefill destination room only when explicitly provided (Calendar Go to Room).
+        final requestedRoom = (place.roomCode ?? '').trim();
+        if (requestedRoom.isNotEmpty) {
+          _destinationRoomController.text = requestedRoom;
+        }
+      });
+
+      await _fetchRoutesAndDurations();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to start directions for this place.'),
+        ),
+      );
+    } finally {
+      SavedDirectionsController.clear();
+    }
+  }
+
+  void _onAppSettingsChanged() {
+    final settings = AppSettingsController.state;
+    final highContrastEnabled = settings.highContrastModeEnabled;
+    final wheelchairRoutingEnabled = settings.wheelchairRoutingDefaultEnabled;
+
+    final highContrastChanged = highContrastEnabled != _highContrastMode;
+
+    if (!mounted ||
+        (!highContrastChanged &&
+            wheelchairRoutingEnabled == _wheelchairRoutingDefaultEnabled)) {
+      return;
+    }
+
+    setState(() {
+      _highContrastMode = highContrastEnabled;
+      _wheelchairRoutingDefaultEnabled = wheelchairRoutingEnabled;
+      if (_wheelchairRoutingDefaultEnabled) {
+        _preferredIndoorTransitionMode = IndoorTransitionMode.elevator;
+      }
+    });
+
+    if (highContrastChanged) {
+      unawaited(initBuildingLabelIcons());
+    }
+  }
+
+  bool get _isIndoorNavigationActive => _indoorNavigationController.isActive;
+
+  IndoorNavigationSession? get _activeIndoorSession =>
+      _indoorNavigationController.session;
+
+  NavigationStep? get _currentIndoorStep =>
+      _indoorNavigationController.currentStep;
+
+  void _onIndoorNavigationChanged() {
+    _syncIndoorNavigationUi();
+    _maybeAutoCompleteOriginIndoorPhase();
+  }
+
+  void _maybeAutoCompleteOriginIndoorPhase() {
+    if (!_isOriginIndoorHandoffPhase) return;
+    if (_isCompletingOriginIndoorPhase) return;
+    if (!_isIndoorNavigationActive) return;
+    if (_indoorNavigationController.canGoNext) return;
+
+    _isCompletingOriginIndoorPhase = true;
+    unawaited(
+      _completeOriginIndoorPhaseAndStartOutdoor().whenComplete(() {
+        _isCompletingOriginIndoorPhase = false;
+      }),
+    );
+  }
+
+  Future<void> _syncIndoorNavigationUi() async {
+    final session = _activeIndoorSession;
+    if (session == null) {
+      if (!mounted) return;
+      setState(() {
+        _originRoomMarker = null;
+        _destinationRoomMarker = null;
+        _routePolylines = {};
+        _isBuildingIndoorRoute = false;
+      });
+      return;
+    }
+
+    final displayedFloorAssetPath =
+        _indoorNavigationController.displayedFloorAssetPath;
+    if (displayedFloorAssetPath != null &&
+        displayedFloorAssetPath != _selectedIndoorFloorAsset) {
+      await _loadIndoorFloor(displayedFloorAssetPath);
+    }
+
+    final currentStep = _currentIndoorStep;
+    final progressPoint =
+        currentStep?.startPoint ??
+        (displayedFloorAssetPath ==
+                session.routePlan.destinationRoom.floorAssetPath
+            ? session.routePlan.destinationRoom.center
+            : session.routePlan.originRoom.center);
+    final showDestinationMarker =
+        displayedFloorAssetPath ==
+        session.routePlan.destinationRoom.floorAssetPath;
+
+    if (!mounted) return;
+    setState(() {
+      _originRoomMarker = _indoorRouteService.buildIndoorProgressMarker(
+        progressPoint,
+        title: currentStep?.instruction,
+      );
+      _destinationRoomMarker = showDestinationMarker
+          ? session.destinationMarker
+          : null;
+      _routePolylines = displayedFloorAssetPath == null
+          ? {}
+          : session.polylinesByFloorAsset[displayedFloorAssetPath] ?? {};
+      _isBuildingIndoorRoute = true;
+    });
+  }
 
   void _clearIndoorState() {
     _showIndoor = false;
@@ -202,6 +445,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorPolygons = {};
     _indoorGeoJson = null;
     _roomLabelMarkers = {};
+    _amenityMarkers = {};
+    _originRoomMarker = null;
+    _destinationRoomMarker = null;
+    _isBuildingIndoorRoute = false;
+  }
+
+  void _clearPendingDestinationIndoorHandoff() {
+    _pendingDestinationIndoorRoom = null;
+    _autoHandoffToIndoorPending = false;
   }
 
   Campus _campusFromPoint(LatLng p) {
@@ -225,8 +477,338 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return dSgw <= dLoy ? Campus.sgw : Campus.loyola;
   }
 
-  Future<void> _onOriginRoomSubmitted(String buildingCode, String roomCode) async {
-    print('[DEBUG] Origin room submitted: $roomCode in $buildingCode');
+  String? _resolvedIndoorOriginBuildingCode() {
+    if (_showRoutePreview) {
+      return _resolveBuildingCode(
+        explicitCode: _routeOriginBuildingCode,
+        fallbackText: _routeOriginText,
+      );
+    }
+    return _resolveBuildingCode(
+      explicitCode: _selectedBuildingPoly?.code ?? _currentBuildingCode,
+    );
+  }
+
+  String? _resolvedIndoorDestinationBuildingCode() {
+    if (_showRoutePreview) {
+      return _resolveBuildingCode(
+        explicitCode: _routeDestinationBuildingCode,
+        fallbackText: _routeDestinationText,
+      );
+    }
+    return _resolveBuildingCode(explicitCode: _selectedBuildingPoly?.code);
+  }
+
+  String? _resolveBuildingCode({String? explicitCode, String? fallbackText}) {
+    final normalizedExplicit = explicitCode?.trim();
+    if (normalizedExplicit != null && normalizedExplicit.isNotEmpty) {
+      final explicitMatch = BuildingSearchService.searchBuilding(
+        normalizedExplicit,
+      );
+      return explicitMatch?.code ?? normalizedExplicit.toUpperCase();
+    }
+
+    final normalizedText = fallbackText?.trim();
+    if (normalizedText == null || normalizedText.isEmpty) {
+      return null;
+    }
+
+    final directMatch = BuildingSearchService.searchBuilding(normalizedText);
+    if (directMatch != null) {
+      return directMatch.code;
+    }
+
+    final roomLabelIndex = normalizedText.indexOf('(Room');
+    final candidateText = roomLabelIndex > 0
+        ? normalizedText.substring(0, roomLabelIndex).trim()
+        : normalizedText;
+
+    final fallbackMatch = BuildingSearchService.searchBuilding(candidateText);
+    return fallbackMatch?.code;
+  }
+
+  String _buildingWithRoomLabel(String buildingCode, String roomCode) {
+    final building = BuildingSearchService.searchBuilding(buildingCode);
+    final buildingLabel = building == null
+        ? buildingCode.toUpperCase()
+        : '${building.name} - ${building.code}';
+    return '$buildingLabel (Room ${roomCode.toUpperCase()})';
+  }
+
+  Future<void> _onOriginRoomSubmitted(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    await _maybeStartIndoorNavigationFromRooms();
+  }
+
+  Future<void> _maybeStartIndoorNavigationFromRooms() async {
+    final originBuildingCode = _resolvedIndoorOriginBuildingCode();
+    final destinationBuildingCode = _resolvedIndoorDestinationBuildingCode();
+    final originRoomCode = _originRoomController.text.trim();
+    final destinationRoomCode = _destinationRoomController.text.trim();
+
+    if (originBuildingCode == null ||
+        destinationBuildingCode == null ||
+        originRoomCode.isEmpty ||
+        destinationRoomCode.isEmpty) {
+      return;
+    }
+
+    final normalizedOriginBuildingCode = originBuildingCode
+        .toUpperCase()
+        .trim();
+    final normalizedDestinationBuildingCode = destinationBuildingCode
+        .toUpperCase()
+        .trim();
+
+    if (normalizedOriginBuildingCode != normalizedDestinationBuildingCode) {
+      await _prepareCrossBuildingRouteFromRooms(
+        originBuildingCode: normalizedOriginBuildingCode,
+        destinationBuildingCode: normalizedDestinationBuildingCode,
+        originRoomCode: originRoomCode,
+        destinationRoomCode: destinationRoomCode,
+      );
+      return;
+    }
+
+    final session = await _indoorRouteService.buildIndoorNavigationSession(
+      buildingCode: normalizedOriginBuildingCode,
+      originRoomCode: originRoomCode,
+      destinationRoomCode: destinationRoomCode,
+      preferredTransitionMode: _effectiveIndoorTransitionMode,
+    );
+
+    if (session == null) {
+      if (!mounted) return;
+      final preferredMode = _preferredIndoorTransitionModeLabel();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            preferredMode == null
+                ? 'Select stairs, elevator, or escalator before starting a multi-floor route.'
+                : 'Could not build an indoor route using $preferredMode.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _activateIndoorNavigation(session);
+  }
+
+  Future<void> _prepareCrossBuildingRouteFromRooms({
+    required String originBuildingCode,
+    required String destinationBuildingCode,
+    required String originRoomCode,
+    required String destinationRoomCode,
+  }) async {
+    final originRoom = await _indoorRouteService.indoorRepository.resolveRoom(
+      originBuildingCode,
+      originRoomCode,
+    );
+    final destinationRoom = await _indoorRouteService.indoorRepository
+        .resolveRoom(destinationBuildingCode, destinationRoomCode);
+
+    if (originRoom == null || destinationRoom == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not resolve one or both rooms. Please check the room numbers and try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Detect whether origin room is on a non-default floor so we can show
+    // origin-building indoor navigation before the outdoor leg.
+    final originFloors = _indoorController.floorsForBuilding(
+      originBuildingCode,
+    );
+    final isOriginOnNonDefaultFloor =
+        originFloors.isNotEmpty &&
+        originRoom.floorAssetPath != originFloors.first.assetPath;
+
+    if (!mounted) return;
+    setState(() {
+      _showRoutePreview = true;
+      _selectedBuildingCenter = null;
+      _anchorOffset = null;
+      _routeOrigin = originRoom.center;
+      _routeDestination = destinationRoom.center;
+      _routeOriginBuildingCode = originBuildingCode;
+      _routeDestinationBuildingCode = destinationBuildingCode;
+      _routeOriginText = _buildingWithRoomLabel(
+        originBuildingCode,
+        originRoomCode,
+      );
+      _routeDestinationText = _buildingWithRoomLabel(
+        destinationBuildingCode,
+        destinationRoomCode,
+      );
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+      _pendingDestinationIndoorRoom = destinationRoom;
+      _autoHandoffToIndoorPending = true;
+      _pendingOriginIndoorRoom = isOriginOnNonDefaultFloor ? originRoom : null;
+    });
+
+    unawaited(_fetchRoutesAndDurations());
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Cross-building classroom route ready. Tap Start to begin navigation.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _activateIndoorNavigation(
+    IndoorNavigationSession session,
+  ) async {
+    final building = BuildingSearchService.searchBuilding(
+      session.routePlan.buildingCode,
+    );
+    final floors = _indoorController.floorsForBuilding(
+      session.routePlan.buildingCode,
+    );
+
+    if (building == null || floors.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indoor maps are not available for that building.'),
+        ),
+      );
+      return;
+    }
+
+    final center = geo.polygonCenter(building.points);
+
+    final preserveOutdoorRouteState = _isOriginIndoorHandoffPhase;
+
+    if (!mounted) return;
+    setState(() {
+      _selectedBuildingPoly = building;
+      _selectedBuildingCenter = center;
+      _anchorOffset = null;
+      _cameraMoving = false;
+      _showRoutePreview = false;
+      _indoorFloors = floors;
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+      _routePolylines = {};
+      _isLoadingRouteData = false;
+      if (!preserveOutdoorRouteState) {
+        _selectedTravelMode = RouteTravelMode.walking;
+        _routeDurations.clear();
+        _routeDistances.clear();
+        _routeArrivalTimes.clear();
+        _routePointsByMode.clear();
+        _routeSegmentsByMode.clear();
+        _routeStepsByMode.clear();
+      }
+    });
+
+    _indoorNavigationController.start(session);
+    await _syncIndoorNavigationUi();
+  }
+
+  void _stopIndoorNavigation() {
+    if (_isOriginIndoorHandoffPhase) {
+      if (_isCompletingOriginIndoorPhase) return;
+      _isCompletingOriginIndoorPhase = true;
+      unawaited(
+        _completeOriginIndoorPhaseAndStartOutdoor().whenComplete(() {
+          _isCompletingOriginIndoorPhase = false;
+        }),
+      );
+      return;
+    }
+
+    _indoorNavigationController.stop();
+    // If stopping during origin-building indoor phase, cancel the whole
+    // cross-building navigation so outdoor and destination indoor also end.
+    if (_isOriginIndoorHandoffPhase) {
+      setState(() {
+        _isOriginIndoorHandoffPhase = false;
+        _pendingOriginIndoorRoom = null;
+      });
+      _clearPendingDestinationIndoorHandoff();
+    }
+  }
+
+  void _goToPreviousIndoorStep() {
+    _indoorNavigationController.previousStep();
+  }
+
+  void _goToNextIndoorStep() {
+    // When in origin-building phase and already at the last step, pressing
+    // Next transitions the user to outdoor navigation.
+    if (_isOriginIndoorHandoffPhase && !_indoorNavigationController.canGoNext) {
+      if (_isCompletingOriginIndoorPhase) return;
+      _isCompletingOriginIndoorPhase = true;
+      unawaited(
+        _completeOriginIndoorPhaseAndStartOutdoor().whenComplete(() {
+          _isCompletingOriginIndoorPhase = false;
+        }),
+      );
+      return;
+    }
+    _indoorNavigationController.nextStep();
+  }
+
+  void _onIndoorTransitionModeChanged(IndoorTransitionMode? mode) {
+    if (_wheelchairRoutingDefaultEnabled &&
+        mode != IndoorTransitionMode.elevator) {
+      return;
+    }
+
+    if (_preferredIndoorTransitionMode == mode) {
+      return;
+    }
+
+    setState(() {
+      _preferredIndoorTransitionMode = mode;
+    });
+
+    if (_effectiveIndoorTransitionMode != null) {
+      unawaited(_maybeStartIndoorNavigationFromRooms());
+    }
+  }
+
+  String? _preferredIndoorTransitionModeLabel() {
+    return switch (_effectiveIndoorTransitionMode) {
+      IndoorTransitionMode.stairs => 'stairs',
+      IndoorTransitionMode.elevator => 'elevators',
+      IndoorTransitionMode.escalator => 'escalators',
+      null => null,
+    };
+  }
+
+  IndoorTransitionMode? get _effectiveIndoorTransitionMode =>
+      _wheelchairRoutingDefaultEnabled
+      ? IndoorTransitionMode.elevator
+      : _preferredIndoorTransitionMode;
+
+  void _openIndoorSteps() {
+    final session = _activeIndoorSession;
+    if (session == null) {
+      return;
+    }
+
+    showNavigationStepsModal(
+      context,
+      title: 'Indoor',
+      steps: session.steps,
+      totalDuration: session.durationText,
+      totalDistance: session.distanceText,
+      highContrastMode: _highContrastMode,
+    );
   }
 
   Future<void> _syncToggleWithCameraCenter() async {
@@ -272,6 +854,11 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorPolygons = result.polygons;
         _indoorGeoJson = result.geoJson;
         _roomLabelMarkers = result.labels;
+        _amenityMarkers = result.amenityIcons;
+        if (_isIndoorNavigationActive) {
+          _routePolylines =
+              _activeIndoorSession?.polylinesByFloorAsset[assetPath] ?? {};
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -281,11 +868,22 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     }
   }
 
+  Future<void> _onIndoorFloorChanged(String assetPath) async {
+    await _loadIndoorFloor(assetPath);
+    if (_isIndoorNavigationActive) {
+      _indoorNavigationController.setDisplayedFloorAssetPath(assetPath);
+    }
+  }
+
   Future<void> _toggleIndoorMap() async {
     // turn OFF
     if (_showIndoor) {
+      if (_isIndoorNavigationActive) {
+        _indoorNavigationController.stop();
+      }
       setState(() {
         _clearIndoorState();
+        _routePolylines = {};
       });
       return;
     }
@@ -298,7 +896,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     if (floors.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No indoor maps available for this building')),
+        const SnackBar(
+          content: Text('No indoor maps available for this building'),
+        ),
       );
       return;
     }
@@ -336,8 +936,14 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
 
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (ok) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Could not open link")));
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -355,7 +961,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Future<void> _updatePopupOffset() async {
     final controller = _mapController;
-    final center = _selectedBuildingCenter;
+    final center = _selectedBuildingCenter ?? _selectedPoiCenter;
     if (!mounted || controller == null || center == null) return;
 
     final sc = await controller.getScreenCoordinate(center);
@@ -386,12 +992,15 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = b;
       _selectedBuildingCenter = center;
-      _anchorOffset = widget.debugAnchorOffset ?? const Offset(200, 420);
+      _anchorOffset = widget.debugAnchorOffset;
       _cameraMoving = false;
     });
   }
 
   void _onBuildingTapped(BuildingPolygon b) {
+    if (_isIndoorNavigationActive) {
+      _indoorNavigationController.stop();
+    }
     final center = geo.polygonCenter(b.points);
     final controller = _mapController;
     final name = buildingInfoByCode[b.code]?.name ?? b.name;
@@ -404,6 +1013,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = b;
       _selectedBuildingCenter = center;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _cameraMoving = true;
       _clearIndoorState();
@@ -428,10 +1040,123 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _clearSelectedBuilding(clearSearch: true);
   }
 
-  void _clearSelectedBuilding({bool clearSearch = false}) {
+  Future<void> _onPoiTapped(PoiPlace poi) async {
+    final controller = _mapController;
+
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = poi;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = poi.location;
+      _anchorOffset = null;
+      _cameraMoving = true;
+      _clearIndoorState();
+      _roomLabelMarkers = {};
+    });
+
+    if (controller != null) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(poi.location, 18),
+      );
+      if (!mounted) return;
+      await _updatePopupOffset();
+      if (!mounted) return;
+      setState(() {
+        _cameraMoving = false;
+      });
+    }
+
+    final details = await GooglePlacesService.instance.getPlaceDetails(
+      poi.placeId,
+      includeMetadata: true,
+    );
+
+    if (!mounted) return;
+    if (_selectedPoi?.placeId != poi.placeId) return;
+
+    setState(() {
+      _selectedPoiDetails = details;
+    });
+  }
+
+  Future<void> _getDirectionsToSelectedPoi() async {
+    final poi = _selectedPoi;
+    final origin = _currentLocation;
+    if (poi == null || origin == null) {
+      return;
+    }
+
+    final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+
+    setState(() {
+      _selectedBuildingCenter = null;
+      _selectedPoiCenter = null;
+      _anchorOffset = null;
+      _showRoutePreview = true;
+      _routeOrigin = origin;
+      _routeDestination = poi.location;
+      _routeOriginText = currentLocationTag;
+      _routeDestinationText = poi.name;
+      _routeOriginBuildingCode = currentBuildingCode;
+      _routeDestinationBuildingCode = null;
+      _isOriginPoi = false;
+      _isDestinationPoi = true;
+    });
+
+    await _fetchRoutesAndDurations();
+  }
+
+  String _poiDescription(PoiPlace poi) {
+    final details = _selectedPoiDetails;
+    final address = details?.formattedAddress?.trim();
+    final category = _poiCategoryLabel(poi.category);
+
+    if (address != null && address.isNotEmpty) {
+      return '$address\n$category';
+    }
+
+    return category;
+  }
+
+  List<String> _poiFacilities() {
+    final types = _selectedPoiDetails?.types ?? const <String>[];
+    return types.map((t) => t.replaceAll('_', ' ')).toList();
+  }
+
+  SavedPlace? _selectedPoiSavedPlace() {
+    final poi = _selectedPoi;
+    if (poi == null) return null;
+
+    return SavedPlace(
+      id: poi.placeId.startsWith('places/')
+          ? poi.placeId
+          : 'places/${poi.placeId}',
+      name: _selectedPoiDetails?.name ?? poi.name,
+      category: _poiCategoryLabel(poi.category).toLowerCase(),
+      latitude: poi.location.latitude,
+      longitude: poi.location.longitude,
+      openingHoursToday: 'Open today: Hours unavailable',
+      googlePlaceType: _selectedPoiDetails?.primaryType,
+    );
+  }
+
+  Future<void> _openSelectedPoiLink() async {
+    final poi = _selectedPoi;
+    if (poi == null) return;
+    await _openLink(
+      'https://www.google.com/maps/place/?q=place_id:${poi.placeId}',
+    );
+  }
+
+  void _clearSelectedBuilding({bool clearSearch = false}) {
+    _indoorNavigationController.stop();
+    setState(() {
+      _selectedBuildingPoly = null;
+      _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _selectedSearchResult = null;
       _anchorOffset = null;
       _routePolylines = {};
@@ -446,8 +1171,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _shuttleNextBuses = [];
-      _shuttleWalkingMinutes = null;
+      _shuttleWalkingToDestinationMinutes = null;
+      _shuttleWalkingFromDestinationMinutes = null;
+      _shuttleTotalTripDuration = null;
+      _originRoomMarker = null;
       _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
       if (clearSearch) {
         _searchController.clear();
       }
@@ -457,6 +1186,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _destinationRoomMarker = null;
       _routeOriginBuildingCode = null;
       _routeDestinationBuildingCode = null;
+      _preferredIndoorTransitionMode = null;
       _originRoomController.clear();
       _destinationRoomController.clear();
     });
@@ -499,6 +1229,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
           '${_selectedBuildingPoly?.name} - ${_selectedBuildingPoly?.code}';
       _routeOriginBuildingCode = currentBuildingCode;
       _routeDestinationBuildingCode = _selectedBuildingPoly?.code;
+      _isOriginPoi = false;
+      _isDestinationPoi = false;
       print(
         '[DEBUG] Route building codes: origin=$_routeOriginBuildingCode, destination=$_routeDestinationBuildingCode',
       );
@@ -562,6 +1294,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDurations
           ..clear()
           ..addAll(durations);
+        _routeDurations['shuttle'] = '...';
         _routeDistances
           ..clear()
           ..addAll(distances);
@@ -608,6 +1341,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       steps: steps,
       totalDuration: _routeDurations[key],
       totalDistance: _routeDistances[key],
+      highContrastMode: _highContrastMode,
     );
   }
 
@@ -637,7 +1371,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         Polyline(
           polylineId: const PolylineId('route'),
           points: selectedPoints,
-          color: const Color(0xFF76263D),
+          color: _highContrastMode
+              ? AppUiColors.highContrastRoutePreview
+              : const Color(0xFF76263D),
           width: 5,
           patterns: _selectedTravelMode == RouteTravelMode.driving
               ? const []
@@ -733,6 +1469,18 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
     });
 
+    // If origin room is on a non-default floor, show origin-building indoor
+    // navigation first before the outdoor leg begins.
+    if (_pendingOriginIndoorRoom != null) {
+      unawaited(_maybeAutoSwitchToOriginIndoorMap());
+      return;
+    }
+
+    if (_autoHandoffToIndoorPending && steps.isEmpty) {
+      unawaited(_maybeAutoSwitchToDestinationIndoorMap());
+      return;
+    }
+
     if (_currentLocation != null && _mapController != null) {
       try {
         final currentPos = _currentLocation!;
@@ -757,7 +1505,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _navModeKey = null;
       _navStepIndex = 0;
       _navigationFollowUser = false;
+      _isOriginIndoorHandoffPhase = false;
+      _pendingOriginIndoorRoom = null;
     });
+    _clearPendingDestinationIndoorHandoff();
     if (_mapController != null && _currentLocation != null) {
       try {
         final cam = CameraPosition(
@@ -826,7 +1577,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
 
     if (d <= 20) {
-      setState(() => _navStepIndex += 1);
+      final nextIndex = _navStepIndex + 1;
+      final reachedFinalStep = nextIndex >= steps.length - 1;
+      setState(() => _navStepIndex = nextIndex);
+      if (reachedFinalStep) {
+        unawaited(_maybeAutoSwitchToDestinationIndoorMap());
+      }
     }
   }
 
@@ -844,19 +1600,26 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _isLoadingRouteData = false;
       _selectedTravelMode = RouteTravelMode.driving;
       _shuttleNextBuses = [];
-      _shuttleWalkingMinutes = null;
+      _shuttleWalkingToDestinationMinutes = null;
+      _shuttleWalkingFromDestinationMinutes = null;
+      _shuttleTotalTripDuration = null;
       _searchController.clear();
 
       //reset indoor map and building selection state
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _destinationRoomMarker = null;
+      _preferredIndoorTransitionMode = null;
       _originRoomController.clear();
       _destinationRoomController.clear();
       _routeOriginBuildingCode = null;
       _routeDestinationBuildingCode = null;
     });
+    _clearPendingDestinationIndoorHandoff();
   }
 
   String? _formatArrivalTime(int? durationSeconds) {
@@ -878,6 +1641,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Color _resolveTransitSegmentColor(DirectionsRouteSegment segment) {
+    if (_highContrastMode) {
+      return AppUiColors.highContrastRoutePreview;
+    }
+
     const defaultRed = Color(0xFF76263D);
     final mode = segment.travelMode.toUpperCase();
     if (mode == 'WALKING') {
@@ -995,7 +1762,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   // ignore: unused_element
   Widget _buildTransitDetailsCard(List<DirectionsRouteSegment> segments) {
-    const burgundy = Color(0xFF76263D);
+    final accent = AppUiColors.primary(highContrastEnabled: _highContrastMode);
 
     return Container(
       width: 340,
@@ -1005,7 +1772,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1015,12 +1782,12 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Transit details',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: burgundy,
+              color: accent,
             ),
           ),
           const SizedBox(height: 6),
@@ -1092,11 +1859,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final tempOriginLatLng = _routeOrigin;
       final tempDestination = _routeDestinationText;
       final tempDestinationLatLng = _routeDestination;
+      final tempIsOriginPoi = _isOriginPoi;
+      final tempIsDestinationPoi = _isDestinationPoi;
+      final tempOriginBuildingCode = _routeOriginBuildingCode;
+      final tempDestinationBuildingCode = _routeDestinationBuildingCode;
 
       _routeOriginText = tempDestination;
       _routeOrigin = tempDestinationLatLng;
       _routeDestinationText = tempOrigin;
       _routeDestination = tempOriginLatLng;
+      _isOriginPoi = tempIsDestinationPoi;
+      _isDestinationPoi = tempIsOriginPoi;
+      _routeOriginBuildingCode = tempDestinationBuildingCode;
+      _routeDestinationBuildingCode = tempOriginBuildingCode;
 
       _routeOriginSuggestions = [];
       _routeDestinationSuggestions = [];
@@ -1131,98 +1906,322 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     );
   }
 
-  /// Walking time + 4 next buses
-  Future<void> _fetchShuttleInfo() async {
-    final origin = _routeOrigin ?? _currentLocation;
-
-    if (origin == null) {
-      setState(() {
-        _routeDurations['shuttle'] = '–';
-      });
-      return;
+  /// Pre-builds all four POI icons then fetches nearby places.
+  Future<void> _initPois() async {
+    for (final category in PoiCategory.values) {
+      _poiIcons[category] = await PoiIconFactory.iconFor(category);
     }
+    await _loadNearbyPois();
+  }
 
-    setState(() {
-      _shuttleNextBuses = [];
-      _shuttleWalkingMinutes = null;
-    });
-
+  /// Fetches POIs centred on SGW and Loyola campuses in parallel.
+  Future<void> _loadNearbyPois() async {
     try {
-      final nearestStop = ConcordiaShuttleService.nearestStop(origin);
-      final stopLatLng = ConcordiaShuttleService.stopLocation(nearestStop);
+      final results = await Future.wait([
+        NearbyPoiService.fetchNearby(concordiaSGW, apiKey: _googleApiKey),
+        NearbyPoiService.fetchNearby(concordiaLoyola, apiKey: _googleApiKey),
+      ]);
 
-      int walkingSeconds = 0;
-      List<LatLng> walkPoints = [];
-
-      final walkRoute = await GoogleDirectionsService.instance.getRouteDetails(
-        origin: origin,
-        destination: stopLatLng,
-        mode: 'walking',
-      );
-
-      if (walkRoute != null) {
-        walkingSeconds = walkRoute.durationSeconds ?? 0;
-        walkPoints = walkRoute.points;
-      }
-
-      final walkingMinutes = (walkingSeconds / 60).ceil();
-
-      final buses = ConcordiaShuttleService.getNextDepartures(
-        fromStop: nearestStop,
-        now: DateTime.now(),
-        count: 4,
-        walkingDuration: Duration(seconds: walkingSeconds),
-      );
-
-      String shuttleDurationLabel;
-      if (!ConcordiaShuttleService.isInService()) {
-        shuttleDurationLabel = 'No service';
-      } else if (buses.isNotEmpty) {
-        shuttleDurationLabel = buses.first.statusLabel;
-      } else {
-        shuttleDurationLabel = '–';
-      }
-
-      if (_selectedTravelMode == RouteTravelMode.shuttle) {
-        if (walkPoints.isNotEmpty) {
-          setState(() {
-            _routePolylines = {
-              Polyline(
-                polylineId: const PolylineId('shuttle_walk'),
-                points: walkPoints,
-                color: const Color(0xFF76263D),
-                width: 5,
-                patterns: [PatternItem.dot, PatternItem.gap(10)],
-              ),
-            };
-          });
-
-          if (_mapController != null) {
-            final bounds = geo.calculateBounds([...walkPoints, stopLatLng]);
-            _mapController!
-                .animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+      // Deduplicate by placeId across both campus results
+      final seen = <String>{};
+      final merged = <PoiPlace>[];
+      for (final list in results) {
+        for (final poi in list) {
+          if (seen.add(poi.placeId)) {
+            merged.add(poi);
           }
-        } else {
-          setState(() {
-            _routePolylines = {};
-          });
         }
       }
 
       if (!mounted) return;
       setState(() {
-        _shuttleNearestStop = nearestStop;
-        _shuttleWalkingMinutes = walkingMinutes > 1 ? walkingMinutes : null;
-        _shuttleNextBuses = buses;
-        _routeDurations['shuttle'] = shuttleDurationLabel;
+        _nearbyPois = merged;
+        _poisLoaded = true;
       });
     } catch (e) {
-      print('Error fetching shuttle info: $e');
-      if (!mounted) return;
-      setState(() {
-        _routeDurations['shuttle'] = '–';
-      });
+      print('[POI] Failed to load nearby POIs: $e');
     }
+  }
+
+  /// Adds a map marker for every loaded POI.
+  void _addPoiMarkers(Set<Marker> markers) {
+    if (!_poisLoaded) return;
+
+    for (final poi in _nearbyPois) {
+      final icon = _poiIcons[poi.category];
+      if (icon == null) continue;
+
+      markers.add(
+        Marker(
+          markerId: MarkerId('poi_${poi.placeId}'),
+          position: poi.location,
+          icon: icon,
+          onTap: () => unawaited(_onPoiTapped(poi)),
+          zIndexInt: 0,
+        ),
+      );
+    }
+  }
+
+  String _poiCategoryLabel(PoiCategory category) {
+    switch (category) {
+      case PoiCategory.cafe:
+        return 'Cafe';
+      case PoiCategory.restaurant:
+        return 'Restaurant';
+      case PoiCategory.pharmacy:
+        return 'Pharmacy';
+      case PoiCategory.depanneur:
+        return 'Dépanneur';
+    }
+  }
+
+  /// Fetch shuttle info: walk, wait, shuttle, walk + next buses
+  Future<void> _fetchShuttleInfo() async {
+    final origin = _routeOrigin ?? _currentLocation;
+    final destinationLatLng = _routeDestination;
+
+    if (origin == null || destinationLatLng == null) {
+      setState(() => _routeDurations['shuttle'] = '–');
+      return;
+    }
+
+    final originStop = ConcordiaShuttleService.nearestStop(origin);
+    final destinationStop = ConcordiaShuttleService.nearestStop(
+      destinationLatLng,
+    );
+
+    // Compute direct walking route
+    DirectionsRouteResult? directWalkRoute;
+    try {
+      directWalkRoute = await GoogleDirectionsService.instance.getRouteDetails(
+        origin: origin,
+        destination: destinationLatLng,
+        mode: 'walking',
+      );
+
+      // If same campus, show walking route only
+      if (originStop == destinationStop) {
+        _handleWalkingRoute(directWalkRoute);
+        return;
+      }
+    } catch (e) {
+      print('[ERROR] Failed to compute direct walking route: $e');
+    }
+
+    try {
+      final nearestStop = originStop;
+      final stopLatLng = ConcordiaShuttleService.stopLocation(nearestStop);
+
+      // Compute walk to shuttle, walk from & shuttle route
+      final shuttleDestinationStop = nearestStop == 'SGW'
+          ? shuttleStopLoyola
+          : shuttleStopSGW;
+      final shuttleStart = nearestStop == 'SGW'
+          ? shuttleStopSGW
+          : shuttleStopLoyola;
+      final shuttleEnd = nearestStop == 'SGW'
+          ? shuttleStopLoyola
+          : shuttleStopSGW;
+
+      final results = await Future.wait([
+        GoogleDirectionsService.instance.getRouteDetails(
+          origin: origin,
+          destination: stopLatLng,
+          mode: 'walking',
+        ), // walkTo
+        GoogleDirectionsService.instance.getRouteDetails(
+          origin: shuttleDestinationStop,
+          destination: destinationLatLng,
+          mode: 'walking',
+        ), // walkFrom
+        GoogleDirectionsService.instance.getRouteDetails(
+          origin: shuttleStart,
+          destination: shuttleEnd,
+          mode: 'driving',
+        ), // shuttle
+      ]);
+
+      final walkToShuttleRoute = results[0];
+      final walkFromShuttleRoute = results[1];
+      final shuttleDrivingRoute = results[2];
+
+      // Fetch shuttle data
+      final routeData = await ShuttleRouteService.fetchShuttleRouteData(
+        nearestStop: nearestStop,
+        stopLatLng: stopLatLng,
+        walkToShuttleRoute: walkToShuttleRoute,
+        walkFromShuttleRoute: walkFromShuttleRoute,
+        shuttleDrivingRoute: shuttleDrivingRoute,
+        directWalkRoute: directWalkRoute,
+      );
+
+      // Walking faster than shuttle
+      if (routeData == null) {
+        if (directWalkRoute != null) _handleWalkingRoute(directWalkRoute);
+        return;
+      }
+
+      //  Display shuttle route polylines
+      await _buildAndDisplayShuttlePolylines(
+        routeData: routeData,
+        nearestStop: nearestStop,
+      );
+
+      // Update shuttle UI
+      _updateShuttleUI(routeData);
+    } catch (e) {
+      print('[ERROR] Error fetching shuttle info: $e');
+      if (!mounted) return;
+      setState(() => _routeDurations['shuttle'] = '–');
+    }
+  }
+
+  // walking route only
+  void _handleWalkingRoute(
+    DirectionsRouteResult? walkRoute, {
+    String label = 'walking',
+  }) {
+    setState(() {
+      _shuttleRouteData = null;
+      _shuttleNextBuses = [];
+      _shuttleWalkingToDestinationMinutes = null;
+      _shuttleWalkingFromDestinationMinutes = null;
+      _shuttleTotalTripDuration = null;
+
+      _routeDurations['shuttle'] = walkRoute?.durationText ?? label;
+
+      // Show walking polyline
+      _routePolylines = {
+        Polyline(
+          polylineId: const PolylineId('walking_route'),
+          points: walkRoute?.points ?? [],
+          color: _highContrastMode
+              ? AppUiColors.highContrastRoutePreview
+              : const Color(0xFF76263D),
+          width: 5,
+          patterns: [PatternItem.dot, PatternItem.gap(10)],
+        ),
+      };
+    });
+
+    // Animate camera to walking route
+    if (_mapController != null && (walkRoute?.points ?? []).isNotEmpty) {
+      final bounds = geo.calculateBounds(walkRoute!.points);
+      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+    }
+  }
+
+  // build & display shuttle poyline
+  Future<void> _buildAndDisplayShuttlePolylines({
+    required ShuttleRouteData routeData,
+    required String nearestStop,
+  }) async {
+    if (_selectedTravelMode != RouteTravelMode.shuttle) return;
+
+    if (_noShuttlePoints(routeData)) {
+      setState(() => _routePolylines = {});
+      return;
+    }
+
+    final opacity = routeData.isInService ? 1.0 : 0.4;
+    final polylines = <Polyline>{};
+
+    // Helper to add a polyline
+    void addPolyline(
+      String id,
+      List<LatLng> points, {
+      Color? color,
+      bool geodesic = false,
+      List<PatternItem>? patterns,
+    }) {
+      if (points.isEmpty) return;
+      polylines.add(
+        Polyline(
+          polylineId: PolylineId(id),
+          points: points,
+          color:
+              color ??
+              const Color(0xFF76263D).withAlpha((opacity * 255).round()),
+          width: 5,
+          geodesic: geodesic,
+          patterns: patterns ?? [],
+        ),
+      );
+    }
+
+    final defaultColor = const Color(
+      0xFF76263D,
+    ).withAlpha((opacity * 255).round());
+    final shuttleColor = const Color(
+      0xFF9C27B0,
+    ).withAlpha((opacity * 255).round());
+    const highContrastColor = AppUiColors.highContrastRoutePreview;
+
+    addPolyline(
+      'shuttle_walk',
+      routeData.walkToShuttlePoints,
+      color: _highContrastMode ? highContrastColor : defaultColor,
+      patterns: [PatternItem.dot, PatternItem.gap(10)],
+    );
+
+    addPolyline(
+      'shuttle_route',
+      routeData.shuttleRoutePoints,
+      color: shuttleColor,
+      geodesic: true,
+    );
+
+    addPolyline(
+      'shuttle_walk_from',
+      routeData.walkFromShuttlePoints,
+      color: _highContrastMode ? highContrastColor : defaultColor,
+      patterns: [PatternItem.dot, PatternItem.gap(10)],
+    );
+
+    setState(() => _routePolylines = polylines);
+
+    _updateCameraBounds(routeData, nearestStop);
+  }
+
+  /// Checks if there are no shuttle or walk points
+  bool _noShuttlePoints(ShuttleRouteData routeData) =>
+      routeData.walkToShuttlePoints.isEmpty &&
+      routeData.shuttleRoutePoints.isEmpty;
+
+  /// Animates camera to fit all relevant points
+  void _updateCameraBounds(ShuttleRouteData routeData, String nearestStop) {
+    if (_mapController == null) return;
+
+    final allPoints = [
+      ...routeData.walkToShuttlePoints,
+      routeData.stopLatLng,
+      ...routeData.shuttleRoutePoints,
+      nearestStop == 'SGW' ? shuttleStopLoyola : shuttleStopSGW,
+      ...routeData.walkFromShuttlePoints,
+    ];
+
+    if (allPoints.isEmpty) return;
+
+    final bounds = geo.calculateBounds(allPoints);
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+  }
+
+  //update shuttle info in route details UI
+  void _updateShuttleUI(ShuttleRouteData routeData) {
+    if (!mounted) return;
+    setState(() {
+      _shuttleNearestStop = routeData.nearestStop;
+      _shuttleNextBuses = routeData.buses.map((b) => b.statusLabel).toList();
+      _routeDurations['shuttle'] = routeData.isInService
+          ? routeData.shuttleDurationLabel
+          : 'No service';
+      _shuttleWalkingToDestinationMinutes = routeData.walkingToShuttleMinutes;
+      _shuttleWalkingFromDestinationMinutes =
+          routeData.walkingFromShuttleMinutes;
+      _shuttleTotalTripDuration = routeData.totalTripDuration;
+      _shuttleRouteData = routeData;
+    });
   }
 
   /// Open full day schedule
@@ -1231,8 +2230,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          _ShuttleScheduleSheet(nearestStop: _shuttleNearestStop),
+      builder: (_) => _ShuttleScheduleSheet(
+        nearestStop: _shuttleNearestStop,
+        highContrastMode: _highContrastMode,
+      ),
     );
   }
 
@@ -1349,6 +2350,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeOriginText = displayText;
         _routeOriginSuggestions = [];
         _routeOriginBuildingCode = buildingCode;
+        _isOriginPoi = false;
         _originRoomController.clear();
       });
       print('[DEBUG] Calling _fetchRoute with new origin: $newOrigin');
@@ -1393,6 +2395,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _routeDestinationText = displayText;
         _routeDestinationSuggestions = [];
         _routeDestinationBuildingCode = buildingCode;
+        _isDestinationPoi = false;
         _destinationRoomController.clear();
       });
       await _fetchRoutesAndDurations();
@@ -1400,7 +2403,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   void _hideBuildingPopup() {
-    if (_selectedBuildingPoly == null) return;
+    if (_selectedBuildingPoly == null && _selectedPoi == null) return;
 
     _clearSelectedBuilding();
   }
@@ -1420,39 +2423,49 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       userLocation: _currentLocation,
     );
 
-    if (results.isNotEmpty) {
-      SearchResult? selectedResult;
-
-      for (final result in results) {
-        if (!result.isConcordiaBuilding) {
-          selectedResult = result;
-          break;
-        }
-      }
-
-      if (selectedResult == null && results.isNotEmpty) {
-        selectedResult = results.first;
-      }
-
-      if (selectedResult != null) {
-        if (selectedResult.isConcordiaBuilding &&
-            selectedResult.buildingPolygon != null) {
-          _onBuildingTapped(selectedResult.buildingPolygon!);
-        } else {
-          _onPlaceSelected(selectedResult);
-        }
-      }
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"$query" not found'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: const Color(0xFF800020),
-        ),
-      );
-      _searchController.clear();
+    final selectedResult = _selectPreferredSearchResult(results);
+    if (selectedResult == null) {
+      _showSearchNotFound(query);
+      return;
     }
+
+    _handleSearchSelection(selectedResult);
+  }
+
+  SearchResult? _selectPreferredSearchResult(List<SearchResult> results) {
+    if (results.isEmpty) return null;
+
+    for (final result in results) {
+      if (!result.isConcordiaBuilding) {
+        return result;
+      }
+    }
+
+    return results.first;
+  }
+
+  void _handleSearchSelection(SearchResult selectedResult) {
+    if (selectedResult.isConcordiaBuilding &&
+        selectedResult.buildingPolygon != null) {
+      _onBuildingTapped(selectedResult.buildingPolygon!);
+      return;
+    }
+
+    _onPlaceSelected(selectedResult);
+  }
+
+  void _showSearchNotFound(String query) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('"$query" not found'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppUiColors.primary(
+          highContrastEnabled: _highContrastMode,
+        ),
+      ),
+    );
+    _searchController.clear();
   }
 
   void _onPlaceSelected(SearchResult result) {
@@ -1462,6 +2475,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _selectedSearchResult = result;
     });
 
@@ -1478,7 +2494,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         SnackBar(
           content: Text('${result.name} is a Concordia building'),
           duration: const Duration(seconds: 3),
-          backgroundColor: const Color(0xFF800020),
+          backgroundColor: AppUiColors.primary(
+            highContrastEnabled: _highContrastMode,
+          ),
         ),
       );
     } else {
@@ -1510,6 +2528,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     setState(() {
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _showRoutePreview = true;
       _routeOrigin = _currentLocation;
@@ -1517,6 +2538,8 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _routeOriginText = currentLocationTag;
       _routeDestinationText = place.name;
       _selectedSearchResult = place;
+      _isOriginPoi = false;
+      _isDestinationPoi = false;
     });
 
     print(
@@ -1559,53 +2582,68 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Set<Polygon> _createBuildingPolygons() {
-    const burgundy = Color(0xFF800020);
-    const selectedBlue = Color(0xFF7F83C3);
-
     final polys = <Polygon>{};
 
     for (final b in buildingPolygons) {
-      final isCurrent = _currentBuildingPoly?.code == b.code;
-      final isSelected = _selectedBuildingPoly?.code == b.code;
-
-      final strokeColor = isSelected
-          ? selectedBlue.withOpacity(0.95)
-          : isCurrent
-          ? Colors.blue.withOpacity(0.8)
-          : burgundy.withOpacity(0.55);
-
-      final fillColor = isSelected
-          ? selectedBlue.withOpacity(0.25)
-          : isCurrent
-          ? Colors.blue.withOpacity(0.25)
-          : burgundy.withOpacity(0.22);
-
-      final strokeWidth = isSelected
-          ? 3
-          : isCurrent
-          ? 3
-          : 2;
-      final zIndex = isSelected
-          ? 3
-          : isCurrent
-          ? 2
-          : 1;
-
-      polys.add(
-        Polygon(
-          polygonId: PolygonId('poly_${b.code}'),
-          points: b.points,
-          strokeWidth: strokeWidth,
-          strokeColor: strokeColor,
-          fillColor: fillColor,
-          zIndex: zIndex,
-          consumeTapEvents: true,
-          onTap: () => _onBuildingTapped(b),
-        ),
-      );
+      polys.add(_buildBuildingPolygon(b));
     }
 
     return polys;
+  }
+
+  Polygon _buildBuildingPolygon(BuildingPolygon building) {
+    const selectedBlue = Color(0xFF7F83C3);
+    const highContrastBuildingBase = Color(0xFF365C60);
+    const highContrastCurrent = Color(0xFF365C60);
+    const burgundy = Color(0xFF800020);
+
+    final isCurrent = _currentBuildingPoly?.code == building.code;
+    final isSelected = _selectedBuildingPoly?.code == building.code;
+
+    late final Color strokeColor;
+    late final Color fillColor;
+    late final int strokeWidth;
+    late final int zIndex;
+
+    if (isSelected) {
+      strokeColor = _highContrastMode
+          ? AppUiColors.highContrastBuildingHighlight.withValues(alpha: 0.95)
+          : selectedBlue.withValues(alpha: 0.95);
+      fillColor = _highContrastMode
+          ? AppUiColors.highContrastBuildingHighlight.withValues(alpha: 0.32)
+          : selectedBlue.withValues(alpha: 0.25);
+      strokeWidth = 3;
+      zIndex = 3;
+    } else if (isCurrent) {
+      strokeColor = _highContrastMode
+          ? highContrastCurrent.withValues(alpha: 0.9)
+          : Colors.blue.withValues(alpha: 0.8);
+      fillColor = _highContrastMode
+          ? highContrastCurrent.withValues(alpha: 0.28)
+          : Colors.blue.withValues(alpha: 0.25);
+      strokeWidth = 3;
+      zIndex = 2;
+    } else {
+      strokeColor = _highContrastMode
+          ? highContrastBuildingBase.withValues(alpha: 0.8)
+          : burgundy.withValues(alpha: 0.55);
+      fillColor = _highContrastMode
+          ? highContrastBuildingBase.withValues(alpha: 0.22)
+          : burgundy.withValues(alpha: 0.22);
+      strokeWidth = 2;
+      zIndex = 1;
+    }
+
+    return Polygon(
+      polygonId: PolygonId('poly_${building.code}'),
+      points: building.points,
+      strokeWidth: strokeWidth,
+      strokeColor: strokeColor,
+      fillColor: fillColor,
+      zIndex: zIndex,
+      consumeTapEvents: true,
+      onTap: () => _onBuildingTapped(building),
+    );
   }
 
   List<Widget> _createBuildingGestureDetectors() {
@@ -1635,34 +2673,91 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   @override
   void initState() {
     super.initState();
+    _indoorRouteService =
+        widget.debugIndoorRouteService ?? IndoorRouteService();
+    _indoorController =
+        widget.debugIndoorMapController ?? IndoorMapController();
+
+    _highContrastMode = AppSettingsController.state.highContrastModeEnabled;
+    _wheelchairRoutingDefaultEnabled =
+        AppSettingsController.state.wheelchairRoutingDefaultEnabled;
+    if (_wheelchairRoutingDefaultEnabled) {
+      _preferredIndoorTransitionMode = IndoorTransitionMode.elevator;
+    }
+
+    unawaited(initBuildingLabelIcons());
+
+    AppSettingsController.notifier.addListener(_onAppSettingsChanged);
+    _indoorNavigationController.addListener(_onIndoorNavigationChanged);
+    SavedDirectionsController.notifier.addListener(_onSavedDirectionsRequested);
 
     _selectedCampus = widget.initialCampus;
+
+    if (widget.debugDisableMap && widget.debugSelectedBuilding != null) {
+      _selectedBuildingPoly = widget.debugSelectedBuilding;
+      _selectedBuildingCenter = geo.polygonCenter(
+        widget.debugSelectedBuilding!.points,
+      );
+      _anchorOffset = widget.debugAnchorOffset;
+    }
 
     _lastCameraTarget = widget.initialCampus == Campus.loyola
         ? concordiaLoyola
         : concordiaSGW;
-
     _createBlueDotIcon();
-    _createShuttleStopIcon();
-    _determineUserLocationAndBuilding().then((_) {
-      _startLocationUpdates();
-    });
+
+    if (!widget.debugDisableLocation) {
+      _createShuttleStopIcon();
+      _bootstrapLocationState();
+      _initPois();
+    }
 
     _searchController.addListener(_onSearchChanged);
-    // Clear destination room marker when room input changes
     _destinationRoomController.addListener(_onDestinationRoomTextChanged);
-    _determineUserLocationAndBuilding();
+
+    _onSavedDirectionsRequested();
+  }
+
+  Future<void> _bootstrapLocationState() async {
+    await _determineUserLocationAndBuilding();
+    if (!mounted) return;
+    await _startLocationUpdates();
   }
 
   Future<void> _determineUserLocationAndBuilding() async {
-    final position = await Geolocator.getCurrentPosition();
-    _currentLocation = LatLng(position.latitude, position.longitude);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return;
+      }
 
-    final buildingAtLocation = _findBuildingAtLocation(_currentLocation!);
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
 
-    setState(() {
-      _currentBuildingCode = buildingAtLocation?.code;
-    });
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final currentLocation = LatLng(position.latitude, position.longitude);
+      final buildingAtLocation = _findBuildingAtLocation(currentLocation);
+
+      if (!mounted) return;
+      setState(() {
+        _currentLocation = currentLocation;
+        _currentCampus = detectCampus(currentLocation);
+        _currentBuildingPoly = detectBuildingPoly(currentLocation);
+        _currentBuildingCode = buildingAtLocation?.code;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentBuildingCode = null;
+      });
+    }
   }
 
   BuildingPolygon? _findBuildingAtLocation(LatLng location) {
@@ -1674,10 +2769,20 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return null;
   }
 
+  BuildingPolygon? _findBuildingByCode(String code) {
+    for (final building in buildingPolygons) {
+      if (building.code.toUpperCase() == code.toUpperCase()) {
+        return building;
+      }
+    }
+    return null;
+  }
+
   void _onDestinationRoomTextChanged() {
-    if (_destinationRoomMarker == null) return;
+    if (_destinationRoomMarker == null && _originRoomMarker == null) return;
 
     setState(() {
+      _originRoomMarker = null;
       _destinationRoomMarker = null;
     });
   }
@@ -1810,80 +2915,96 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};
-    // Add current location marker
-    if (_currentLocation != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('current_location'),
-          position: _currentLocation!,
-          icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
-          anchor: const Offset(0.5, 0.5),
-          flat: true,
-          zIndex: 999,
-        ),
-      );
-    }
+    _addCurrentLocationMarker(markers);
 
-    // Shuttle stop markers
-    final shuttleIcon = _shuttleStopIcon;
-    if (shuttleIcon != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('shuttle_stop_sgw'),
-          position: shuttleStopSGW,
-          icon: shuttleIcon,
-          infoWindow: const InfoWindow(
-            title: 'Concordia Shuttle — SGW',
-            snippet: 'Hall Building stop',
-          ),
-          onTap: () {
-            if (_showRoutePreview) {
-              setState(() => _selectedTravelMode = RouteTravelMode.shuttle);
-              _fetchShuttleInfo();
-            }
-          },
-        ),
-      );
-      markers.add(
-        Marker(
-          markerId: const MarkerId('shuttle_stop_loyola'),
-          position: shuttleStopLoyola,
-          icon: shuttleIcon,
-          infoWindow: const InfoWindow(
-            title: 'Concordia Shuttle — Loyola',
-            snippet: 'Loyola campus stop',
-          ),
-          onTap: () {
-            if (_showRoutePreview) {
-              setState(() => _selectedTravelMode = RouteTravelMode.shuttle);
-              _fetchShuttleInfo();
-            }
-          },
-        ),
-      );
-    }
-
-    // Add destination room marker only when indoor map is shown
-    if (_destinationRoomMarker != null && _showIndoor) {
-      markers.add(_destinationRoomMarker!);
-    }
-
-    if (_showRoutePreview) {
-      if (_routeDestination != null) {
-        markers.add(
-          Marker(
-            markerId: const MarkerId('route_destination'),
-            position: _routeDestination!,
-            infoWindow: InfoWindow(title: _routeDestinationText),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueRed,
-            ),
-          ),
-        );
-      }
-    }
+    addBuildingLabelMarkers(markers);
+    _addPoiMarkers(markers);
+    _addShuttleStopMarkers(markers);
+    _addIndoorMarkers(markers);
+    _addRouteDestinationMarker(markers);
 
     return markers;
+  }
+
+  void _addCurrentLocationMarker(Set<Marker> markers) {
+    if (_currentLocation == null) return;
+
+    markers.add(
+      Marker(
+        markerId: const MarkerId('current_location'),
+        position: _currentLocation!,
+        icon: _blueDotIcon ?? BitmapDescriptor.defaultMarker,
+        anchor: const Offset(0.5, 0.5),
+        flat: true,
+        zIndex: 999,
+      ),
+    );
+  }
+
+  void _addShuttleStopMarkers(Set<Marker> markers) {
+    final shuttleIcon = _shuttleStopIcon;
+    if (shuttleIcon == null) return;
+
+    markers.add(
+      Marker(
+        markerId: const MarkerId('shuttle_stop_sgw'),
+        position: shuttleStopSGW,
+        icon: shuttleIcon,
+        infoWindow: const InfoWindow(
+          title: 'Concordia Shuttle — SGW',
+          snippet: 'Hall Building stop',
+        ),
+        onTap: _onShuttleStopTapped,
+      ),
+    );
+
+    markers.add(
+      Marker(
+        markerId: const MarkerId('shuttle_stop_loyola'),
+        position: shuttleStopLoyola,
+        icon: shuttleIcon,
+        infoWindow: const InfoWindow(
+          title: 'Concordia Shuttle — Loyola',
+          snippet: 'Loyola campus stop',
+        ),
+        onTap: _onShuttleStopTapped,
+      ),
+    );
+  }
+
+  void _onShuttleStopTapped() {
+    if (!_showRoutePreview) return;
+    setState(() => _selectedTravelMode = RouteTravelMode.shuttle);
+    _fetchShuttleInfo();
+  }
+
+  void _addIndoorMarkers(Set<Marker> markers) {
+    if (!_showIndoor) return;
+
+    markers.addAll(_amenityMarkers);
+    if (_originRoomMarker != null) {
+      markers.add(_originRoomMarker!);
+    }
+    if (_destinationRoomMarker != null) {
+      markers.add(_destinationRoomMarker!);
+    }
+  }
+
+  void _addRouteDestinationMarker(Set<Marker> markers) {
+    if (!_showRoutePreview ||
+        _isBuildingIndoorRoute ||
+        _routeDestination == null) {
+      return;
+    }
+
+    markers.add(
+      Marker(
+        markerId: const MarkerId('route_destination'),
+        position: _routeDestination!,
+        infoWindow: InfoWindow(title: _routeDestinationText),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      ),
+    );
   }
 
   Set<Circle> _createCircles() {
@@ -1891,52 +3012,64 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
     if (_currentLocation == null) return {};
 
+    _addCurrentLocationAccuracyCircle(circles);
+
+    if (_showRoutePreview && _selectedTravelMode == RouteTravelMode.transit) {
+      _addTransitStopCircles(circles);
+    }
+
+    return circles;
+  }
+
+  void _addCurrentLocationAccuracyCircle(Set<Circle> circles) {
     circles.add(
       Circle(
         circleId: const CircleId('current_location_accuracy'),
         center: _currentLocation!,
         radius: 20,
-        fillColor: Colors.blue.withOpacity(0.1),
-        strokeColor: Colors.blue.withOpacity(0.3),
+        fillColor: Colors.blue.withValues(alpha: 0.1),
+        strokeColor: Colors.blue.withValues(alpha: 0.3),
         strokeWidth: 1,
       ),
     );
+  }
 
-    if (_showRoutePreview && _selectedTravelMode == RouteTravelMode.transit) {
-      final segments = _routeSegmentsByMode['transit'] ?? const [];
-      final seen = <String>{};
+  void _addTransitStopCircles(Set<Circle> circles) {
+    final segments = _routeSegmentsByMode['transit'] ?? const [];
+    final seen = <String>{};
 
-      for (final segment in segments) {
-        if (segment.travelMode.toUpperCase() != 'TRANSIT') {
+    for (final segment in segments) {
+      if (!_isEligibleTransitSegment(segment)) {
+        continue;
+      }
+
+      final endpoints = [segment.points.first, segment.points.last];
+      for (final point in endpoints) {
+        final key =
+            '${point.latitude.toStringAsFixed(6)},${point.longitude.toStringAsFixed(6)}';
+        if (!seen.add(key)) {
           continue;
         }
-        if (segment.points.isEmpty) {
-          continue;
-        }
 
-        final endpoints = [segment.points.first, segment.points.last];
-        for (final point in endpoints) {
-          final key =
-              '${point.latitude.toStringAsFixed(6)},${point.longitude.toStringAsFixed(6)}';
-          if (!seen.add(key)) {
-            continue;
-          }
-
-          circles.add(
-            Circle(
-              circleId: CircleId('transit_stop_$key'),
-              center: point,
-              radius: 15,
-              fillColor: Colors.white,
-              strokeColor: const Color(0xFF76263D),
-              strokeWidth: 2,
-            ),
-          );
-        }
+        circles.add(_buildTransitStopCircle(point, key));
       }
     }
+  }
 
-    return circles;
+  bool _isEligibleTransitSegment(dynamic segment) {
+    return segment.travelMode.toUpperCase() == 'TRANSIT' &&
+        segment.points.isNotEmpty;
+  }
+
+  Circle _buildTransitStopCircle(LatLng point, String key) {
+    return Circle(
+      circleId: CircleId('transit_stop_$key'),
+      center: point,
+      radius: 15,
+      fillColor: Colors.white,
+      strokeColor: AppUiColors.primary(highContrastEnabled: _highContrastMode),
+      strokeWidth: 2,
+    );
   }
 
   NavigationStep? _getCurrentNavStep() {
@@ -1950,9 +3083,454 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return steps[_navStepIndex];
   }
 
-  void _switchCampus(Campus newCampus) {
-    LatLng targetLocation;
+  bool get _canGoToPreviousNavStep {
+    final key = _navModeKey;
+    if (key == null) return false;
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return false;
+    return _navStepIndex > 0;
+  }
 
+  bool get _canGoToNextNavStep {
+    final key = _navModeKey;
+    if (key == null) return false;
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return false;
+    return _navStepIndex < steps.length - 1;
+  }
+
+  String? get _navProgressLabel {
+    final key = _navModeKey;
+    if (key == null) return null;
+    final steps = _routeStepsByMode[key] ?? const [];
+    if (steps.isEmpty) return null;
+    return '${_navStepIndex + 1}/${steps.length}';
+  }
+
+  void _goToPreviousNavStep() {
+    if (!_canGoToPreviousNavStep) {
+      return;
+    }
+    setState(() {
+      _navStepIndex -= 1;
+    });
+  }
+
+  void _goToNextNavStep() {
+    if (!_canGoToNextNavStep) {
+      return;
+    }
+    final key = _navModeKey;
+    if (key == null) {
+      return;
+    }
+    final steps = _routeStepsByMode[key] ?? const [];
+    final nextIndex = _navStepIndex + 1;
+    final reachedFinalStep = steps.isNotEmpty && nextIndex >= steps.length - 1;
+    setState(() {
+      _navStepIndex = nextIndex;
+    });
+    if (reachedFinalStep) {
+      unawaited(_maybeAutoSwitchToDestinationIndoorMap());
+    }
+  }
+
+  /// Switches to indoor navigation for the origin building when the origin
+  /// room is on a non-default floor (e.g., MB S2). The user navigates from
+  /// their origin room to the nearest transition (stair/elevator/escalator)
+  /// on the entry floor, then proceeds outdoors.
+  Future<void> _maybeAutoSwitchToOriginIndoorMap() async {
+    final originRoom = _pendingOriginIndoorRoom;
+    if (originRoom == null) return;
+
+    final building = _findBuildingByCode(originRoom.buildingCode);
+    final floors = _indoorController.floorsForBuilding(originRoom.buildingCode);
+
+    if (!mounted) return;
+    if (building == null || floors.isEmpty) {
+      // Can't show origin building indoor — skip straight to outdoor nav.
+      setState(() {
+        _pendingOriginIndoorRoom = null;
+      });
+      return;
+    }
+
+    final entryFloor = floors.first;
+
+    // Find the exit transition room on the entry floor closest to the origin room.
+    final exitRoomCode = await _resolveEntryRoomForIndoorHandoff(
+      buildingCode: originRoom.buildingCode,
+      entryFloorAssetPath: entryFloor.assetPath,
+      transitionMode: _effectiveIndoorTransitionMode,
+      destinationCenter: originRoom.center,
+    );
+
+    if (!mounted) return;
+    if (exitRoomCode == null || exitRoomCode.trim().isEmpty) {
+      setState(() {
+        _pendingOriginIndoorRoom = null;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Unable to find exit route from origin building. Starting outdoor navigation.',
+            ),
+          ),
+        );
+        // Resume outdoor navigation.
+        setState(() {
+          _isNavigating = true;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _isNavigating = false;
+      _navigationFollowUser = false;
+      _showRoutePreview = false;
+
+      _selectedBuildingPoly = building;
+      _selectedBuildingCenter = geo.polygonCenter(building.points);
+      _anchorOffset = null;
+      _cameraMoving = false;
+      _currentBuildingCode = building.code;
+
+      _indoorFloors = floors;
+      _originRoomController.text = originRoom.roomCode;
+      _destinationRoomController.text = exitRoomCode;
+      _originRoomMarker = null;
+      _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
+
+      _isOriginIndoorHandoffPhase = true;
+      _pendingOriginIndoorRoom = null;
+    });
+
+    // Start on the origin room's floor so the user sees their starting point.
+    await _loadIndoorFloor(originRoom.floorAssetPath);
+
+    if (!mounted) return;
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: originRoom.center,
+          zoom: 19,
+          tilt: _defaultTilt,
+          bearing: _defaultBearing,
+        ),
+      ),
+    );
+
+    final originFloorOption = IndoorFloorConfig.optionForAssetPath(
+      originRoom.buildingCode,
+      originRoom.floorAssetPath,
+    );
+    final needsFloorSwitch =
+        originFloorOption != null &&
+        originFloorOption.assetPath != entryFloor.assetPath;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          needsFloorSwitch
+              ? 'Navigate from ${originRoom.roomCode} to the ${_preferredIndoorTransitionModeLabel() ?? 'exit'} on floor ${entryFloor.label}, then continue outdoors.'
+              : 'Navigate to the building exit, then continue outdoors.',
+        ),
+      ),
+    );
+
+    await _maybeStartIndoorNavigationFromRooms();
+  }
+
+  /// Called when the user finishes the origin-building indoor phase and is
+  /// ready to begin (or bypass) the outdoor leg toward the destination.
+  Future<void> _completeOriginIndoorPhaseAndStartOutdoor() async {
+    if (!_isOriginIndoorHandoffPhase) {
+      return;
+    }
+
+    _indoorNavigationController.stop();
+
+    if (!mounted) return;
+
+    final key = _navModeKey;
+    final steps = key != null ? (_routeStepsByMode[key] ?? const []) : const [];
+
+    setState(() {
+      _isOriginIndoorHandoffPhase = false;
+      _isNavigating = true;
+      _navStepIndex = 0;
+      _navigationFollowUser = true;
+      _lastNavCameraUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+      // Clear indoor display state.
+      _showIndoor = false;
+      _indoorFloors = const [];
+      _selectedIndoorFloorAsset = null;
+      _indoorPolygons = {};
+      _indoorGeoJson = null;
+      _roomLabelMarkers = {};
+      _amenityMarkers = {};
+      _originRoomMarker = null;
+      _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
+    });
+
+    _applySelectedModeRoute(animateCamera: false);
+
+    // If there is no outdoor leg at all, skip straight to
+    // destination building indoor navigation if a handoff is pending.
+    if (_autoHandoffToIndoorPending && steps.isEmpty) {
+      await _maybeAutoSwitchToDestinationIndoorMap();
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Now navigate outdoors to the destination building.'),
+      ),
+    );
+
+    if (_currentLocation != null && _mapController != null) {
+      try {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: _currentLocation!,
+              zoom: _navZoom,
+              tilt: _navTilt,
+              bearing: 0.0,
+            ),
+          ),
+        );
+      } catch (e) {
+        // ignore camera animation failures
+      }
+    }
+  }
+
+  Future<void> _maybeAutoSwitchToDestinationIndoorMap() async {
+    if (!_autoHandoffToIndoorPending) {
+      return;
+    }
+
+    final destinationRoom = _pendingDestinationIndoorRoom;
+    if (destinationRoom == null) {
+      _clearPendingDestinationIndoorHandoff();
+      return;
+    }
+
+    final building = _findBuildingByCode(destinationRoom.buildingCode);
+    final floors = _indoorController.floorsForBuilding(
+      destinationRoom.buildingCode,
+    );
+
+    if (!mounted) return;
+    if (building == null || floors.isEmpty) {
+      _clearPendingDestinationIndoorHandoff();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Indoor maps are not available for the destination building.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isNavigating = false;
+      _navModeKey = null;
+      _navStepIndex = 0;
+      _navigationFollowUser = false;
+
+      _showRoutePreview = false;
+      _routePolylines = {};
+      _routeOriginSuggestions = [];
+      _routeDestinationSuggestions = [];
+      _routeDurations.clear();
+      _routeDistances.clear();
+      _routeArrivalTimes.clear();
+      _routePointsByMode.clear();
+      _routeSegmentsByMode.clear();
+      _routeStepsByMode.clear();
+
+      _selectedBuildingPoly = building;
+      _selectedBuildingCenter = geo.polygonCenter(building.points);
+      _anchorOffset = null;
+      _cameraMoving = false;
+      _currentBuildingCode = building.code;
+
+      _indoorFloors = floors;
+      _originRoomController.clear();
+      _destinationRoomController.text = destinationRoom.roomCode;
+      _originRoomMarker = null;
+      _destinationRoomMarker = null;
+      _isBuildingIndoorRoute = false;
+    });
+
+    final destinationFloorOption = IndoorFloorConfig.optionForAssetPath(
+      destinationRoom.buildingCode,
+      destinationRoom.floorAssetPath,
+    );
+    final entryFloorOption = floors.first;
+    final targetAsset = entryFloorOption.assetPath;
+
+    final entryRoomCode = await _resolveEntryRoomForIndoorHandoff(
+      buildingCode: destinationRoom.buildingCode,
+      entryFloorAssetPath: targetAsset,
+      transitionMode: _effectiveIndoorTransitionMode,
+      destinationCenter: destinationRoom.center,
+    );
+
+    if (entryRoomCode == null || entryRoomCode.trim().isEmpty) {
+      _clearPendingDestinationIndoorHandoff();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to start indoor navigation automatically from the destination building entry floor.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _originRoomController.text = entryRoomCode;
+    });
+
+    await _loadIndoorFloor(targetAsset);
+
+    _clearPendingDestinationIndoorHandoff();
+
+    if (!mounted) return;
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: destinationRoom.center,
+          zoom: 19,
+          tilt: _defaultTilt,
+          bearing: _defaultBearing,
+        ),
+      ),
+    );
+    final destinationFloorLabel =
+        destinationFloorOption?.label ?? destinationRoom.floorLabel;
+    final needsFloorSwitch =
+        destinationFloorLabel.trim().toUpperCase() !=
+        entryFloorOption.label.trim().toUpperCase();
+
+    final transitionLabel = _preferredIndoorTransitionModeLabel() ?? 'selected';
+
+    final indoorNavigationMessage = needsFloorSwitch
+        ? 'Indoor navigation started from floor ${entryFloorOption.label}. Follow the $transitionLabel transition to floor $destinationFloorLabel for room ${destinationRoom.roomCode}.'
+        : 'Indoor navigation started on floor ${entryFloorOption.label}. Continue to room ${destinationRoom.roomCode}.';
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(indoorNavigationMessage)));
+
+    await _maybeStartIndoorNavigationFromRooms();
+  }
+
+  String? _transitionTypeForMode(IndoorTransitionMode? mode) {
+    return switch (mode) {
+      IndoorTransitionMode.stairs => 'stairs',
+      IndoorTransitionMode.elevator => 'elevator',
+      IndoorTransitionMode.escalator => 'escalator',
+      null => null,
+    };
+  }
+
+  Future<String?> _resolveEntryRoomForIndoorHandoff({
+    required String buildingCode,
+    required String entryFloorAssetPath,
+    required IndoorTransitionMode? transitionMode,
+    required LatLng destinationCenter,
+  }) async {
+    final floorGeoJson = await _indoorRouteService.indoorRepository
+        .loadGeoJsonAsset(entryFloorAssetPath);
+
+    final nodes = _indoorRouteService.sameFloorRouter
+        .buildNodesFromFloorGeoJson(floorGeoJson);
+
+    final roomNodes = nodes
+        .where((node) => node.nodeType == IndoorRoutingNodeType.room)
+        .toList(growable: false);
+    if (roomNodes.isEmpty) {
+      return null;
+    }
+
+    final preferredTransitionType = _transitionTypeForMode(transitionMode);
+    final transitionNodes = nodes
+        .where((node) => node.isTransition)
+        .where(
+          (node) =>
+              preferredTransitionType == null ||
+              node.transitionType == preferredTransitionType,
+        )
+        .toList(growable: false);
+
+    IndoorRoutingNode? anchorTransition;
+    if (transitionNodes.isNotEmpty) {
+      anchorTransition = transitionNodes.reduce((best, candidate) {
+        final bestDistance = Geolocator.distanceBetween(
+          best.center.latitude,
+          best.center.longitude,
+          destinationCenter.latitude,
+          destinationCenter.longitude,
+        );
+        final candidateDistance = Geolocator.distanceBetween(
+          candidate.center.latitude,
+          candidate.center.longitude,
+          destinationCenter.latitude,
+          destinationCenter.longitude,
+        );
+        return candidateDistance < bestDistance ? candidate : best;
+      });
+    }
+
+    final anchorPoint = anchorTransition?.center ?? destinationCenter;
+    final entryRoom = roomNodes.reduce((best, candidate) {
+      final bestDistance = Geolocator.distanceBetween(
+        best.center.latitude,
+        best.center.longitude,
+        anchorPoint.latitude,
+        anchorPoint.longitude,
+      );
+      final candidateDistance = Geolocator.distanceBetween(
+        candidate.center.latitude,
+        candidate.center.longitude,
+        anchorPoint.latitude,
+        anchorPoint.longitude,
+      );
+      return candidateDistance < bestDistance ? candidate : best;
+    });
+
+    final roomCode = entryRoom.roomCode;
+    if (roomCode == null || roomCode.trim().isEmpty) {
+      return null;
+    }
+
+    final exists = await _indoorRouteService.indoorRepository.roomExists(
+      buildingCode,
+      roomCode,
+    );
+    if (!exists) {
+      return null;
+    }
+
+    return roomCode;
+  }
+
+  void _switchCampus(Campus newCampus) {
+    if (_isIndoorNavigationActive) {
+      _indoorNavigationController.stop();
+    }
+
+    LatLng targetLocation;
     switch (newCampus) {
       case Campus.sgw:
         targetLocation = concordiaSGW;
@@ -1973,6 +3551,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       _selectedCampus = newCampus;
       _selectedBuildingPoly = null;
       _selectedBuildingCenter = null;
+      _selectedPoi = null;
+      _selectedPoiDetails = null;
+      _selectedPoiCenter = null;
       _anchorOffset = null;
       _cameraMoving = false;
       _searchController.clear();
@@ -2014,244 +3595,365 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     String buildingCode,
     String roomCode,
   ) async {
-    print('[DEBUG] Destination room submitted: $roomCode in $buildingCode');
-
-    try {
-      final repo = IndoorMapRepository();
-      final roomLocation = await repo.getRoomLocation(buildingCode, roomCode);
-
-      if (roomLocation == null) {
-        print('[ERROR] Could not find location for room $roomCode');
-        return;
-      }
-      print('[DEBUG] Room location found: $roomLocation');
-      final marker = Marker(
-        markerId: const MarkerId('destination_room'),
-        position: roomLocation,
-        infoWindow: InfoWindow(title: 'Room $roomCode'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _destinationRoomMarker = marker;
-      });
-
-      print('[DEBUG] Destination room marker placed at $roomLocation');
-    } catch (e) {
-      print('[ERROR] Error processing destination room: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: const Color(0xFFE53935),
-        ),
-      );
-    }
+    await _maybeStartIndoorNavigationFromRooms();
   }
 
   @override
   Widget build(BuildContext context) {
-    final LatLng initialTarget =
-        widget.initialCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
-
-    final Campus labelCampus =
-        _selectedCampus != Campus.none ? _selectedCampus : _currentCampus;
-
-    final String campusLabel = labelCampus == Campus.sgw
-        ? 'SGW'
-        : labelCampus == Campus.loyola
-            ? 'Loyola'
-            : '';
-
-    final selectedBuilding = widget.debugSelectedBuilding ?? _selectedBuildingPoly;
-    final popupPos = _computePopupPosition(context);
+    final selectedBuilding =
+        widget.debugSelectedBuilding ?? _selectedBuildingPoly;
 
     return Scaffold(
       body: Stack(
         children: [
-          if (widget.debugDisableMap)
-            const SizedBox.expand()
-          else
-            OutdoorMapView(
-              initialTarget: initialTarget,
-              showIndoorStyle: _showIndoor,
-              indoorMapStyle: _indoorMapStyle,
-              onMapCreated: (c) => _mapController = c,
-              onCameraMove: (pos) {
-                _lastCameraTarget = pos.target;
-                if (_selectedBuildingCenter != null) _schedulePopupUpdate();
-              },
-              onCameraMoveStarted: () {
-                if (_selectedBuildingCenter == null) return;
-                setState(() => _cameraMoving = true);
-              },
-              onCameraIdle: () {
-                _syncToggleWithCameraCenter();
-                if (_selectedBuildingCenter == null) return;
-                setState(() => _cameraMoving = false);
-                _updatePopupOffset();
-              },
-              markers: {
-                ..._createMarkers(),
-                ..._roomLabelMarkers,
-              },
-              circles: _createCircles(),
-              polygons: {
-                ..._createBuildingPolygons(),
-                ..._indoorPolygons,
-              },
-              polylines: _routePolylines,
-            ),
-
-          if (_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: NavigationNextStepHeader(
-                  modeLabel: _selectedTravelMode.label,
-                  nextStep: _getCurrentNavStep(),
-                  onStop: _stopNavigation,
-                  onShowSteps: _openStepsForSelectedMode,
-                ),
-              ),
-            ),
-
-          if (_showRoutePreview && !_isNavigating)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: RoutePreviewPanel(
-                originText: _routeOriginText,
-                destinationText: _routeDestinationText,
-                onClose: _closeRoutePreview,
-                onSwitch: _switchOriginDestination,
-                onOriginChanged: _onRouteOriginChanged,
-                onDestinationChanged: _onRouteDestinationChanged,
-                onOriginSelected: _onRouteOriginSelected,
-                onDestinationSelected: _onRouteDestinationSelected,
-                originSuggestions: _routeOriginSuggestions,
-                destinationSuggestions: _routeDestinationSuggestions,
-                originRoomController: _originRoomController,
-                destinationRoomController: _destinationRoomController,
-                onOriginRoomSubmitted: _onOriginRoomSubmitted,
-                onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-                originBuildingCode: _routeOriginBuildingCode,
-                destinationBuildingCode: _routeDestinationBuildingCode,
-                isConcordiaBuilding: (buildingCode) {
-                  return buildingPolygons.any(
-                    (b) => (b.code ?? '').toUpperCase() == buildingCode.toUpperCase(),
-                  );
-                },
-              ),
-            ),
-
-          if (_showRoutePreview)
-            Positioned(
-              bottom: 25,
-              left: 0,
-              right: 0,
-              child: PointerInterceptor(
-                child: Center(
-                  child: RouteTravelModeBar(
-                    selectedTravelMode: _selectedTravelMode,
-                    onTravelModeSelected: _onTravelModeSelected,
-                    modeDurations: _routeDurations,
-                    isLoadingDurations: _isLoadingRouteData,
-                    onClose: _closeRoutePreview,
-                    onStart: _startNavigation,
-                    isNavigating: _isNavigating,
-                    onShowSteps: _openStepsForSelectedMode,
-                    transitDetails: _buildTransitDetailItems(),
-                    modeDistances: _routeDistances,
-                    modeArrivalTimes: _routeArrivalTimes,
-                    shuttleNextBuses:
-                        _shuttleNextBuses.map((b) => b.statusLabel).toList(),
-                    shuttleWalkingMinutes: _shuttleWalkingMinutes,
-                    shuttleNearestStop: _shuttleNearestStop,
-                    onViewSchedule: _showShuttleScheduleModal,
-                  ),
-                ),
-              ),
-            ),
-
-          if (!_showRoutePreview && !_isNavigating)
-            OutdoorTopSearch(
-              campusLabel: campusLabel,
-              controller: _searchController,
-              onSubmitted: _onSearchSubmitted,
-              suggestions: _searchSuggestions,
-              onSuggestionSelected: _onSuggestionSelected,
-              onFocus: _hideBuildingPopup,
-              originRoomController: _originRoomController,
-              destinationRoomController: _destinationRoomController,
-              onOriginRoomSubmitted: _onOriginRoomSubmitted,
-              onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
-              selectedBuildingCode: _selectedBuildingPoly?.code,
-              currentBuildingCode: _currentBuildingCode,
-              userLocation: _currentLocation,
-              isConcordiaBuilding: (buildingCode) {
-                return buildingPolygons.any(
-                  (b) =>
-                      (b.code ?? '').toUpperCase() ==
-                      buildingCode.toUpperCase(),
-                );
-              },
-              showIndoor: _showIndoor,
-              floors: _indoorFloors,
-              selectedAssetPath: _selectedIndoorFloorAsset,
-              onFloorChanged: _loadIndoorFloor,
-            ),
-
-          if (selectedBuilding != null && popupPos != null)
-            OutdoorBuildingPopup(
-              building: selectedBuilding,
-              position: popupPos,
-              buildingInfoByCode: buildingInfoByCode,
-              debugLinkOverride: widget.debugLinkOverride,
-              onClose: _closePopup,
-              onIndoorMap: _toggleIndoorMap,
-              onGetDirections: _getDirections,
-              onOpenLink: _openLink,
-              isLoggedIn: widget.isLoggedIn,
-            ),
-
-          if (!_showRoutePreview)
-            OutdoorBottomControls(
-              currentLocation: _currentLocation,
-              currentCampus: _currentCampus,
-              onGoToMyLocation: _goToMyLocation,
-              onCenterOnUser: () {
-                final loc = _currentLocation;
-                if (loc == null) return;
-                _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
-              },
-            ),
-
-          if (!_showRoutePreview)
-            OutdoorBottomBar(
-              showRoutePreview: _showRoutePreview,
-              isNavigating: _isNavigating,
-              selectedCampus: _selectedCampus,
-              onCampusChanged: _switchCampus,
-              selectedTravelMode: _selectedTravelMode,
-              onTravelModeSelected: _onTravelModeSelected,
-              routeDurations: _routeDurations,
-              routeDistances: _routeDistances,
-              routeArrivalTimes: _routeArrivalTimes,
-              isLoadingRouteData: _isLoadingRouteData,
-              onCloseRoutePreview: _closeRoutePreview,
-              onStartNavigation: _startNavigation,
-              onShowSteps: _openStepsForSelectedMode,
-              transitDetails: _buildTransitDetailItems(),
-            ),
-
+          _buildOutdoorMapLayer(
+            _initialTargetForCampus(),
+            _resolvedIndoorMapStyle(),
+          ),
+          ..._buildNavigationAndPreviewOverlays(),
+          ..._buildOutdoorUiOverlays(
+            context,
+            selectedBuilding,
+            _computePopupPosition(context),
+          ),
           ..._createBuildingGestureDetectors(),
         ],
       ),
+    );
+  }
+
+  LatLng _initialTargetForCampus() {
+    return widget.initialCampus == Campus.loyola
+        ? concordiaLoyola
+        : concordiaSGW;
+  }
+
+  String _campusLabel() {
+    final labelCampus = _selectedCampus != Campus.none
+        ? _selectedCampus
+        : _currentCampus;
+    if (labelCampus == Campus.sgw) {
+      return 'SGW';
+    }
+    if (labelCampus == Campus.loyola) {
+      return 'Loyola';
+    }
+    return '';
+  }
+
+  String? _resolvedIndoorMapStyle() {
+    if (_highContrastMode) {
+      return _highContrastMapStyle;
+    }
+    if (_showIndoor) {
+      return _indoorMapStyle;
+    }
+    return null;
+  }
+
+  Widget _buildOutdoorMapLayer(LatLng initialTarget, String? indoorMapStyle) {
+    if (widget.debugDisableMap) {
+      return const SizedBox.expand();
+    }
+
+    return OutdoorMapView(
+      initialTarget: initialTarget,
+      showIndoorStyle: _highContrastMode || _showIndoor,
+      indoorMapStyle: indoorMapStyle,
+      onMapCreated: (c) => _mapController = c,
+      onCameraMove: (pos) {
+        _lastCameraTarget = pos.target;
+        if (_selectedBuildingCenter != null || _selectedPoiCenter != null) {
+          _schedulePopupUpdate();
+        }
+      },
+      onCameraMoveStarted: () {
+        if (_selectedBuildingCenter == null && _selectedPoiCenter == null) {
+          return;
+        }
+        setState(() => _cameraMoving = true);
+      },
+      onCameraIdle: () {
+        _syncToggleWithCameraCenter();
+        if (_selectedBuildingCenter == null && _selectedPoiCenter == null) {
+          return;
+        }
+        setState(() => _cameraMoving = false);
+        _updatePopupOffset();
+      },
+      markers: {..._createMarkers(), ..._roomLabelMarkers},
+      circles: _createCircles(),
+      polygons: {..._createBuildingPolygons(), ..._indoorPolygons},
+      polylines: _routePolylines,
+    );
+  }
+
+  List<Widget> _buildNavigationAndPreviewOverlays() {
+    final overlays = <Widget>[];
+
+    if (_isIndoorNavigationActive) {
+      overlays.add(
+        Positioned(
+          top: 80,
+          left: 0,
+          right: 0,
+          child: PointerInterceptor(
+            child: NavigationNextStepHeader(
+              modeLabel: 'Indoor',
+              nextStep: _currentIndoorStep,
+              highContrastMode: _highContrastMode,
+              onStop: _stopIndoorNavigation,
+              onShowSteps: _openIndoorSteps,
+              onPrevious: _goToPreviousIndoorStep,
+              onNext: _goToNextIndoorStep,
+              canGoPrevious: _indoorNavigationController.canGoPrevious,
+              canGoNext:
+                  _indoorNavigationController.canGoNext ||
+                  _isOriginIndoorHandoffPhase,
+              progressLabel:
+                  '${_indoorNavigationController.currentStepIndex + 1}/${_indoorNavigationController.steps.length}',
+            ),
+          ),
+        ),
+      );
+      return overlays;
+    }
+
+    if (_isNavigating) {
+      overlays.add(
+        Positioned(
+          top: 80,
+          left: 0,
+          right: 0,
+          child: PointerInterceptor(
+            child: NavigationNextStepHeader(
+              modeLabel: _selectedTravelMode.label,
+              nextStep: _getCurrentNavStep(),
+              highContrastMode: _highContrastMode,
+              onStop: _stopNavigation,
+              onShowSteps: _openStepsForSelectedMode,
+              onPrevious: _goToPreviousNavStep,
+              onNext: _goToNextNavStep,
+              canGoPrevious: _canGoToPreviousNavStep,
+              canGoNext: _canGoToNextNavStep,
+              progressLabel: _navProgressLabel,
+            ),
+          ),
+        ),
+      );
+      return overlays;
+    }
+
+    if (_showRoutePreview) {
+      overlays.add(_buildRoutePreviewPanel());
+    }
+
+    if (_showRoutePreview && !_isIndoorNavigationActive) {
+      overlays.add(_buildRouteTravelModeBar());
+    }
+
+    return overlays;
+  }
+
+  List<Widget> _buildOutdoorUiOverlays(
+    BuildContext context,
+    dynamic selectedBuilding,
+    Offset? popupPos,
+  ) {
+    final overlays = <Widget>[];
+    final showOutdoorUi =
+        !_showRoutePreview && !_isNavigating && !_isIndoorNavigationActive;
+
+    if (!showOutdoorUi) {
+      return overlays;
+    }
+
+    overlays.add(_buildOutdoorTopSearch(_campusLabel()));
+
+    if (selectedBuilding != null && popupPos != null && !_showIndoor) {
+      overlays.add(
+        OutdoorBuildingPopup(
+          building: selectedBuilding,
+          position: popupPos,
+          buildingInfoByCode: buildingInfoByCode,
+          debugLinkOverride: widget.debugLinkOverride,
+          onClose: _closePopup,
+          onIndoorMap: _toggleIndoorMap,
+          onGetDirections: _getDirections,
+          onOpenLink: _openLink,
+          isLoggedIn: widget.isLoggedIn,
+          highContrastMode: _highContrastMode,
+        ),
+      );
+    }
+
+    final poiPopup = _buildPoiPopup(selectedBuilding, popupPos);
+    if (poiPopup != null) {
+      overlays.add(poiPopup);
+    }
+
+    overlays.add(_buildOutdoorBottomControls());
+    overlays.add(_buildOutdoorBottomBar());
+    return overlays;
+  }
+
+  Widget _buildRoutePreviewPanel() {
+    return Positioned(
+      top: 80,
+      left: 0,
+      right: 0,
+      child: RoutePreviewPanel(
+        originText: _routeOriginText,
+        destinationText: _routeDestinationText,
+        highContrastMode: _highContrastMode,
+        onClose: _closeRoutePreview,
+        onSwitch: _switchOriginDestination,
+        onOriginChanged: _onRouteOriginChanged,
+        onDestinationChanged: _onRouteDestinationChanged,
+        onOriginSelected: _onRouteOriginSelected,
+        onDestinationSelected: _onRouteDestinationSelected,
+        originSuggestions: _routeOriginSuggestions,
+        destinationSuggestions: _routeDestinationSuggestions,
+        originRoomController: _originRoomController,
+        destinationRoomController: _destinationRoomController,
+        onOriginRoomSubmitted: _onOriginRoomSubmitted,
+        onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+        selectedTransitionMode: _preferredIndoorTransitionMode,
+        onTransitionModeChanged: _onIndoorTransitionModeChanged,
+        wheelchairRoutingDefaultEnabled: _wheelchairRoutingDefaultEnabled,
+        originBuildingCode: _routeOriginBuildingCode,
+        destinationBuildingCode: _routeDestinationBuildingCode,
+        isOriginPoi: _isOriginPoi,
+        isDestinationPoi: _isDestinationPoi,
+        isConcordiaBuilding: _isConcordiaBuildingCode,
+      ),
+    );
+  }
+
+  Widget _buildRouteTravelModeBar() {
+    return Positioned(
+      bottom: 25,
+      left: 0,
+      right: 0,
+      child: PointerInterceptor(
+        child: Center(
+          child: RouteTravelModeBar(
+            selectedTravelMode: _selectedTravelMode,
+            highContrastMode: _highContrastMode,
+            onTravelModeSelected: _onTravelModeSelected,
+            modeDurations: _routeDurations,
+            isLoadingDurations: _isLoadingRouteData,
+            onClose: _closeRoutePreview,
+            onStart: _startNavigation,
+            isNavigating: _isNavigating,
+            onShowSteps: _openStepsForSelectedMode,
+            transitDetails: _buildTransitDetailItems(),
+            modeDistances: _routeDistances,
+            modeArrivalTimes: _routeArrivalTimes,
+            shuttleNextBuses: _shuttleNextBuses,
+            shuttleWalkingFromDestinationMinutes:
+                _shuttleWalkingFromDestinationMinutes,
+            shuttleWalkingToDestinationMinutes:
+                _shuttleWalkingToDestinationMinutes,
+            shuttleNearestStop: _shuttleNearestStop,
+            onViewSchedule: _showShuttleScheduleModal,
+            shuttleRouteData: _shuttleRouteData,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOutdoorTopSearch(String campusLabel) {
+    return OutdoorTopSearch(
+      campusLabel: campusLabel,
+      highContrastMode: _highContrastMode,
+      controller: _searchController,
+      onSubmitted: _onSearchSubmitted,
+      suggestions: _searchSuggestions,
+      onSuggestionSelected: _onSuggestionSelected,
+      onFocus: _hideBuildingPopup,
+      originRoomController: _originRoomController,
+      destinationRoomController: _destinationRoomController,
+      onOriginRoomSubmitted: _onOriginRoomSubmitted,
+      onDestinationRoomSubmitted: _onDestinationRoomSubmitted,
+      selectedTransitionMode: _preferredIndoorTransitionMode,
+      onTransitionModeChanged: _onIndoorTransitionModeChanged,
+      wheelchairRoutingDefaultEnabled: _wheelchairRoutingDefaultEnabled,
+      selectedBuildingCode: _selectedBuildingPoly?.code,
+      currentBuildingCode: _currentBuildingCode,
+      userLocation: _currentLocation,
+      isConcordiaBuilding: _isConcordiaBuildingCode,
+      showIndoor: _showIndoor,
+      floors: _indoorFloors,
+      selectedAssetPath: _selectedIndoorFloorAsset,
+      onFloorChanged: _onIndoorFloorChanged,
+    );
+  }
+
+  Widget? _buildPoiPopup(dynamic selectedBuilding, Offset? popupPos) {
+    if (selectedBuilding != null || _selectedPoi == null || popupPos == null) {
+      return null;
+    }
+
+    return Positioned(
+      left: popupPos.dx,
+      top: popupPos.dy,
+      child: PointerInterceptor(
+        child: BuildingInfoPopup(
+          title: _selectedPoiDetails?.name ?? _selectedPoi!.name,
+          description: _poiDescription(_selectedPoi!),
+          accessibility: false,
+          poiCategory: _selectedPoi!.category,
+          facilities: _poiFacilities(),
+          onMore: () => unawaited(_openSelectedPoiLink()),
+          onClose: _closePopup,
+          isLoggedIn: widget.isLoggedIn,
+          onGetDirections: () => unawaited(_getDirectionsToSelectedPoi()),
+          highContrastMode: _highContrastMode,
+          savedPlace: _selectedPoiSavedPlace(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOutdoorBottomControls() {
+    return OutdoorBottomControls(
+      currentLocation: _currentLocation,
+      currentCampus: _currentCampus,
+      highContrastMode: _highContrastMode,
+      onGoToMyLocation: _goToMyLocation,
+      onCenterOnUser: () {
+        final loc = _currentLocation;
+        if (loc == null) return;
+        _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
+      },
+    );
+  }
+
+  Widget _buildOutdoorBottomBar() {
+    return OutdoorBottomBar(
+      showRoutePreview: _showRoutePreview,
+      isNavigating: _isNavigating,
+      highContrastMode: _highContrastMode,
+      selectedCampus: _selectedCampus,
+      onCampusChanged: _switchCampus,
+      selectedTravelMode: _selectedTravelMode,
+      onTravelModeSelected: _onTravelModeSelected,
+      routeDurations: _routeDurations,
+      routeDistances: _routeDistances,
+      routeArrivalTimes: _routeArrivalTimes,
+      isLoadingRouteData: _isLoadingRouteData,
+      onCloseRoutePreview: _closeRoutePreview,
+      onStartNavigation: _startNavigation,
+      onShowSteps: _openStepsForSelectedMode,
+      transitDetails: _buildTransitDetailItems(),
+    );
+  }
+
+  bool _isConcordiaBuildingCode(String buildingCode) {
+    return buildingPolygons.any(
+      (b) => b.code.toUpperCase() == buildingCode.toUpperCase(),
     );
   }
 
@@ -2284,8 +3986,84 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   ]
   ''';
 
+  static const String _highContrastMapStyle = '''
+  [
+    {
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#1A1A1A" }
+      ]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [
+        { "color": "#8A8A8A" }
+      ]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [
+        { "color": "#111111" }
+      ]
+    },
+    {
+      "featureType": "landscape",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#161616" }
+      ]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#2A2A2A" }
+      ]
+    },
+    {
+      "featureType": "road.arterial",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#242424" }
+      ]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#202020" }
+      ]
+    },
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#0E1A1F" }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    },
+    {
+      "featureType": "transit",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    }
+  ]
+  ''';
+
   @override
   void dispose() {
+    AppSettingsController.notifier.removeListener(_onAppSettingsChanged);
+    _indoorNavigationController.removeListener(_onIndoorNavigationChanged);
+    _indoorNavigationController.dispose();
+    SavedDirectionsController.notifier.removeListener(
+      _onSavedDirectionsRequested,
+    );
     _posSub?.cancel();
     _popupDebounce?.cancel();
     _debounceTimer?.cancel();
@@ -2297,17 +4075,198 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _destinationRoomController.dispose();
     super.dispose();
   }
-}
 
+  Future<void> initBuildingLabelIcons() async {
+    final icons = <String, BitmapDescriptor>{};
+
+    for (final building in buildingPolygons) {
+      icons[building.code] = await resolveBuildingLabelIcon(building.code);
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _buildingLabelIcons
+        ..clear()
+        ..addAll(icons);
+      _buildingLabelIconsReady = true;
+    });
+  }
+
+  Future<BitmapDescriptor> createBuildingLabelIcon(String text) async {
+    const horizontalPadding = 10.0;
+    const verticalPadding = 6.0;
+
+    final textPainter = _buildBuildingLabelTextPainter(text);
+    final width = textPainter.width + (horizontalPadding * 2);
+    final height = textPainter.height + (verticalPadding * 2);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    _drawBuildingLabelBackground(canvas, width, height);
+    _paintCenteredLabelText(canvas, textPainter, width, height);
+
+    return _bitmapDescriptorFromRecorder(recorder, width, height);
+  }
+
+  TextPainter _buildBuildingLabelTextPainter(String text) {
+    const fontSize = 14.0;
+    final textColor = _highContrastMode ? Colors.black : Colors.white;
+
+    return TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+  }
+
+  void _drawBuildingLabelBackground(
+    Canvas canvas,
+    double width,
+    double height,
+  ) {
+    const borderRadius = 12.0;
+    final backgroundColor = _highContrastMode
+        ? const Color(0xFFB8FFF1)
+        : const Color(0xFF76263D);
+    final borderColor = _highContrastMode ? Colors.black : Colors.white;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, width, height),
+      const Radius.circular(borderRadius),
+    );
+
+    final fillPaint = Paint()..color = backgroundColor;
+    final strokePaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    canvas.drawRRect(rect, fillPaint);
+    canvas.drawRRect(rect, strokePaint);
+  }
+
+  void _paintCenteredLabelText(
+    Canvas canvas,
+    TextPainter textPainter,
+    double width,
+    double height,
+  ) {
+    textPainter.paint(
+      canvas,
+      Offset(
+        (width - textPainter.width) / 2,
+        (height - textPainter.height) / 2,
+      ),
+    );
+  }
+
+  Future<BitmapDescriptor> _bitmapDescriptorFromRecorder(
+    ui.PictureRecorder recorder,
+    double width,
+    double height,
+  ) async {
+    final image = await recorder.endRecording().toImage(
+      width.ceil(),
+      height.ceil(),
+    );
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
+  }
+
+  bool shouldShowBuildingLabel(BuildingPolygon building) {
+    final buildingCampus = detectCampus(building.center);
+
+    if (_selectedCampus != Campus.none) {
+      return buildingCampus == _selectedCampus;
+    }
+
+    if (_currentCampus != Campus.none) {
+      return buildingCampus == _currentCampus;
+    }
+
+    return true;
+  }
+
+  void addBuildingLabelMarkers(Set<Marker> markers) {
+    if (!_buildingLabelIconsReady) return;
+    if (_showIndoor || _showRoutePreview || _isIndoorNavigationActive) return;
+
+    for (final building in buildingPolygons) {
+      if (!shouldShowBuildingLabel(building)) continue;
+
+      final icon = _buildingLabelIcons[building.code];
+      if (icon == null) continue;
+
+      markers.add(
+        Marker(
+          markerId: MarkerId('building_label_${building.code}'),
+          position: building.center,
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: 50,
+          consumeTapEvents: true,
+          onTap: () => _onBuildingTapped(building),
+        ),
+      );
+    }
+  }
+
+  String getBuildingLabel(BuildingPolygon building) {
+    return (buildingInfoByCode[building.code]?.name ?? building.name)
+        .replaceAll('Building', '')
+        .replaceAll('Pavilion', '')
+        .trim()
+        .toUpperCase();
+  }
+
+  Future<BitmapDescriptor> resolveBuildingLabelIcon(String text) {
+    final factory = widget.debugBuildingLabelIconFactory;
+    if (factory != null) {
+      return factory(text);
+    }
+    return createBuildingLabelIcon(text);
+  }
+}
 
 class _ShuttleScheduleSheet extends StatelessWidget {
   final String nearestStop;
+  final bool highContrastMode;
 
-  const _ShuttleScheduleSheet({required this.nearestStop});
+  const _ShuttleScheduleSheet({
+    required this.nearestStop,
+    required this.highContrastMode,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const burgundy = Color(0xFF76263D);
+    final accent = AppUiColors.primary(highContrastEnabled: highContrastMode);
+    final sheetBackground = highContrastMode
+        ? AppUiColors.highContrastPrimary
+        : Colors.white;
+    final titleColor = highContrastMode ? Colors.black : accent;
+    final primaryText = highContrastMode ? Colors.black : Colors.black87;
+    final secondaryText = highContrastMode ? Colors.black54 : Colors.black54;
+    final mutedText = highContrastMode ? Colors.black45 : Colors.black45;
+    final nextHighlight = highContrastMode
+        ? const Color(0xFF5EBFA7)
+        : accent.withValues(alpha: 0.08);
+    final nextBorder = highContrastMode
+        ? Colors.black26
+        : accent.withValues(alpha: 0.3);
+    final nextBadgeBg = highContrastMode ? Colors.black : accent;
+    final nextBadgeText = highContrastMode
+        ? AppUiColors.highContrastPrimary
+        : Colors.white;
+    final stopChipColor = highContrastMode ? Colors.black : accent;
     final today = DateTime.now();
     final times = ConcordiaShuttleService.getFullScheduleForDay(today);
     final isWeekday =
@@ -2319,9 +4278,9 @@ class _ShuttleScheduleSheet extends StatelessWidget {
       maxChildSize: 0.92,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          decoration: BoxDecoration(
+            color: sheetBackground,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
           ),
           child: Column(
             children: [
@@ -2330,7 +4289,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                 height: 4,
                 width: 44,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -2340,58 +4299,71 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 10, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.directions_bus_filled, color: burgundy),
+                    Icon(Icons.directions_bus_filled, color: accent),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Concordia Shuttle Schedule',
                             style: TextStyle(
-                              color: burgundy,
+                              color: titleColor,
                               fontWeight: FontWeight.w800,
                               fontSize: 16,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             isWeekday
                                 ? 'Mon–Fri  ·  Every 30 min  ·  8:00 AM – 10:00 PM'
                                 : 'Sat–Sun  ·  Every 15 min  ·  9:00 AM – 6:00 PM',
-                            style: const TextStyle(
-                              color: Colors.black54,
+                            style: TextStyle(
+                              color: secondaryText,
                               fontSize: 11,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close, color: titleColor),
                     ),
                   ],
                 ),
               ),
 
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Row(
-                  children: [
-                    _StopChip(
-                        label: 'SGW  (Hall Building)', color: burgundy),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.sync_alt,
-                          size: 16, color: Colors.black45),
-                    ),
-                    _StopChip(label: 'Loyola', color: burgundy),
-                  ],
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _StopChip(
+                        label: 'SGW  (Hall Building)',
+                        color: stopChipColor,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Icon(Icons.sync_alt, size: 16, color: mutedText),
+                      ),
+                      _StopChip(label: 'Loyola', color: stopChipColor),
+                    ],
+                  ),
                 ),
               ),
 
-              const Divider(height: 1),
+              Divider(
+                height: 1,
+                color: highContrastMode ? Colors.black26 : null,
+              ),
 
               Expanded(
                 child: ListView.builder(
@@ -2402,20 +4374,33 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                     final t = times[index];
                     final now = DateTime.now();
                     final isPast = t.isBefore(now);
-                    final isNext = !isPast &&
+                    final isNext =
+                        !isPast &&
                         (index == 0 || times[index - 1].isBefore(now));
+
+                    late final Color busIconColor;
+                    late final Color busTimeColor;
+
+                    if (isPast) {
+                      busIconColor = Colors.black26;
+                      busTimeColor = Colors.black26;
+                    } else if (isNext) {
+                      busIconColor = titleColor;
+                      busTimeColor = titleColor;
+                    } else {
+                      busIconColor = secondaryText;
+                      busTimeColor = primaryText;
+                    }
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: isNext
-                            ? burgundy.withOpacity(0.08)
-                            : Colors.transparent,
-                        border: isNext
-                            ? Border.all(color: burgundy.withOpacity(0.3))
-                            : null,
+                        color: isNext ? nextHighlight : Colors.transparent,
+                        border: isNext ? Border.all(color: nextBorder) : null,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -2423,11 +4408,7 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                           Icon(
                             Icons.directions_bus_filled,
                             size: 16,
-                            color: isPast
-                                ? Colors.black26
-                                : isNext
-                                    ? burgundy
-                                    : Colors.black54,
+                            color: busIconColor,
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -2437,26 +4418,24 @@ class _ShuttleScheduleSheet extends StatelessWidget {
                               fontWeight: isNext
                                   ? FontWeight.w700
                                   : FontWeight.w400,
-                              color: isPast
-                                  ? Colors.black26
-                                  : isNext
-                                      ? burgundy
-                                      : Colors.black87,
+                              color: busTimeColor,
                             ),
                           ),
                           if (isNext) ...[
                             const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: burgundy,
+                                color: nextBadgeBg,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Next bus',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: nextBadgeText,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -2488,8 +4467,8 @@ class _StopChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

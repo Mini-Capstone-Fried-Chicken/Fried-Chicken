@@ -1,4 +1,5 @@
 import "package:campus_app/app/campus_app.dart";
+import "package:campus_app/features/settings/app_settings.dart";
 import "package:clarity_flutter/clarity_flutter.dart";
 import "package:campus_app/services/firebase/firebase_options.dart";
 import "package:firebase_core/firebase_core.dart";
@@ -18,6 +19,7 @@ Future<void> main() async {
     }
     Firebase.app();
   }
+  await AppSettingsController.restore();
 
   final app = const CampusApp();
   final isMobileTarget = !kIsWeb &&

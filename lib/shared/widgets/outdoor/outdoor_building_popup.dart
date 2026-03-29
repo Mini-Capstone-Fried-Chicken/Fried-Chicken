@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../data/building_polygons.dart';
+import '../../../features/saved/saved_place.dart';
 import '../../../features/indoor/data/building_info.dart';
 import '../../../shared/widgets/building_info_popup.dart';
 
@@ -17,6 +18,7 @@ class OutdoorBuildingPopup extends StatelessWidget {
   final Future<void> Function(String url) onOpenLink;
 
   final bool isLoggedIn;
+  final bool highContrastMode;
 
   const OutdoorBuildingPopup({
     super.key,
@@ -29,6 +31,7 @@ class OutdoorBuildingPopup extends StatelessWidget {
     required this.onGetDirections,
     required this.onOpenLink,
     required this.isLoggedIn,
+    this.highContrastMode = false,
   });
 
   @override
@@ -39,6 +42,14 @@ class OutdoorBuildingPopup extends StatelessWidget {
     final description = info?.description ?? 'No description available.';
     final accessibility = info?.accessibility ?? false;
     final facilities = info?.facilities ?? const [];
+    final savedPlace = SavedPlace(
+      id: building.code,
+      name: info?.name ?? building.name,
+      category: 'all',
+      latitude: building.center.latitude,
+      longitude: building.center.longitude,
+      openingHoursToday: _openingHoursForToday(),
+    );
 
     return Positioned(
       left: position.dx,
@@ -57,8 +68,14 @@ class OutdoorBuildingPopup extends StatelessWidget {
           isLoggedIn: isLoggedIn,
           onIndoorMap: onIndoorMap,
           onGetDirections: onGetDirections,
+          highContrastMode: highContrastMode,
+          savedPlace: savedPlace,
         ),
       ),
     );
+  }
+
+  String _openingHoursForToday() {
+    return 'Open today: Hours unavailable';
   }
 }

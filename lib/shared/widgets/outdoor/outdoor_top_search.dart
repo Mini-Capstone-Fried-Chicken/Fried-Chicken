@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../../../shared/widgets/map_search_bar.dart';
-import '../../../shared/widgets/indoor_floor_dropdown.dart';
-import '../../../services/indoor_maps/indoor_floor_config.dart';
 import '../../../data/search_suggestion.dart';
+import '../../../services/indoor_maps/indoor_floor_config.dart';
+import '../../../services/indoors_routing/core/indoor_route_plan_models.dart';
+import '../../../shared/widgets/indoor_floor_dropdown.dart';
+import '../../../shared/widgets/map_search_bar.dart';
 
 class OutdoorTopSearch extends StatelessWidget {
   final String campusLabel;
   final TextEditingController controller;
+  final bool highContrastMode;
 
   final void Function(String) onSubmitted;
   final List<SearchSuggestion> suggestions;
@@ -22,19 +24,24 @@ class OutdoorTopSearch extends StatelessWidget {
 
   final TextEditingController originRoomController;
   final TextEditingController destinationRoomController;
-  final void Function(String buildingCode, String roomCode) onOriginRoomSubmitted;
   final void Function(String buildingCode, String roomCode)
-      onDestinationRoomSubmitted;
+  onOriginRoomSubmitted;
+  final void Function(String buildingCode, String roomCode)
+  onDestinationRoomSubmitted;
 
   final String? selectedBuildingCode;
   final String? currentBuildingCode;
   final LatLng? userLocation;
   final bool Function(String buildingCode) isConcordiaBuilding;
+  final IndoorTransitionMode? selectedTransitionMode;
+  final ValueChanged<IndoorTransitionMode?>? onTransitionModeChanged;
+  final bool wheelchairRoutingDefaultEnabled;
 
   const OutdoorTopSearch({
     super.key,
     required this.campusLabel,
     required this.controller,
+    this.highContrastMode = false,
     required this.onSubmitted,
     required this.suggestions,
     required this.onSuggestionSelected,
@@ -47,6 +54,9 @@ class OutdoorTopSearch extends StatelessWidget {
     required this.currentBuildingCode,
     required this.userLocation,
     required this.isConcordiaBuilding,
+    this.selectedTransitionMode,
+    this.onTransitionModeChanged,
+    this.wheelchairRoutingDefaultEnabled = false,
     required this.showIndoor,
     required this.floors,
     required this.selectedAssetPath,
@@ -76,9 +86,17 @@ class OutdoorTopSearch extends StatelessWidget {
             onOriginRoomSubmitted: onOriginRoomSubmitted,
             onDestinationRoomSubmitted: onDestinationRoomSubmitted,
             selectedBuildingCode: selectedBuildingCode,
-            currentBuildingCode: currentBuildingCode,
+            currentBuildingCode: showIndoor
+                ? selectedBuildingCode
+                : currentBuildingCode,
             userLocation: userLocation,
             isConcordiaBuilding: isConcordiaBuilding,
+            highContrastMode: highContrastMode,
+            showRoomFields:
+                showIndoor && (selectedBuildingCode?.isNotEmpty ?? false),
+            selectedTransitionMode: selectedTransitionMode,
+            onTransitionModeChanged: onTransitionModeChanged,
+            wheelchairRoutingDefaultEnabled: wheelchairRoutingDefaultEnabled,
           ),
           if (showIndoor && floors.isNotEmpty) ...[
             const SizedBox(height: 10),
