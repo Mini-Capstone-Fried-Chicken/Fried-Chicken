@@ -15,10 +15,7 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFF7F1D3A),
-                ),
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF7F1D3A)),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -43,7 +40,7 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              const _StepSection( 
+              const _StepSection(
                 title: 'Step 1',
                 description:
                     'Click on the + sign at the bottom right of your screen and choose event.',
@@ -56,6 +53,14 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
                 description:
                     'Set the location of the event as the building name/code your class is in and the description as the room number.',
                 imagePath: 'assets/images/google_calendar_step2.png',
+              ),
+              const SizedBox(height: 28),
+
+              const _StepSection(
+                title: 'Step 3',
+                description:
+                    'Here is an example of how your calendar should look after setting up your classes, given the room is Hall-110',
+                imagePath: 'assets/images/google_calendar_step3.png',
               ),
               const SizedBox(height: 28),
             ],
@@ -105,10 +110,7 @@ class _StepSection extends StatelessWidget {
           child: Container(
             width: double.infinity,
             color: Colors.white,
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset(imagePath, fit: BoxFit.contain),
           ),
         ),
       ],
