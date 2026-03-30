@@ -39,206 +39,138 @@ BuildingName _annexBuilding(String code, List<String> searchTerms) {
   );
 }
 
-const List<_BuildingSeed> _sgwSeeds = [
-  _BuildingSeed(code: 'LB', name: 'LB Building', searchTerms: ['lb']),
-  _BuildingSeed(
-    code: 'MB',
-    name: 'JMSB Building',
-    searchTerms: ['mb, jmsb, jsmb'],
-  ),
-  _BuildingSeed(
-    code: 'HALL',
-    name: 'Hall Building',
-    searchTerms: ['hall', 'h', 'HALL'],
-  ),
-  _BuildingSeed(
-    code: 'EV',
-    name: 'EV Building',
-    searchTerms: ['ev', 'engineering', 'visual arts'],
-  ),
-  _BuildingSeed(
-    code: 'GM',
-    name: 'GM Building',
-    searchTerms: ['gm', 'guy metro'],
-  ),
-  _BuildingSeed(
-    code: 'FG',
-    name: 'Faubourg Building',
-    searchTerms: ['faubourg', 'fg'],
-  ),
-  _BuildingSeed(code: 'ER', name: 'ER building', searchTerms: ['er']),
-  _BuildingSeed(
-    code: 'FB',
-    name: 'FB - Faubourg Tower',
-    searchTerms: ['fb', 'faubourg', 'tower'],
-  ),
-  _BuildingSeed(
-    code: 'GN',
-    name: 'Grey Nuns Building',
-    searchTerms: ['grey nuns', 'gn'],
-  ),
-  _BuildingSeed(code: 'GS', searchTerms: ['gs']),
-  _BuildingSeed(code: 'K', searchTerms: ['k']),
-  _BuildingSeed(code: 'LD', searchTerms: ['ld']),
-  _BuildingSeed(
-    code: 'LS',
-    name: 'Learning Square',
-    searchTerms: ['learning square', 'ls'],
-  ),
-  _BuildingSeed(code: 'M', searchTerms: ['m']),
-  _BuildingSeed(code: 'MI', searchTerms: ['mi']),
-  _BuildingSeed(code: 'MU', searchTerms: ['mu']),
-  _BuildingSeed(code: 'P', searchTerms: ['p']),
-  _BuildingSeed(code: 'PR', searchTerms: ['pr']),
-  _BuildingSeed(code: 'Q', searchTerms: ['q']),
-  _BuildingSeed(code: 'R', searchTerms: ['r']),
-  _BuildingSeed(code: 'RR', searchTerms: ['rr']),
-  _BuildingSeed(code: 'S', searchTerms: ['s']),
-  _BuildingSeed(code: 'SB', searchTerms: ['sb']),
-  _BuildingSeed(code: 'T', searchTerms: ['t']),
-  _BuildingSeed(code: 'TD', searchTerms: ['td']),
-  _BuildingSeed(code: 'V', searchTerms: ['v']),
-  _BuildingSeed(code: 'VA', searchTerms: ['va', 'visual arts']),
-];
+List<String> _parseSearchTerms(String value) {
+  if (value.trim().isEmpty) {
+    return const [];
+  }
 
-const List<_BuildingSeed> _loyolaSeeds = [
-  _BuildingSeed(
-    code: 'AD',
-    name: 'Administration Building',
-    searchTerms: ['administration', 'ad', 'admin'],
-  ),
-  _BuildingSeed(
-    code: 'CC',
-    name: 'Central Building',
-    searchTerms: ['central', 'cc'],
-  ),
-  _BuildingSeed(
-    code: 'CJ',
-    name: 'Communication Studies and Journalism building',
-    searchTerms: ['communication', 'journalism', 'cj', 'comm'],
-  ),
-  _BuildingSeed(
-    code: 'DO',
-    name: 'Stinger Dome',
-    searchTerms: ['stinger', 'dome', 'do'],
-  ),
-  _BuildingSeed(
-    code: 'FC',
-    name: 'F.C. Smith building',
-    searchTerms: ['fc', 'smith'],
-  ),
-  _BuildingSeed(
-    code: 'GE',
-    name: 'Center for structural and functional genomics',
-    searchTerms: ['genomics', 'ge', 'center'],
-  ),
-  _BuildingSeed(
-    code: 'HA',
-    name: 'Hingston Hall, wing HA',
-    searchTerms: ['hingston', 'ha', 'hall'],
-  ),
-  _BuildingSeed(
-    code: 'HB',
-    name: 'Hingston Hall, wing HB',
-    searchTerms: ['hingston', 'hb', 'hall'],
-  ),
-  _BuildingSeed(
-    code: 'HC',
-    name: 'Hingston Hall, wing HC',
-    searchTerms: ['hingston', 'hc', 'hall'],
-  ),
-  _BuildingSeed(
-    code: 'HU',
-    name: 'Applied Science Hub',
-    searchTerms: ['applied science', 'hub', 'hu'],
-  ),
-  _BuildingSeed(
-    code: 'JR',
-    name: 'Jesuit Residence',
-    searchTerms: ['jesuit', 'residence', 'jr'],
-  ),
-  _BuildingSeed(
-    code: 'PC',
-    name: 'PERFORM center',
-    searchTerms: ['perform', 'pc', 'center'],
-  ),
-  _BuildingSeed(
-    code: 'PS',
-    name: 'Physical Services building',
-    searchTerms: ['physical services', 'ps'],
-  ),
-  _BuildingSeed(
-    code: 'PT',
-    name: 'Oscar Peterson Concert Hall',
-    searchTerms: ['oscar peterson', 'concert', 'hall', 'pt'],
-  ),
-  _BuildingSeed(
-    code: 'PY',
-    name: 'Psychology building',
-    searchTerms: ['psychology', 'py', 'psych'],
-  ),
-  _BuildingSeed(
-    code: 'QA',
-    name: 'Quadrangle',
-    searchTerms: ['quadrangle', 'qa', 'quad'],
-  ),
-  _BuildingSeed(
-    code: 'RA',
-    name: 'Recreation and Athletic Complex',
-    searchTerms: ['recreation', 'athletic', 'ra', 'rec'],
-  ),
-  _BuildingSeed(
-    code: 'RF',
-    name: 'Loyola Jesuit Hall and Conference Centre',
-    searchTerms: ['loyola', 'jesuit', 'conference', 'rf'],
-  ),
-  _BuildingSeed(
-    code: 'SC',
-    name: 'Student Centre',
-    searchTerms: ['student', 'centre', 'center', 'sc'],
-  ),
-  _BuildingSeed(
-    code: 'SH',
-    name: 'Future Buildings Laboratory',
-    searchTerms: ['future buildings', 'laboratory', 'sh', 'lab'],
-  ),
-  _BuildingSeed(
-    code: 'SI',
-    name: 'St. Ignatus of Loyola Church',
-    searchTerms: ['st ignatus', 'loyola', 'church', 'si', 'saint'],
-  ),
-  _BuildingSeed(
-    code: 'SP',
-    name: 'Richard J. Renaud Science Complex',
-    searchTerms: ['richard renaud', 'science', 'sp', 'complex'],
-  ),
-  _BuildingSeed(
-    code: 'TA',
-    name: 'Terrebonne Building',
-    searchTerms: ['terrebonne', 'ta'],
-  ),
-  _BuildingSeed(
-    code: 'VE',
-    name: 'Vanier Extension',
-    searchTerms: ['vanier', 'extension', 've'],
-  ),
-  _BuildingSeed(
-    code: 'VL',
-    name: 'Vanier Library',
-    searchTerms: ['vanier', 'library', 'vl'],
-  ),
-];
+  return value
+      .split(';')
+      .map((term) => term.trim())
+      .where((term) => term.isNotEmpty)
+      .toList(growable: false);
+}
 
-const List<MapEntry<String, List<String>>> _annexSeeds = [
-  MapEntry('B', ['b', 'annex']),
-  MapEntry('CI', ['ci', 'annex']),
-  MapEntry('CL', ['cl', 'annex']),
-  MapEntry('D', ['d', 'annex']),
-  MapEntry('EN', ['en', 'annex']),
-  MapEntry('FA', ['fa', 'annex']),
-  MapEntry('BB', ['bb', 'annex']),
-  MapEntry('BH', ['bh', 'annex']),
-];
+List<_BuildingSeed> _parseBuildingSeeds(String rows) {
+  final seeds = <_BuildingSeed>[];
+
+  for (final rawRow in rows.trim().split('\n')) {
+    final row = rawRow.trim();
+    if (row.isEmpty) continue;
+
+    final parts = row.split('|');
+    if (parts.length != 3) {
+      throw FormatException('Invalid building seed row: $row');
+    }
+
+    final code = parts[0].trim();
+    final rawName = parts[1].trim();
+    seeds.add(
+      _BuildingSeed(
+        code: code,
+        name: rawName.isEmpty ? null : rawName,
+        searchTerms: _parseSearchTerms(parts[2]),
+      ),
+    );
+  }
+
+  return seeds;
+}
+
+List<MapEntry<String, List<String>>> _parseAnnexSeeds(String rows) {
+  final seeds = <MapEntry<String, List<String>>>[];
+
+  for (final rawRow in rows.trim().split('\n')) {
+    final row = rawRow.trim();
+    if (row.isEmpty) continue;
+
+    final parts = row.split('|');
+    if (parts.length != 2) {
+      throw FormatException('Invalid annex seed row: $row');
+    }
+
+    seeds.add(MapEntry(parts[0].trim(), _parseSearchTerms(parts[1])));
+  }
+
+  return seeds;
+}
+
+const String _sgwSeedRows = '''
+LB|LB Building|lb
+MB|JMSB Building|mb, jmsb, jsmb
+HALL|Hall Building|hall;h;HALL
+EV|EV Building|ev;engineering;visual arts
+GM|GM Building|gm;guy metro
+FG|Faubourg Building|faubourg;fg
+ER|ER building|er
+FB|FB - Faubourg Tower|fb;faubourg;tower
+GN|Grey Nuns Building|grey nuns;gn
+GS||gs
+K||k
+LD||ld
+LS|Learning Square|learning square;ls
+M||m
+MI||mi
+MU||mu
+P||p
+PR||pr
+Q||q
+R||r
+RR||rr
+S||s
+SB||sb
+T||t
+TD||td
+V||v
+VA||va;visual arts
+''';
+
+const String _loyolaSeedRows = '''
+AD|Administration Building|administration;ad;admin
+CC|Central Building|central;cc
+CJ|Communication Studies and Journalism building|communication;journalism;cj;comm
+DO|Stinger Dome|stinger;dome;do
+FC|F.C. Smith building|fc;smith
+GE|Center for structural and functional genomics|genomics;ge;center
+HA|Hingston Hall, wing HA|hingston;ha;hall
+HB|Hingston Hall, wing HB|hingston;hb;hall
+HC|Hingston Hall, wing HC|hingston;hc;hall
+HU|Applied Science Hub|applied science;hub;hu
+JR|Jesuit Residence|jesuit;residence;jr
+PC|PERFORM center|perform;pc;center
+PS|Physical Services building|physical services;ps
+PT|Oscar Peterson Concert Hall|oscar peterson;concert;hall;pt
+PY|Psychology building|psychology;py;psych
+QA|Quadrangle|quadrangle;qa;quad
+RA|Recreation and Athletic Complex|recreation;athletic;ra;rec
+RF|Loyola Jesuit Hall and Conference Centre|loyola;jesuit;conference;rf
+SC|Student Centre|student;centre;center;sc
+SH|Future Buildings Laboratory|future buildings;laboratory;sh;lab
+SI|St. Ignatus of Loyola Church|st ignatus;loyola;church;si;saint
+SP|Richard J. Renaud Science Complex|richard renaud;science;sp;complex
+TA|Terrebonne Building|terrebonne;ta
+VE|Vanier Extension|vanier;extension;ve
+VL|Vanier Library|vanier;library;vl
+''';
+
+const String _annexSeedRows = '''
+B|b;annex
+CI|ci;annex
+CL|cl;annex
+D|d;annex
+EN|en;annex
+FA|fa;annex
+BB|bb;annex
+BH|bh;annex
+''';
+
+final List<_BuildingSeed> _sgwSeeds = _parseBuildingSeeds(_sgwSeedRows);
+
+final List<_BuildingSeed> _loyolaSeeds = _parseBuildingSeeds(_loyolaSeedRows);
+
+final List<MapEntry<String, List<String>>> _annexSeeds = _parseAnnexSeeds(
+  _annexSeedRows,
+);
 
 final List<BuildingName> _sgwBuildings = _sgwSeeds.map(_fromSeed).toList();
 
