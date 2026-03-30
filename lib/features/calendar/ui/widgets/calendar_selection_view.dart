@@ -24,6 +24,11 @@ class CalendarSelectionView extends StatelessWidget {
     this.highContrastMode = false,
   });
 
+  static const String successBannerKey = 'calendar_success_banner';
+  static const String selectionTitleKey = 'calendar_selection_title';
+  static const String setupButtonKey = 'calendar_setup_button';
+  static const String continueButtonKey = 'calendar_continue_button';
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -57,6 +62,7 @@ class CalendarSelectionView extends StatelessWidget {
     final textColor = highContrastMode ? Colors.black : Colors.black87;
 
     return Container(
+      key: const Key(successBannerKey),
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
@@ -94,6 +100,7 @@ class CalendarSelectionView extends StatelessWidget {
       children: [
         Text(
           'Select Calendar(s)',
+          key: const Key(selectionTitleKey),
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -200,6 +207,7 @@ class CalendarSelectionView extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
+        key: const Key(setupButtonKey),
         onPressed: onSetupPressed,
         icon: const Icon(Icons.arrow_forward_rounded),
         label: const Text('How to set up calendar'),
@@ -225,6 +233,7 @@ class CalendarSelectionView extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
+        key: const Key(continueButtonKey),
         onPressed: selectedCalendarIds.isEmpty || isLoading ? null : onContinue,
         style: ElevatedButton.styleFrom(
           backgroundColor: bg,

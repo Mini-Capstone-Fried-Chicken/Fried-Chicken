@@ -71,6 +71,13 @@ class _CalendarContentConfig {
 class _CalendarScheduleViewState extends State<CalendarScheduleView> {
   CalendarView _calendarView = CalendarView.week;
 
+  static const String scheduleTitleKey = 'calendar_schedule_title';
+  static const String backButtonKey = 'calendar_back_button';
+  static const String dayViewKey = 'calendar_day_view';
+  static const String weekViewKey = 'calendar_week_view';
+  static const String monthViewKey = 'calendar_month_view';
+  static const String scheduleViewKey = 'calendar_schedule_view';
+
   @override
   Widget build(BuildContext context) {
     final isHighContrast = widget.highContrastMode;
@@ -134,6 +141,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
           child: Row(
             children: [
               IconButton(
+                key: const Key(backButtonKey),
                 onPressed: widget.onBack,
                 icon: Icon(
                   Icons.arrow_back,
@@ -144,6 +152,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
               Expanded(
                 child: Text(
                   'My Class Schedule',
+                  key: const Key(scheduleTitleKey),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -173,13 +182,13 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              _viewChip('Day', CalendarView.day),
+              _viewChip('Day', CalendarView.day, dayViewKey),
               const SizedBox(width: 8),
-              _viewChip('Week', CalendarView.week),
+              _viewChip('Week', CalendarView.week, weekViewKey),
               const SizedBox(width: 8),
-              _viewChip('Month', CalendarView.month),
+              _viewChip('Month', CalendarView.month, monthViewKey),
               const SizedBox(width: 8),
-              _viewChip('Schedule', CalendarView.schedule),
+              _viewChip('Schedule', CalendarView.schedule, scheduleViewKey),
             ],
           ),
         ),
@@ -309,7 +318,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
     );
   }
 
-  Widget _viewChip(String label, CalendarView view) {
+  Widget _viewChip(String label, CalendarView view, String key) {
     final isHighContrast = widget.highContrastMode;
     final isSelected = _calendarView == view;
 
@@ -328,6 +337,7 @@ class _CalendarScheduleViewState extends State<CalendarScheduleView> {
         : const Color(0xFF8B1E3F);
 
     return ChoiceChip(
+      key: Key(key),
       label: Text(label),
       selected: isSelected,
       onSelected: (_) {

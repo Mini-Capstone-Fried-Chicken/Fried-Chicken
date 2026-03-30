@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 class GoogleCalendarSetupScreen extends StatelessWidget {
   const GoogleCalendarSetupScreen({super.key});
 
+  static const String backButtonKey = 'setup_back_button';
+  static const String titleKey = 'setup_title';
+  static const String descriptionKey = 'setup_description';
+  static const String step1Key = 'setup_step1';
+  static const String step2Key = 'setup_step2';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -14,6 +20,7 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               IconButton(
+                key: const Key(backButtonKey),
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF7F1D3A)),
                 padding: EdgeInsets.zero,
@@ -22,6 +29,7 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
               const SizedBox(height: 12),
               const Text(
                 'How to set up your Google Calendar',
+                key: Key(titleKey),
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -32,6 +40,7 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
               const SizedBox(height: 18),
               const Text(
                 'Follow these steps to properly set up your Google Calendar to work with the Campus App.',
+                key: Key(descriptionKey),
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.black54,
