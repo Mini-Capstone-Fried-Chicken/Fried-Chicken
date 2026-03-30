@@ -8,6 +8,9 @@ import 'package:campus_app/services/location/googlemaps_livelocation.dart';
 import 'package:campus_app/data/building_polygons.dart';
 import 'package:campus_app/features/saved/saved_directions_controller.dart';
 import 'package:campus_app/features/saved/saved_place.dart';
+import 'package:campus_app/services/indoor_maps/indoor_map_repository.dart';
+import 'package:campus_app/services/indoors_routing/core/indoor_route_plan_models.dart';
+import 'package:campus_app/services/location/indoor_route_service.dart';
 import 'package:campus_app/shared/widgets/campus_toggle.dart';
 import 'package:campus_app/shared/widgets/map_search_bar.dart';
 import 'package:campus_app/shared/widgets/building_info_popup.dart';
@@ -42,6 +45,28 @@ Future<void> pumpPage(
 }
 
 BuildingPolygon get firstBuilding => buildingPolygons.first;
+
+class _FakeIndoorMapRepository extends IndoorMapRepository {
+  final IndoorResolvedRoom? resolvedRoom;
+
+  _FakeIndoorMapRepository({this.resolvedRoom});
+
+  @override
+  Future<IndoorResolvedRoom?> resolveRoom(
+    String buildingCode,
+    String roomCode,
+  ) async {
+    final room = resolvedRoom;
+    if (room == null) {
+      return null;
+    }
+
+    final buildingMatches =
+        room.buildingCode.toUpperCase() == buildingCode.toUpperCase();
+    final roomMatches = room.roomCode.toUpperCase() == roomCode.toUpperCase();
+    return buildingMatches && roomMatches ? room : null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -1555,83 +1580,141 @@ void main() {
           .setMockMethodCallHandler(geolocatorChannel, null);
     });
 
-    testWidgets('uses current location branch when directions are requested after location resolves', (
-      tester,
-    ) async {
-      await mockGeolocatorSuccess();
+    testWidgets(
+      'uses current location branch when directions are requested after location resolves',
+      (tester) async {
+        await mockGeolocatorSuccess();
 
-      await pumpPage(
-        tester,
-        initialCampus: Campus.sgw,
-      );
+        await pumpPage(tester, initialCampus: Campus.sgw);
 
-      // Allow init location requests to populate _currentLocation first.
-      await tester.pump(const Duration(milliseconds: 120));
+        // Allow init location requests to populate _currentLocation first.
+        await tester.pump(const Duration(milliseconds: 120));
 
-      final target = firstBuilding;
-      SavedDirectionsController.requestDirections(
-        SavedPlace(
-          id: target.code,
-          name: target.name,
-          category: 'concordia building',
-          latitude: target.center.latitude,
-          longitude: target.center.longitude,
-          openingHoursToday: 'Open today: Hours unavailable',
-        ),
-      );
+        final target = firstBuilding;
+        SavedDirectionsController.requestDirections(
+          SavedPlace(
+            id: target.code,
+            name: target.name,
+            category: 'concordia building',
+            latitude: target.center.latitude,
+            longitude: target.center.longitude,
+            openingHoursToday: 'Open today: Hours unavailable',
+          ),
+        );
 
-      await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(SavedDirectionsController.notifier.value, isNull);
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+        expect(SavedDirectionsController.notifier.value, isNull);
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      },
+    );
 
-    testWidgets('falls back to last camera target when geolocator cannot provide origin', (
-      tester,
-    ) async {
-      await mockGeolocatorFailure();
+    testWidgets(
+      'falls back to last camera target when geolocator cannot provide origin',
+      (tester) async {
+        await mockGeolocatorFailure();
 
-      SavedDirectionsController.notifier.value = const SavedPlace(
+        SavedDirectionsController.notifier.value = const SavedPlace(
           id: 'non_concordia_place',
           name: 'Coffee Shop',
           category: 'cafe',
           latitude: 45.497,
           longitude: -73.579,
           openingHoursToday: 'Open today: Hours unavailable',
-      );
+        );
 
-      await pumpPage(
-        tester,
-        initialCampus: Campus.loyola,
-      );
+        await pumpPage(tester, initialCampus: Campus.loyola);
 
-      await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(SavedDirectionsController.notifier.value, isNull);
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+        expect(SavedDirectionsController.notifier.value, isNull);
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      },
+    );
 
-    testWidgets('invalid destination coordinates hit catch/finally path and clear notifier', (
-      tester,
-    ) async {
-      await mockGeolocatorFailure();
+    testWidgets(
+      'invalid destination coordinates hit catch/finally path and clear notifier',
+      (tester) async {
+        await mockGeolocatorFailure();
 
-      SavedDirectionsController.notifier.value = const SavedPlace(
+        SavedDirectionsController.notifier.value = const SavedPlace(
           id: 'broken_place',
           name: 'Broken Place',
           category: 'all',
           latitude: 200,
           longitude: -73.579,
           openingHoursToday: 'Open today: Hours unavailable',
-      );
+        );
 
-      await pumpPage(tester);
+        await pumpPage(tester);
 
-      await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(SavedDirectionsController.notifier.value, isNull);
-      expect(find.byType(OutdoorMapPage), findsOneWidget);
-    });
+        expect(SavedDirectionsController.notifier.value, isNull);
+        expect(find.byType(OutdoorMapPage), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'room requests seed route preview with the resolved indoor destination',
+      (tester) async {
+        await mockGeolocatorFailure();
+
+        final hallBuilding = buildingPolygons.firstWhere(
+          (building) => building.code.toUpperCase() == 'HALL',
+        );
+        final indoorRouteService = IndoorRouteService(
+          indoorRepository: _FakeIndoorMapRepository(
+            resolvedRoom: const IndoorResolvedRoom(
+              buildingCode: 'HALL',
+              roomCode: '110',
+              floorLabel: '1',
+              floorLevel: '1',
+              floorAssetPath: 'assets/indoor_maps/geojson/Hall/h1.geojson.json',
+              floorGeoJson: {'type': 'FeatureCollection', 'features': []},
+              center: LatLng(45.49746, -73.57862),
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: OutdoorMapPage(
+              initialCampus: Campus.sgw,
+              isLoggedIn: false,
+              debugDisableMap: true,
+              debugDisableLocation: true,
+              debugIndoorRouteService: indoorRouteService,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        SavedDirectionsController.requestDirections(
+          SavedPlace(
+            id: hallBuilding.code,
+            name: hallBuilding.name,
+            category: 'concordia building',
+            latitude: hallBuilding.center.latitude,
+            longitude: hallBuilding.center.longitude,
+            openingHoursToday: 'Open today: Hours unavailable',
+            roomCode: '110',
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.byType(RoutePreviewPanel), findsOneWidget);
+
+        final panel = tester.widget<RoutePreviewPanel>(
+          find.byType(RoutePreviewPanel),
+        );
+
+        expect(panel.destinationBuildingCode?.toUpperCase(), 'HALL');
+        expect(panel.destinationText, contains('Room 110'));
+        expect(panel.destinationRoomController.text, '110');
+      },
+    );
   });
 
   // =========================================================================
