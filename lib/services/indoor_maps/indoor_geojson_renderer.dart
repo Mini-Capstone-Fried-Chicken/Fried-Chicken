@@ -181,12 +181,44 @@ class IndoorGeoJsonRenderer {
     );
     textPainter.paint(canvas, offset);
 
+    return _bitmapFromRecorder(recorder, size.toInt(), size.toInt());
+  }
+
+  static List<LatLng>? _polygonPointsFromGeometry(
+    Map<String, dynamic> geometry,
+  ) {
+    if (geometry['type'] != 'Polygon') return null;
+
+    final rings = geometry['coordinates'];
+    if (rings is! List || rings.isEmpty) return null;
+
+    final outer = rings.first;
+    if (outer is! List) return null;
+
+    final points = <LatLng>[];
+    for (final p in outer) {
+      if (p is! List || p.length < 2) continue;
+      final lng = p[0];
+      final lat = p[1];
+      if (lng is! num || lat is! num) continue;
+      points.add(LatLng(lat.toDouble(), lng.toDouble()));
+    }
+
+    if (points.length < 3) return null;
+    return points;
+  }
+
+  static Future<BitmapDescriptor> _bitmapFromRecorder(
+    ui.PictureRecorder recorder,
+    int width,
+    int height,
+  ) async {
     final picture = recorder.endRecording();
     ui.Image? img;
     ByteData? byteData;
 
     try {
-      img = await picture.toImage(size.toInt(), size.toInt());
+      img = await picture.toImage(width, height);
       byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     } finally {
       img?.dispose();
@@ -204,21 +236,8 @@ class IndoorGeoJsonRenderer {
     for (final f in features) {
       final feature = f as Map<String, dynamic>;
       final geometry = feature['geometry'] as Map<String, dynamic>;
-      if (geometry['type'] != 'Polygon') continue;
-
-      final rings = geometry['coordinates'] as List;
-      if (rings.isEmpty) continue;
-
-      final outer = rings[0] as List;
-
-      final points = outer.map<LatLng>((p) {
-        final coords = p as List;
-        final lng = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng); // GeoJSON is [lng, lat]
-      }).toList();
-
-      if (points.length < 3) continue;
+      final points = _polygonPointsFromGeometry(geometry);
+      if (points == null) continue;
 
       final props =
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -268,21 +287,10 @@ class IndoorGeoJsonRenderer {
       final props =
           (feature['properties'] as Map?)?.cast<String, dynamic>() ?? {};
 
-      if (geometry['type'] != 'Polygon') continue;
       if (props['ref'] == null) continue;
 
-      final rings = geometry['coordinates'] as List;
-      if (rings.isEmpty) continue;
-      final outer = rings[0] as List;
-
-      final points = outer.map<LatLng>((p) {
-        final coords = p as List;
-        final lng = (coords[0] as num).toDouble();
-        final lat = (coords[1] as num).toDouble();
-        return LatLng(lat, lng);
-      }).toList();
-
-      if (points.length < 3) continue;
+      final points = _polygonPointsFromGeometry(geometry);
+      if (points == null) continue;
 
       // Skip very small polygons where text won't fit
       final area = polygonArea(points);
@@ -340,19 +348,6 @@ class IndoorGeoJsonRenderer {
 
     painter.paint(canvas, Offset.zero);
 
-    final picture = recorder.endRecording();
-    ui.Image? img;
-    ByteData? byteData;
-
-    try {
-      img = await picture.toImage(width, height);
-      byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    } finally {
-      img?.dispose();
-      picture.dispose();
-    }
-
-    final Uint8List bytes = byteData!.buffer.asUint8List();
-    return BitmapDescriptor.bytes(bytes);
+    return _bitmapFromRecorder(recorder, width, height);
   }
 }
