@@ -292,6 +292,29 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     return _selectedCampus == Campus.loyola ? concordiaLoyola : concordiaSGW;
   }
 
+  Future<IndoorResolvedRoom?> _resolveDestinationRoomForSavedPlace(
+    String? buildingCode,
+    String roomCode,
+  ) async {
+    final normalizedBuildingCode = buildingCode?.trim();
+    final normalizedRoomCode = roomCode.trim();
+
+    if (normalizedBuildingCode == null ||
+        normalizedBuildingCode.isEmpty ||
+        normalizedRoomCode.isEmpty) {
+      return null;
+    }
+
+    try {
+      return _indoorRouteService.indoorRepository.resolveRoom(
+        normalizedBuildingCode,
+        normalizedRoomCode,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _startDirectionsForSavedPlace(SavedPlace place) async {
     try {
       final origin = await _resolveOriginForSavedDirections();
@@ -299,6 +322,19 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       final destination = LatLng(place.latitude, place.longitude);
       final selectedBuilding = _findBuildingByCode(place.id);
       final currentBuildingCode = _findBuildingAtLocation(origin)?.code;
+      final requestedRoom = (place.roomCode ?? '').trim();
+      final resolvedDestinationRoom =
+          await _resolveDestinationRoomForSavedPlace(
+            selectedBuilding?.code,
+            requestedRoom,
+          );
+      final routeDestination = resolvedDestinationRoom?.center ?? destination;
+      final routeDestinationText = resolvedDestinationRoom == null
+          ? place.name
+          : _buildingWithRoomLabel(
+              resolvedDestinationRoom.buildingCode,
+              resolvedDestinationRoom.roomCode,
+            );
 
       if (!mounted) return;
       setState(() {
@@ -310,20 +346,34 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _anchorOffset = null;
         _showRoutePreview = true;
         _routeOrigin = origin;
-        _routeDestination = destination;
+        _routeDestination = routeDestination;
         _routeOriginText = currentLocationTag;
-        _routeDestinationText = place.name;
+        _routeDestinationText = routeDestinationText;
         _routeOriginBuildingCode = currentBuildingCode;
-        _routeDestinationBuildingCode = selectedBuilding?.code;
+        _routeDestinationBuildingCode =
+            resolvedDestinationRoom?.buildingCode ?? selectedBuilding?.code;
         _isOriginPoi = false;
         _isDestinationPoi = false;
+        _pendingDestinationIndoorRoom = resolvedDestinationRoom;
+        _autoHandoffToIndoorPending = resolvedDestinationRoom != null;
+        _pendingOriginIndoorRoom = null;
+        _isOriginIndoorHandoffPhase = false;
 
         // Prefill destination room only when explicitly provided (Calendar Go to Room).
-        final requestedRoom = (place.roomCode ?? '').trim();
-        if (requestedRoom.isNotEmpty) {
-          _destinationRoomController.text = requestedRoom;
-        }
+        _destinationRoomController.text = requestedRoom;
       });
+
+      if (requestedRoom.isNotEmpty &&
+          selectedBuilding != null &&
+          resolvedDestinationRoom == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not match room $requestedRoom in ${selectedBuilding.code}. Outdoor directions will still open.',
+            ),
+          ),
+        );
+      }
 
       await _fetchRoutesAndDurations();
     } catch (_) {
