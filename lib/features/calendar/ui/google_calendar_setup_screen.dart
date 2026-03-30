@@ -50,8 +50,6 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               const _StepSection(
-                key: Key(step1Key),
-
                 title: 'Step 1',
                 description:
                     'Click on the + sign at the bottom right of your screen and choose event.',
@@ -60,7 +58,6 @@ class GoogleCalendarSetupScreen extends StatelessWidget {
               const SizedBox(height: 28),
 
               const _StepSection(
-                key: Key(step2Key),
                 title: 'Step 2',
                 description:
                     'Set the location of the event as the building name/code your class is in and the description as the room number.',
@@ -87,13 +84,11 @@ class _StepSection extends StatelessWidget {
   final String title;
   final String description;
   final String imagePath;
-  final Key? key;
 
   const _StepSection({
     required this.title,
     required this.description,
     required this.imagePath,
-    this.key,
   });
 
   @override

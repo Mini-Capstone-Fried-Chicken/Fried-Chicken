@@ -72,7 +72,6 @@ class CalendarConnectView extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               error!,
-              key: Key(errorTextKey),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.red,
