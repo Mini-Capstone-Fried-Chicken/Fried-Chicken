@@ -2608,52 +2608,80 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
-    if (suggestion.placeId == _nextClassSuggestionPlaceId) {
-      final recommendation = _nextClassDirectionsRecommendation;
-      if (recommendation == null) return;
-
-      if (recommendation.roomCode.isNotEmpty) {
-        SavedDirectionsController.requestDirectionsToBuildingRoom(
-          buildingCode: recommendation.buildingCode,
-          roomCode: recommendation.roomCode,
-        );
-      } else {
-        SavedDirectionsController.requestDirectionsToBuildingCode(
-          recommendation.buildingCode,
-        );
-      }
+    if (_isNextClassActionSuggestion(suggestion)) {
+      _handleNextClassSuggestionSelection();
       return;
     }
 
-    if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
-      final buildingPolygon = BuildingSearchService.searchBuilding(
-        suggestion.buildingName!.code,
-      );
-      if (buildingPolygon == null) return;
-      _onBuildingTapped(buildingPolygon);
-    } else if (suggestion.placeId != null) {
-      final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
-        suggestion.placeId!,
-      );
-      if (placeDetails != null) {
-        final concordiaBuilding = BuildingSearchService.searchBuilding(
-          suggestion.name,
-        );
-
-        if (concordiaBuilding != null) {
-          _onBuildingTapped(concordiaBuilding);
-        } else {
-          final searchResult = SearchResult.fromGooglePlace(
-            name: placeDetails.name,
-            address: placeDetails.formattedAddress,
-            location: placeDetails.location,
-            isConcordiaBuilding: false,
-            placeId: placeDetails.placeId,
-          );
-          _onPlaceSelected(searchResult);
-        }
-      }
+    if (_isConcordiaBuildingSuggestion(suggestion)) {
+      _handleConcordiaSuggestionSelection(suggestion);
+      return;
     }
+
+    await _handlePlaceSuggestionSelection(suggestion);
+  }
+
+  bool _isNextClassActionSuggestion(SearchSuggestion suggestion) {
+    return suggestion.placeId == _nextClassSuggestionPlaceId;
+  }
+
+  bool _isConcordiaBuildingSuggestion(SearchSuggestion suggestion) {
+    return suggestion.isConcordiaBuilding && suggestion.buildingName != null;
+  }
+
+  void _handleNextClassSuggestionSelection() {
+    final recommendation = _nextClassDirectionsRecommendation;
+    if (recommendation == null) return;
+
+    if (recommendation.roomCode.isNotEmpty) {
+      SavedDirectionsController.requestDirectionsToBuildingRoom(
+        buildingCode: recommendation.buildingCode,
+        roomCode: recommendation.roomCode,
+      );
+      return;
+    }
+
+    SavedDirectionsController.requestDirectionsToBuildingCode(
+      recommendation.buildingCode,
+    );
+  }
+
+  void _handleConcordiaSuggestionSelection(SearchSuggestion suggestion) {
+    final buildingCode = suggestion.buildingName?.code;
+    if (buildingCode == null) return;
+
+    final buildingPolygon = BuildingSearchService.searchBuilding(buildingCode);
+    if (buildingPolygon == null) return;
+    _onBuildingTapped(buildingPolygon);
+  }
+
+  Future<void> _handlePlaceSuggestionSelection(
+    SearchSuggestion suggestion,
+  ) async {
+    final placeId = suggestion.placeId;
+    if (placeId == null) return;
+
+    final placeDetails = await GooglePlacesService.instance.getPlaceDetails(
+      placeId,
+    );
+    if (placeDetails == null) return;
+
+    final concordiaBuilding = BuildingSearchService.searchBuilding(
+      suggestion.name,
+    );
+    if (concordiaBuilding != null) {
+      _onBuildingTapped(concordiaBuilding);
+      return;
+    }
+
+    final searchResult = SearchResult.fromGooglePlace(
+      name: placeDetails.name,
+      address: placeDetails.formattedAddress,
+      location: placeDetails.location,
+      isConcordiaBuilding: false,
+      placeId: placeDetails.placeId,
+    );
+    _onPlaceSelected(searchResult);
   }
 
   Set<Polygon> _createBuildingPolygons() {
@@ -2961,6 +2989,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Future<_NextClassDirectionsRecommendation?>
   _resolveNextClassRecommendation() async {
     final events = await _eventsForNextClassRecommendation();
+    if (!mounted) {
+      return null;
+    }
     if (events.isEmpty) {
       return null;
     }

@@ -331,14 +331,38 @@ class _MapSearchBarState extends State<MapSearchBar> {
   Widget _buildSuggestionTile(SearchSuggestion suggestion) {
     final isActionSuggestion = _isActionSuggestion(suggestion);
     final isSaved = _isSuggestionSaved(suggestion);
+    final IconData suggestionIcon;
+    if (isActionSuggestion) {
+      suggestionIcon = Icons.directions;
+    } else if (suggestion.isConcordiaBuilding) {
+      suggestionIcon = Icons.school;
+    } else {
+      suggestionIcon = Icons.place;
+    }
+    final saveTooltip = isSaved ? 'Remove from saved' : 'Add to saved';
+    final bookmarkIcon = isSaved ? Icons.bookmark : Icons.bookmark_border;
+    final Color? bookmarkColor;
+    if (isSaved) {
+      bookmarkColor = AppUiColors.primary(
+        highContrastEnabled: widget.highContrastMode,
+      );
+    } else {
+      bookmarkColor = Colors.grey[700];
+    }
+    final Widget? trailingWidget;
+    if (isActionSuggestion) {
+      trailingWidget = null;
+    } else {
+      trailingWidget = IconButton(
+        tooltip: saveTooltip,
+        icon: Icon(bookmarkIcon, size: 20, color: bookmarkColor),
+        onPressed: () => unawaited(_toggleSuggestionSaved(suggestion)),
+      );
+    }
 
     return ListTile(
       leading: Icon(
-        isActionSuggestion
-            ? Icons.directions
-            : suggestion.isConcordiaBuilding
-            ? Icons.school
-            : Icons.place,
+        suggestionIcon,
         color: suggestion.isConcordiaBuilding
             ? AppUiColors.primary(highContrastEnabled: widget.highContrastMode)
             : Colors.grey,
@@ -370,21 +394,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
         ],
       ),
       subtitle: _buildSuggestionSubtitle(suggestion),
-      trailing: isActionSuggestion
-          ? null
-          : IconButton(
-              tooltip: isSaved ? 'Remove from saved' : 'Add to saved',
-              icon: Icon(
-                isSaved ? Icons.bookmark : Icons.bookmark_border,
-                size: 20,
-                color: isSaved
-                    ? AppUiColors.primary(
-                        highContrastEnabled: widget.highContrastMode,
-                      )
-                    : Colors.grey[700],
-              ),
-              onPressed: () => unawaited(_toggleSuggestionSaved(suggestion)),
-            ),
+      trailing: trailingWidget,
       dense: true,
       onTap: () => _selectSuggestion(suggestion),
     );
@@ -396,11 +406,14 @@ class _MapSearchBarState extends State<MapSearchBar> {
       return null;
     }
 
-    final subtitleColor = suggestion.isConcordiaBuilding
-        ? AppUiColors.primary(
-            highContrastEnabled: widget.highContrastMode,
-          ).withValues(alpha: 0.7)
-        : Colors.grey[600];
+    final Color? subtitleColor;
+    if (suggestion.isConcordiaBuilding) {
+      subtitleColor = AppUiColors.primary(
+        highContrastEnabled: widget.highContrastMode,
+      ).withValues(alpha: 0.7);
+    } else {
+      subtitleColor = Colors.grey[600];
+    }
 
     return Text(subtitle, style: TextStyle(fontSize: 12, color: subtitleColor));
   }
