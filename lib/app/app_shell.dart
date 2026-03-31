@@ -56,29 +56,53 @@ class _AppShellState extends State<AppShell> {
     final items = widget.isLoggedIn
         ? [
             BottomNavigationBarItem(
-              icon: Image.asset("assets/images/explore.png", width: 24, height: 24),
+              icon: Image.asset(
+                "assets/images/explore.png",
+                width: 24,
+                height: 24,
+              ),
               label: "Explore",
             ),
             BottomNavigationBarItem(
-              icon: Image.asset("assets/images/calendar.png", width: 24, height: 24),
+              icon: Image.asset(
+                "assets/images/calendar.png",
+                width: 24,
+                height: 24,
+              ),
               label: "Calendar",
             ),
             BottomNavigationBarItem(
-              icon: Image.asset("assets/images/saved.png", width: 24, height: 24),
+              icon: Image.asset(
+                "assets/images/saved.png",
+                width: 24,
+                height: 24,
+              ),
               label: "Saved",
             ),
             BottomNavigationBarItem(
-              icon: Image.asset("assets/images/settings.png", width: 24, height: 24),
+              icon: Image.asset(
+                "assets/images/settings.png",
+                width: 24,
+                height: 24,
+              ),
               label: "Settings",
             ),
           ]
         : [
             BottomNavigationBarItem(
-              icon: Image.asset("assets/images/explore.png", width: 24, height: 24),
+              icon: Image.asset(
+                "assets/images/explore.png",
+                width: 24,
+                height: 24,
+              ),
               label: "Explore",
             ),
             BottomNavigationBarItem(
-              icon: Image.asset("assets/images/settings.png", width: 24, height: 24),
+              icon: Image.asset(
+                "assets/images/settings.png",
+                width: 24,
+                height: 24,
+              ),
               label: "Settings",
             ),
           ];
@@ -87,7 +111,7 @@ class _AppShellState extends State<AppShell> {
       valueListenable: AppSettingsController.notifier,
       builder: (context, settings, _) {
         return Scaffold(
-          body: pages[currentIndex],
+          body: IndexedStack(index: currentIndex, children: pages),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: currentIndex,
             onTap: (index) => setState(() => currentIndex = index),

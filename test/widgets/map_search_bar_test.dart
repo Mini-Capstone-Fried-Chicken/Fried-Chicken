@@ -198,6 +198,44 @@ void main() {
     expect(find.byType(ListTile), findsNothing);
   });
 
+  testWidgets('Action suggestion shows Recommended badge and no save button', (
+    WidgetTester tester,
+  ) async {
+    final controller = TextEditingController();
+    final originRoomController = TextEditingController();
+    final destinationRoomController = TextEditingController();
+
+    const suggestion = SearchSuggestion(
+      name: 'Directions to next class: COMP 472',
+      subtitle: '10:15 AM • H-110',
+      isConcordiaBuilding: false,
+      placeId: '__action_next_class__',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapSearchBar(
+            controller: controller,
+            suggestions: const [suggestion],
+            originRoomController: originRoomController,
+            destinationRoomController: destinationRoomController,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(TextField).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recommended'), findsOneWidget);
+    expect(find.byIcon(Icons.directions), findsOneWidget);
+    expect(find.byTooltip('Add to saved'), findsNothing);
+    expect(find.byTooltip('Remove from saved'), findsNothing);
+    expect(find.byIcon(Icons.bookmark), findsNothing);
+    expect(find.byIcon(Icons.bookmark_border), findsNothing);
+  });
+
   testWidgets('Hint text includes campus label when provided', (
     WidgetTester tester,
   ) async {
@@ -430,42 +468,43 @@ void main() {
     expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
   });
 
-  testWidgets('Add to saved no-op for non-concordia suggestion without place id', (
-    WidgetTester tester,
-  ) async {
-    final controller = TextEditingController();
-    final originRoomController = TextEditingController();
-    final destinationRoomController = TextEditingController();
+  testWidgets(
+    'Add to saved no-op for non-concordia suggestion without place id',
+    (WidgetTester tester) async {
+      final controller = TextEditingController();
+      final originRoomController = TextEditingController();
+      final destinationRoomController = TextEditingController();
 
-    const suggestion = SearchSuggestion(
-      name: 'Unknown Place',
-      subtitle: 'No place id',
-      isConcordiaBuilding: false,
-      placeId: null,
-    );
+      const suggestion = SearchSuggestion(
+        name: 'Unknown Place',
+        subtitle: 'No place id',
+        isConcordiaBuilding: false,
+        placeId: null,
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MapSearchBar(
-            controller: controller,
-            suggestions: const [suggestion],
-            originRoomController: originRoomController,
-            destinationRoomController: destinationRoomController,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapSearchBar(
+              controller: controller,
+              suggestions: const [suggestion],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.byType(TextField).first);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Add to saved'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add to saved'));
+      await tester.pumpAndSettle();
 
-    expect(SavedPlacesController.notifier.value, isEmpty);
-    expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
-  });
+      expect(SavedPlacesController.notifier.value, isEmpty);
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+    },
+  );
 
   testWidgets('Add to saved stores valid concordia suggestion', (
     WidgetTester tester,
@@ -498,54 +537,55 @@ void main() {
     expect(find.byIcon(Icons.bookmark), findsOneWidget);
   });
 
-  testWidgets('Add to saved stores valid non-concordia suggestion with injected places service', (
-    WidgetTester tester,
-  ) async {
-    final mockClient = _MockHttpClient((request) {
-      return http.Response(
-        '{"id":"place_123","displayName":{"text":"Injected Place"},"location":{"latitude":45.501,"longitude":-73.571},"primaryType":"cafe","types":["cafe"]}',
-        200,
+  testWidgets(
+    'Add to saved stores valid non-concordia suggestion with injected places service',
+    (WidgetTester tester) async {
+      final mockClient = _MockHttpClient((request) {
+        return http.Response(
+          '{"id":"place_123","displayName":{"text":"Injected Place"},"location":{"latitude":45.501,"longitude":-73.571},"primaryType":"cafe","types":["cafe"]}',
+          200,
+        );
+      });
+      final injectedPlacesService = GooglePlacesService(client: mockClient);
+
+      final controller = TextEditingController();
+      final originRoomController = TextEditingController();
+      final destinationRoomController = TextEditingController();
+
+      final suggestion = SearchSuggestion.fromGooglePlace(
+        name: 'Injected Place',
+        subtitle: 'Montreal',
+        placeId: 'place_123',
       );
-    });
-    final injectedPlacesService = GooglePlacesService(client: mockClient);
 
-    final controller = TextEditingController();
-    final originRoomController = TextEditingController();
-    final destinationRoomController = TextEditingController();
-
-    final suggestion = SearchSuggestion.fromGooglePlace(
-      name: 'Injected Place',
-      subtitle: 'Montreal',
-      placeId: 'place_123',
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MapSearchBar(
-            controller: controller,
-            suggestions: [suggestion],
-            placesService: injectedPlacesService,
-            originRoomController: originRoomController,
-            destinationRoomController: destinationRoomController,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapSearchBar(
+              controller: controller,
+              suggestions: [suggestion],
+              placesService: injectedPlacesService,
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.byType(TextField).first);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Add to saved'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add to saved'));
+      await tester.pumpAndSettle();
 
-    expect(SavedPlacesController.isSaved('place_123'), isTrue);
-    final saved = SavedPlacesController.notifier.value.firstWhere(
-      (p) => p.id == 'place_123',
-    );
-    expect(saved.name, 'Injected Place');
-    expect(saved.googlePlaceType, 'cafe');
-  });
+      expect(SavedPlacesController.isSaved('place_123'), isTrue);
+      final saved = SavedPlacesController.notifier.value.firstWhere(
+        (p) => p.id == 'place_123',
+      );
+      expect(saved.name, 'Injected Place');
+      expect(saved.googlePlaceType, 'cafe');
+    },
+  );
 
   testWidgets('External room controller changes rebuild without crashing', (
     WidgetTester tester,
@@ -576,76 +616,78 @@ void main() {
     expect(find.byType(RoomFieldsSection), findsOneWidget);
   });
 
-  testWidgets('Add to saved no-op for concordia suggestion without building payload', (
-    WidgetTester tester,
-  ) async {
-    final controller = TextEditingController();
-    final originRoomController = TextEditingController();
-    final destinationRoomController = TextEditingController();
+  testWidgets(
+    'Add to saved no-op for concordia suggestion without building payload',
+    (WidgetTester tester) async {
+      final controller = TextEditingController();
+      final originRoomController = TextEditingController();
+      final destinationRoomController = TextEditingController();
 
-    const suggestion = SearchSuggestion(
-      name: 'Broken Concordia Suggestion',
-      subtitle: 'No building model',
-      isConcordiaBuilding: true,
-      buildingName: null,
-      placeId: null,
-    );
+      const suggestion = SearchSuggestion(
+        name: 'Broken Concordia Suggestion',
+        subtitle: 'No building model',
+        isConcordiaBuilding: true,
+        buildingName: null,
+        placeId: null,
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MapSearchBar(
-            controller: controller,
-            suggestions: const [suggestion],
-            originRoomController: originRoomController,
-            destinationRoomController: destinationRoomController,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapSearchBar(
+              controller: controller,
+              suggestions: const [suggestion],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.byType(TextField).first);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Add to saved'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add to saved'));
+      await tester.pumpAndSettle();
 
-    expect(SavedPlacesController.notifier.value, isEmpty);
-  });
+      expect(SavedPlacesController.notifier.value, isEmpty);
+    },
+  );
 
-  testWidgets('Add to saved no-op when concordia building code is not in polygon list', (
-    WidgetTester tester,
-  ) async {
-    final controller = TextEditingController();
-    final originRoomController = TextEditingController();
-    final destinationRoomController = TextEditingController();
+  testWidgets(
+    'Add to saved no-op when concordia building code is not in polygon list',
+    (WidgetTester tester) async {
+      final controller = TextEditingController();
+      final originRoomController = TextEditingController();
+      final destinationRoomController = TextEditingController();
 
-    const fakeBuilding = BuildingName(
-      code: 'ZZZ999',
-      name: 'Unknown Concordia Building',
-    );
+      const fakeBuilding = BuildingName(
+        code: 'ZZZ999',
+        name: 'Unknown Concordia Building',
+      );
 
-    final suggestion = SearchSuggestion.fromConcordiaBuilding(fakeBuilding);
+      final suggestion = SearchSuggestion.fromConcordiaBuilding(fakeBuilding);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MapSearchBar(
-            controller: controller,
-            suggestions: [suggestion],
-            originRoomController: originRoomController,
-            destinationRoomController: destinationRoomController,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapSearchBar(
+              controller: controller,
+              suggestions: [suggestion],
+              originRoomController: originRoomController,
+              destinationRoomController: destinationRoomController,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.byType(TextField).first);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Add to saved'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add to saved'));
+      await tester.pumpAndSettle();
 
-    expect(SavedPlacesController.notifier.value, isEmpty);
-  });
+      expect(SavedPlacesController.notifier.value, isEmpty);
+    },
+  );
 }
