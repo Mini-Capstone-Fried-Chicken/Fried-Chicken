@@ -12,6 +12,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/building_polygons.dart';
 import '../../data/search_result.dart';
 import '../../data/search_suggestion.dart';
+import '../../features/calendar/data/models/google_calendar_event.dart';
+import '../../features/calendar/data/repositories/google_calendar_repository.dart';
+import '../../features/calendar/services/calendar_building_resolver.dart';
+import '../../features/calendar/services/google_calendar_session.dart';
 import '../../features/indoor/data/building_info.dart';
 import '../../features/saved/saved_directions_controller.dart';
 import '../../features/saved/saved_place.dart';
@@ -132,6 +136,8 @@ class OutdoorMapPage extends StatefulWidget {
 }
 
 class _OutdoorMapPageState extends State<OutdoorMapPage> {
+  static const String _nextClassSuggestionPlaceId = '__action_next_class__';
+
   final Map<String, BitmapDescriptor> _buildingLabelIcons = {};
   bool _buildingLabelIconsReady = false;
   late final IndoorRouteService _indoorRouteService;
@@ -143,6 +149,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       TextEditingController();
   bool _cameraMoving = false;
   List<SearchSuggestion> _searchSuggestions = [];
+  _NextClassDirectionsRecommendation? _nextClassDirectionsRecommendation;
   Timer? _debounceTimer;
 
   // Indoor overlay state
@@ -2601,6 +2608,23 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   }
 
   Future<void> _onSuggestionSelected(SearchSuggestion suggestion) async {
+    if (suggestion.placeId == _nextClassSuggestionPlaceId) {
+      final recommendation = _nextClassDirectionsRecommendation;
+      if (recommendation == null) return;
+
+      if (recommendation.roomCode.isNotEmpty) {
+        SavedDirectionsController.requestDirectionsToBuildingRoom(
+          buildingCode: recommendation.buildingCode,
+          roomCode: recommendation.roomCode,
+        );
+      } else {
+        SavedDirectionsController.requestDirectionsToBuildingCode(
+          recommendation.buildingCode,
+        );
+      }
+      return;
+    }
+
     if (suggestion.isConcordiaBuilding && suggestion.buildingName != null) {
       final buildingPolygon = BuildingSearchService.searchBuilding(
         suggestion.buildingName!.code,
@@ -2844,9 +2868,9 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       final query = _searchController.text;
       try {
-        final suggestions = await BuildingSearchService.getCombinedSuggestions(
+        final suggestions = await _buildSearchSuggestions(
           query,
-          userLocation: _currentLocation,
+          includeNextClassRecommendation: query.trim().isEmpty,
         );
         if (mounted) {
           setState(() {
@@ -2856,14 +2880,141 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       } catch (e) {
         print('Error getting search suggestions: $e');
         if (mounted) {
+          final fallback = BuildingSearchService.getSuggestions(
+            query,
+          ).map((b) => SearchSuggestion.fromConcordiaBuilding(b)).toList();
+          final recommendation = query.trim().isEmpty
+              ? await _recommendationSuggestionOrEmpty()
+              : const <SearchSuggestion>[];
           setState(() {
-            _searchSuggestions = BuildingSearchService.getSuggestions(
-              query,
-            ).map((b) => SearchSuggestion.fromConcordiaBuilding(b)).toList();
+            _searchSuggestions = [...recommendation, ...fallback];
           });
         }
       }
     });
+  }
+
+  Future<List<SearchSuggestion>> _buildSearchSuggestions(
+    String query, {
+    bool includeNextClassRecommendation = false,
+  }) async {
+    final suggestions = await BuildingSearchService.getCombinedSuggestions(
+      query,
+      userLocation: _currentLocation,
+    );
+
+    if (!includeNextClassRecommendation) {
+      _nextClassDirectionsRecommendation = null;
+      return suggestions;
+    }
+
+    final recommendation = await _recommendationSuggestionOrEmpty();
+    return [...recommendation, ...suggestions];
+  }
+
+  Future<List<SearchSuggestion>> _recommendationSuggestionOrEmpty() async {
+    _nextClassDirectionsRecommendation =
+        await _resolveNextClassRecommendation();
+    final recommendation = _nextClassDirectionsRecommendation;
+    if (recommendation == null) {
+      return const <SearchSuggestion>[];
+    }
+
+    return <SearchSuggestion>[
+      SearchSuggestion(
+        name: 'Directions to next class: ${recommendation.event.title}',
+        subtitle: recommendation.subtitle,
+        isConcordiaBuilding: false,
+        placeId: _nextClassSuggestionPlaceId,
+      ),
+    ];
+  }
+
+  Future<List<GoogleCalendarEvent>> _eventsForNextClassRecommendation() async {
+    final sessionEvents = GoogleCalendarSession.instance.events;
+    if (sessionEvents.isNotEmpty) {
+      return sessionEvents;
+    }
+
+    final cachedEvents = GoogleCalendarRepository.instance.cachedEvents;
+    if (cachedEvents.isNotEmpty) {
+      return cachedEvents;
+    }
+
+    final session = GoogleCalendarSession.instance;
+    if (!session.isConnected && session.selectedCalendarIds.isEmpty) {
+      return const <GoogleCalendarEvent>[];
+    }
+
+    try {
+      final restored = await GoogleCalendarRepository.instance
+          .restoreConnection();
+      if (!restored) {
+        return const <GoogleCalendarEvent>[];
+      }
+      return GoogleCalendarRepository.instance.cachedEvents;
+    } catch (_) {
+      return const <GoogleCalendarEvent>[];
+    }
+  }
+
+  Future<_NextClassDirectionsRecommendation?>
+  _resolveNextClassRecommendation() async {
+    final events = await _eventsForNextClassRecommendation();
+    if (events.isEmpty) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    final upcomingEvents =
+        events
+            .where((event) => event.start != null && event.start!.isAfter(now))
+            .toList()
+          ..sort((a, b) => a.start!.compareTo(b.start!));
+
+    for (final event in upcomingEvents) {
+      final buildingCode = resolveBuildingCode(event.location);
+      if (buildingCode.isEmpty) continue;
+
+      final building = _findBuildingByCode(buildingCode);
+      if (building == null) continue;
+
+      final roomCode = (event.description ?? '').trim();
+      final localTime = TimeOfDay.fromDateTime(event.start!).format(context);
+      final subtitle = roomCode.isEmpty
+          ? '$localTime • $buildingCode'
+          : '$localTime • $buildingCode-$roomCode';
+
+      return _NextClassDirectionsRecommendation(
+        event: event,
+        buildingCode: buildingCode,
+        roomCode: roomCode,
+        subtitle: subtitle,
+      );
+    }
+
+    return null;
+  }
+
+  void _onSearchFocus() {
+    _hideBuildingPopup();
+    unawaited(_refreshSearchSuggestionsForFocus());
+  }
+
+  Future<void> _refreshSearchSuggestionsForFocus() async {
+    final query = _searchController.text;
+    try {
+      final suggestions = await _buildSearchSuggestions(
+        query,
+        includeNextClassRecommendation: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _searchSuggestions = suggestions;
+      });
+    } catch (_) {
+      // Keep existing suggestions if refresh fails.
+    }
   }
 
   Future<void> _createBlueDotIcon() async {
@@ -3923,7 +4074,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       onSubmitted: _onSearchSubmitted,
       suggestions: _searchSuggestions,
       onSuggestionSelected: _onSuggestionSelected,
-      onFocus: _hideBuildingPopup,
+      onFocus: _onSearchFocus,
       originRoomController: _originRoomController,
       destinationRoomController: _destinationRoomController,
       onOriginRoomSubmitted: _onOriginRoomSubmitted,
@@ -4587,6 +4738,20 @@ class _ShuttleSheetPalette {
     required this.nextBadgeText,
     required this.stopChipColor,
     required this.dividerColor,
+  });
+}
+
+class _NextClassDirectionsRecommendation {
+  final GoogleCalendarEvent event;
+  final String buildingCode;
+  final String roomCode;
+  final String subtitle;
+
+  const _NextClassDirectionsRecommendation({
+    required this.event,
+    required this.buildingCode,
+    required this.roomCode,
+    required this.subtitle,
   });
 }
 

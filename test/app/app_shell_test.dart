@@ -214,6 +214,16 @@ void main() {
       expect(updatedBottomNavBar.currentIndex, 1);
     });
 
+    testWidgets('AppShell keeps pages in IndexedStack', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: AppShell(isLoggedIn: true)),
+      );
+
+      expect(find.byType(IndexedStack), findsOneWidget);
+    });
+
     testWidgets('AppShell has correct number of navigation items', (
       WidgetTester tester,
     ) async {

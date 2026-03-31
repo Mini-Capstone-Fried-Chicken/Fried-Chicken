@@ -70,6 +70,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
   late FocusNode _focusNode;
   bool _showSuggestions = false;
 
+  static const String _actionSuggestionPrefix = '__action_';
+
   bool get _hasSuggestions => widget.suggestions?.isNotEmpty ?? false;
 
   bool get _isConcordiaBuilding =>
@@ -153,6 +155,12 @@ class _MapSearchBarState extends State<MapSearchBar> {
     final id = _savedIdForSuggestion(suggestion);
     if (id == null || id.isEmpty) return false;
     return SavedPlacesController.isSaved(id);
+  }
+
+  bool _isActionSuggestion(SearchSuggestion suggestion) {
+    final placeId = suggestion.placeId;
+    if (placeId == null) return false;
+    return placeId.startsWith(_actionSuggestionPrefix);
   }
 
   Future<void> _toggleSuggestionSaved(SearchSuggestion suggestion) async {
@@ -321,31 +329,62 @@ class _MapSearchBarState extends State<MapSearchBar> {
   }
 
   Widget _buildSuggestionTile(SearchSuggestion suggestion) {
+    final isActionSuggestion = _isActionSuggestion(suggestion);
     final isSaved = _isSuggestionSaved(suggestion);
 
     return ListTile(
       leading: Icon(
-        suggestion.isConcordiaBuilding ? Icons.school : Icons.place,
+        isActionSuggestion
+            ? Icons.directions
+            : suggestion.isConcordiaBuilding
+            ? Icons.school
+            : Icons.place,
         color: suggestion.isConcordiaBuilding
             ? AppUiColors.primary(highContrastEnabled: widget.highContrastMode)
             : Colors.grey,
         size: 20,
       ),
-      title: Text(suggestion.name),
-      subtitle: _buildSuggestionSubtitle(suggestion),
-      trailing: IconButton(
-        tooltip: isSaved ? 'Remove from saved' : 'Add to saved',
-        icon: Icon(
-          isSaved ? Icons.bookmark : Icons.bookmark_border,
-          size: 20,
-          color: isSaved
-              ? AppUiColors.primary(
+      title: Row(
+        children: [
+          Expanded(child: Text(suggestion.name)),
+          if (isActionSuggestion)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppUiColors.primary(
                   highContrastEnabled: widget.highContrastMode,
-                )
-              : Colors.grey[700],
-        ),
-        onPressed: () => unawaited(_toggleSuggestionSaved(suggestion)),
+                ).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Recommended',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppUiColors.primary(
+                    highContrastEnabled: widget.highContrastMode,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
+      subtitle: _buildSuggestionSubtitle(suggestion),
+      trailing: isActionSuggestion
+          ? null
+          : IconButton(
+              tooltip: isSaved ? 'Remove from saved' : 'Add to saved',
+              icon: Icon(
+                isSaved ? Icons.bookmark : Icons.bookmark_border,
+                size: 20,
+                color: isSaved
+                    ? AppUiColors.primary(
+                        highContrastEnabled: widget.highContrastMode,
+                      )
+                    : Colors.grey[700],
+              ),
+              onPressed: () => unawaited(_toggleSuggestionSaved(suggestion)),
+            ),
       dense: true,
       onTap: () => _selectSuggestion(suggestion),
     );
