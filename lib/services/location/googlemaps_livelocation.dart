@@ -36,6 +36,7 @@ import '../building_search_service.dart';
 import '../google_directions_service.dart';
 import '../google_places_service.dart';
 import '../indoor_maps/indoor_floor_config.dart';
+import '../indoor_maps/indoor_geojson_renderer.dart';
 import '../indoor_maps/indoor_map_controller.dart';
 import '../indoors_routing/core/indoor_route_plan_models.dart';
 import '../indoors_routing/core/indoor_routing_models.dart';
@@ -264,6 +265,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
   Campus _selectedCampus = Campus.none;
 
   LatLng? _lastCameraTarget;
+  double _lastCameraZoom = _defaultZoom;
+  double? _lastRenderedRoomLabelZoom;
+  bool _refreshingRoomLabels = false;
+  static const double _roomLabelZoomRefreshThreshold = 0.2;
   bool _highContrastMode = false;
   bool _wheelchairRoutingDefaultEnabled = false;
   IndoorTransitionMode? _preferredIndoorTransitionMode;
@@ -502,10 +507,47 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
     _indoorPolygons = {};
     _indoorGeoJson = null;
     _roomLabelMarkers = {};
+    _lastRenderedRoomLabelZoom = null;
+    _refreshingRoomLabels = false;
     _amenityMarkers = {};
     _originRoomMarker = null;
     _destinationRoomMarker = null;
     _isBuildingIndoorRoute = false;
+  }
+
+  Future<void> _refreshIndoorRoomLabelsForZoom({bool force = false}) async {
+    if (!_showIndoor) return;
+
+    final geoJson = _indoorGeoJson;
+    if (geoJson == null) return;
+
+    final currentZoom = _lastCameraZoom;
+    final previousZoom = _lastRenderedRoomLabelZoom;
+    if (!force &&
+        previousZoom != null &&
+        (currentZoom - previousZoom).abs() < _roomLabelZoomRefreshThreshold) {
+      return;
+    }
+
+    if (_refreshingRoomLabels) return;
+
+    _refreshingRoomLabels = true;
+    try {
+      final labels = await IndoorGeoJsonRenderer.createRoomLabels(
+        geoJson,
+        zoom: currentZoom,
+      );
+      if (!mounted || !_showIndoor || !identical(_indoorGeoJson, geoJson)) {
+        return;
+      }
+
+      setState(() {
+        _roomLabelMarkers = labels;
+        _lastRenderedRoomLabelZoom = currentZoom;
+      });
+    } finally {
+      _refreshingRoomLabels = false;
+    }
   }
 
   void _clearPendingDestinationIndoorHandoff() {
@@ -903,7 +945,10 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   Future<void> _loadIndoorFloor(String assetPath) async {
     try {
-      final result = await _indoorController.loadFloor(assetPath);
+      final result = await _indoorController.loadFloor(
+        assetPath,
+        zoom: _lastCameraZoom,
+      );
       if (!mounted) return;
       setState(() {
         _showIndoor = true;
@@ -911,6 +956,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
         _indoorPolygons = result.polygons;
         _indoorGeoJson = result.geoJson;
         _roomLabelMarkers = result.labels;
+        _lastRenderedRoomLabelZoom = _lastCameraZoom;
         _amenityMarkers = result.amenityIcons;
         if (_isIndoorNavigationActive) {
           _routePolylines =
@@ -3896,6 +3942,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       onMapCreated: (c) => _mapController = c,
       onCameraMove: (pos) {
         _lastCameraTarget = pos.target;
+        _lastCameraZoom = pos.zoom;
         if (_selectedBuildingCenter != null || _selectedPoiCenter != null) {
           _schedulePopupUpdate();
         }
@@ -3908,6 +3955,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
       },
       onCameraIdle: () {
         _syncToggleWithCameraCenter();
+        unawaited(_refreshIndoorRoomLabelsForZoom());
         if (_selectedBuildingCenter == null && _selectedPoiCenter == null) {
           return;
         }

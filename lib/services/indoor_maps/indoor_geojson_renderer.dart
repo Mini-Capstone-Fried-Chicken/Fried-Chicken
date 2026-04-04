@@ -275,8 +275,9 @@ class IndoorGeoJsonRenderer {
   }
 
   static Future<Set<Marker>> createRoomLabels(
-    Map<String, dynamic> geojson,
-  ) async {
+    Map<String, dynamic> geojson, {
+    double zoom = 17.0,
+  }) async {
     final features = (geojson['features'] as List).cast<dynamic>();
     final markers = <Marker>{};
     int index = 0;
@@ -299,8 +300,10 @@ class IndoorGeoJsonRenderer {
       final center = polygonCenter(points);
       final ref = props['ref'].toString();
 
-      // Choose font size based on polygon area
-      final double fontSize = area > 5e-8 ? 10 : 8;
+      final double fontSize = _fontSizeForRoomLabel(
+        polygonArea: area,
+        zoom: zoom,
+      );
       final icon = await _createTextBitmap(ref, fontSize: fontSize);
 
       markers.add(
@@ -318,6 +321,18 @@ class IndoorGeoJsonRenderer {
     }
 
     return markers;
+  }
+
+  static double _fontSizeForRoomLabel({
+    required double polygonArea,
+    required double zoom,
+  }) {
+    final baseFontSize = polygonArea > 5e-8 ? 10.0 : 8.0;
+    final normalizedZoom = (zoom / 16.0).clamp(0.7, 1.8).toDouble();
+    final zoomScale = (normalizedZoom * normalizedZoom)
+        .clamp(0.45, 3.2)
+        .toDouble();
+    return (baseFontSize * zoomScale).clamp(5.0, 30.0).toDouble();
   }
 
   static Future<BitmapDescriptor> _createTextBitmap(

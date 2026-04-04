@@ -27,10 +27,16 @@ class IndoorMapController {
     return IndoorFloorConfig.floorsForBuilding(buildingCode);
   }
 
-  Future<IndoorLoadResult> loadFloor(String assetPath) async {
+  Future<IndoorLoadResult> loadFloor(
+    String assetPath, {
+    double zoom = 17.0,
+  }) async {
     final geo = await _repo.loadGeoJsonAsset(assetPath);
     final polygons = IndoorGeoJsonRenderer.geoJsonToPolygons(geo);
-    final labels = await IndoorGeoJsonRenderer.createRoomLabels(geo);
+    final labels = await IndoorGeoJsonRenderer.createRoomLabels(
+      geo,
+      zoom: zoom,
+    );
     final amenityIcons = await IndoorGeoJsonRenderer.createAmenityIcons(geo);
 
     return IndoorLoadResult(
