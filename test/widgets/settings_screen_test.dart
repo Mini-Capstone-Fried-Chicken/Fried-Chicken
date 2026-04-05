@@ -47,42 +47,24 @@ void main() {
     });
 
     testWidgets(
-      'accessibility controls are gated until accessibility mode is enabled',
+      'accessibility controls render on the settings screen',
       (tester) async {
         await tester.pumpWidget(
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
 
-        await tester.ensureVisible(find.text('High Contrast mode'));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('High Contrast mode'), warnIfMissed: false);
-        await tester.pumpAndSettle();
-
-        expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
-
-        await tester.tap(find.text('Accessibility Mode'));
-        await tester.pumpAndSettle();
-
-        expect(AppSettingsController.state.accessibilityModeEnabled, isTrue);
-
-        await tester.tap(find.text('High Contrast mode'));
-        await tester.pumpAndSettle();
-        expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
+        expect(find.text('Wheelchair routing as default'), findsOneWidget);
+        expect(find.text('High Contrast mode'), findsOneWidget);
+        expect(find.text('Large Text'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'high contrast mode switch updates shared settings when accessibility mode is enabled',
+      'high contrast mode switch updates shared settings state',
       (tester) async {
         await tester.pumpWidget(
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
-
-        await tester.tap(find.text('Accessibility Mode'));
-        await tester.pumpAndSettle();
-
-        expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
 
         await tester.ensureVisible(find.text('High Contrast mode'));
         await tester.pumpAndSettle();
@@ -94,16 +76,11 @@ void main() {
     );
 
     testWidgets(
-      'large text switch updates shared settings when accessibility mode is enabled',
+      'large text switch updates shared settings state',
       (tester) async {
         await tester.pumpWidget(
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
-
-        await tester.tap(find.text('Accessibility Mode'));
-        await tester.pumpAndSettle();
-
-        expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
 
         await tester.ensureVisible(find.text('Large Text'));
         await tester.pumpAndSettle();
@@ -205,51 +182,32 @@ void main() {
     );
 
     testWidgets(
-      'accessibility section is dimmed and non-interactive when mode is off',
+      'accessibility section is interactive by default',
       (tester) async {
         await tester.pumpWidget(
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
 
-        final opacityWidgets = tester.widgetList<Opacity>(find.byType(Opacity));
-        final ignorePointerWidgets = tester.widgetList<IgnorePointer>(
-          find.byType(IgnorePointer),
-        );
+        expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
 
-        expect(opacityWidgets.any((widget) => widget.opacity == 0.5), isTrue);
-        expect(ignorePointerWidgets.any((widget) => widget.ignoring), isTrue);
+        await tester.ensureVisible(find.text('High Contrast mode'));
+        final highContrastSwitch = find.descendant(
+          of: find.widgetWithText(SwitchListTile, 'High Contrast mode'),
+          matching: find.byType(Switch),
+        );
+        await tester.tap(highContrastSwitch, warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
       },
     );
 
     testWidgets(
-      'enabling accessibility mode activates accessibility controls',
+      'wheelchair routing switch updates shared settings state',
       (tester) async {
         await tester.pumpWidget(
           makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
         );
-
-        await tester.tap(find.text('Accessibility Mode'));
-        await tester.pumpAndSettle();
-
-        final opacityWidgets = tester.widgetList<Opacity>(find.byType(Opacity));
-        final ignorePointerWidgets = tester.widgetList<IgnorePointer>(
-          find.byType(IgnorePointer),
-        );
-
-        expect(opacityWidgets.any((widget) => widget.opacity == 1.0), isTrue);
-        expect(ignorePointerWidgets.any((widget) => !widget.ignoring), isTrue);
-      },
-    );
-
-    testWidgets('wheelchair routing switch updates shared settings state', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        makeTestableWidget(const SettingsScreen(isLoggedIn: true)),
-      );
-
-      await tester.tap(find.text('Accessibility Mode'));
-      await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Wheelchair routing as default'));
       final wheelchairSwitch = find.descendant(
