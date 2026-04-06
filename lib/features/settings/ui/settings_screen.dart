@@ -42,7 +42,6 @@ class _SettingsViewStyle {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _defaultCampus = AppSettingsState.defaultCampusSgw;
-  bool _accessibilityModeEnabled = false;
   bool _calendarAccessEnabled = true;
 
   bool _wheelchairRoutingDefault = false;
@@ -53,7 +52,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final state = AppSettingsController.state;
     if (!mounted) return;
     setState(() {
-      _accessibilityModeEnabled = state.accessibilityModeEnabled;
       _wheelchairRoutingDefault = state.wheelchairRoutingDefaultEnabled;
       _highContrastMode = state.highContrastModeEnabled;
       _largeTextMode = state.largeTextModeEnabled;
@@ -218,23 +216,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             _buildCampusSegmentedButton(style.isHighContrast),
             const SizedBox(height: 10),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Accessibility Mode',
-                style: TextStyle(color: style.textColor),
-              ),
-              value: _accessibilityModeEnabled,
-              activeThumbColor: style.toggleActiveColor,
-              inactiveThumbColor: style.toggleInactiveThumb,
-              inactiveTrackColor: style.toggleInactiveTrack,
-              onChanged: (value) {
-                setState(() {
-                  _accessibilityModeEnabled = value;
-                });
-                AppSettingsController.setAccessibilityMode(value);
-              },
-            ),
             Divider(height: 12, color: style.dividerColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -326,73 +307,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Opacity(
-          opacity: _accessibilityModeEnabled ? 1.0 : 0.5,
-          child: IgnorePointer(
-            ignoring: !_accessibilityModeEnabled,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Accessibility Settings',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: headingColor,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Wheelchair routing as default',
-                    style: TextStyle(color: textColor),
-                  ),
-                  value: _wheelchairRoutingDefault,
-                  activeThumbColor: toggleActiveColor,
-                  inactiveThumbColor: toggleInactiveThumb,
-                  inactiveTrackColor: toggleInactiveTrack,
-                  onChanged: (value) {
-                    setState(() {
-                      _wheelchairRoutingDefault = value;
-                    });
-                    AppSettingsController.setWheelchairRoutingDefault(value);
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'High Contrast mode',
-                    style: TextStyle(color: textColor),
-                  ),
-                  value: _highContrastMode,
-                  activeThumbColor: toggleActiveColor,
-                  inactiveThumbColor: toggleInactiveThumb,
-                  inactiveTrackColor: toggleInactiveTrack,
-                  onChanged: (value) {
-                    setState(() {
-                      _highContrastMode = value;
-                    });
-                    AppSettingsController.setHighContrastMode(value);
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text('Large Text', style: TextStyle(color: textColor)),
-                  value: _largeTextMode,
-                  activeThumbColor: toggleActiveColor,
-                  inactiveThumbColor: toggleInactiveThumb,
-                  inactiveTrackColor: toggleInactiveTrack,
-                  onChanged: (value) {
-                    setState(() {
-                      _largeTextMode = value;
-                    });
-                    AppSettingsController.setLargeTextMode(value);
-                  },
-                ),
-              ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Accessibility Settings',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: headingColor,
+              ),
             ),
-          ),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Wheelchair routing as default',
+                style: TextStyle(color: textColor),
+              ),
+              value: _wheelchairRoutingDefault,
+              activeThumbColor: toggleActiveColor,
+              inactiveThumbColor: toggleInactiveThumb,
+              inactiveTrackColor: toggleInactiveTrack,
+              onChanged: (value) {
+                setState(() {
+                  _wheelchairRoutingDefault = value;
+                });
+                AppSettingsController.setWheelchairRoutingDefault(value);
+              },
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'High Contrast mode',
+                style: TextStyle(color: textColor),
+              ),
+              value: _highContrastMode,
+              activeThumbColor: toggleActiveColor,
+              inactiveThumbColor: toggleInactiveThumb,
+              inactiveTrackColor: toggleInactiveTrack,
+              onChanged: (value) {
+                setState(() {
+                  _highContrastMode = value;
+                });
+                AppSettingsController.setHighContrastMode(value);
+              },
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Large Text', style: TextStyle(color: textColor)),
+              value: _largeTextMode,
+              activeThumbColor: toggleActiveColor,
+              inactiveThumbColor: toggleInactiveThumb,
+              inactiveTrackColor: toggleInactiveTrack,
+              onChanged: (value) {
+                setState(() {
+                  _largeTextMode = value;
+                });
+                AppSettingsController.setLargeTextMode(value);
+              },
+            ),
+          ],
         ),
       ),
     );

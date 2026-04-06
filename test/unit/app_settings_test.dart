@@ -69,12 +69,12 @@ void main() {
     });
 
     test(
-      'setWheelchairRoutingDefault is ignored when accessibility mode is disabled',
+      'setWheelchairRoutingDefault updates state even when accessibility mode is disabled',
       () {
         AppSettingsController.setWheelchairRoutingDefault(true);
         expect(
           AppSettingsController.state.wheelchairRoutingDefaultEnabled,
-          isFalse,
+          isTrue,
         );
       },
     );
@@ -93,10 +93,10 @@ void main() {
     );
 
     test(
-      'setHighContrastMode is ignored when accessibility mode is disabled',
+      'setHighContrastMode updates state even when accessibility mode is disabled',
       () {
         AppSettingsController.setHighContrastMode(true);
-        expect(AppSettingsController.state.highContrastModeEnabled, isFalse);
+        expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
       },
     );
 
@@ -107,9 +107,9 @@ void main() {
       expect(AppSettingsController.state.highContrastModeEnabled, isTrue);
     });
 
-    test('setLargeTextMode is ignored when accessibility mode is disabled', () {
+    test('setLargeTextMode updates state even when accessibility mode is disabled', () {
       AppSettingsController.setLargeTextMode(true);
-      expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
+      expect(AppSettingsController.state.largeTextModeEnabled, isTrue);
     });
 
     test('setLargeTextMode updates when accessibility mode is enabled', () {
