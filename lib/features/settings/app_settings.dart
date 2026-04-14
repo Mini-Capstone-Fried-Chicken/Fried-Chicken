@@ -260,23 +260,14 @@ class AppSettingsController {
   }
 
   static void setWheelchairRoutingDefault(bool enabled) {
-    if (!state.accessibilityModeEnabled && enabled) {
-      return;
-    }
     _updateState(state.copyWith(wheelchairRoutingDefaultEnabled: enabled));
   }
 
   static void setHighContrastMode(bool enabled) {
-    if (!state.accessibilityModeEnabled && enabled) {
-      return;
-    }
     _updateState(state.copyWith(highContrastModeEnabled: enabled));
   }
 
   static void setLargeTextMode(bool enabled) {
-    if (!state.accessibilityModeEnabled && enabled) {
-      return;
-    }
     _updateState(state.copyWith(largeTextModeEnabled: enabled));
   }
 

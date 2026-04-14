@@ -2049,7 +2049,7 @@ class _OutdoorMapPageState extends State<OutdoorMapPage> {
 
   /// Adds a map marker for every loaded POI.
   void _addPoiMarkers(Set<Marker> markers) {
-    if (!_poisLoaded) return;
+    if (!_poisLoaded || _showRoutePreview) return;
 
     for (final poi in _nearbyPois) {
       final icon = _poiIcons[poi.category];

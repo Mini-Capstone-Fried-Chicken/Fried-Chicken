@@ -54,7 +54,7 @@ void main() {
       expect(find.byType(SegmentedButton<String>), findsOneWidget);
     });
 
-    testWidgets('keeps large text disabled until accessibility mode is enabled', (
+    testWidgets('toggles large text directly from settings controls', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -63,13 +63,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Large Text'));
-      await tester.tap(find.text('Large Text'), warnIfMissed: false);
-      await tester.pumpAndSettle();
       expect(AppSettingsController.state.largeTextModeEnabled, isFalse);
 
-      await tester.tap(find.text('Accessibility Mode'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Large Text'));
+      await tester.tap(find.text('Large Text'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(AppSettingsController.state.largeTextModeEnabled, isTrue);
